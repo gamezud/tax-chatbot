@@ -1,0 +1,17 @@
+# ความลับ
+.env
+config/serviceAccountKey.json
+firebase_key.json
+*.key
+
+# สภาพแวดล้อม Python
+.venv/
+__pycache__/
+*.pyc
+
+# ข้อมูลผู้ใช้ — PDF มีรายได้ของคนที่ทดสอบ
+static/reports/
+
+# ไฟล์ชั่วคราว
+*.log
+test_speed.py
