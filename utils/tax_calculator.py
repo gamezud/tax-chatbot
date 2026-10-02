@@ -72,8 +72,10 @@ def get_rental_expense_rate(property_type):
         return 0.20
     elif 'ที่ดิน' in prop:
         return 0.15
+    # ยานพาหนะ 30% ตาม พ.ร.ฎ. ฉบับที่ 11 ม.5
+    # "โรงเรือน" มี "เรือ" อยู่ข้างใน จึงตกสาขานี้ด้วย ได้ 30% ถูกเพราะอัตราเท่ากับโรงเรือนพอดี
     elif any(k in prop for k in ['รถ', 'เรือ', 'ยานพาหนะ']):
-        return 0.10
+        return 0.30
     else:
         return 0.30
 

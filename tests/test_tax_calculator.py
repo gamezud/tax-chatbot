@@ -106,13 +106,11 @@ def test_rental_expense_rate(property_type, expected):
     assert get_rental_expense_rate(property_type) == expected
 
 
-@pytest.mark.xfail(strict=True, reason="ปัญหาที่รู้แล้ว #1: ยานพาหนะตามกฎหมาย 30% แต่โค้ดให้ 10%")
 @pytest.mark.parametrize("property_type", ["รถยนต์", "เรือ", "ยานพาหนะ"])
 def test_rental_expense_rate_vehicle_is_30_percent(property_type):
     assert get_rental_expense_rate(property_type) == 0.30
 
 
-@pytest.mark.xfail(strict=True, reason="'โรงเรือน' มีคำว่า 'เรือ' อยู่ข้างใน จึงตกสาขายานพาหนะได้ 10%")
 def test_rental_expense_rate_rong_ruean_is_30_percent():
     assert get_rental_expense_rate("โรงเรือน") == 0.30
 
