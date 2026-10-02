@@ -1,6 +1,7 @@
 import os
 import uuid
 import traceback
+import time
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 
@@ -26,6 +27,9 @@ def download_file(filename):
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
+    # 1. ตั้ง Budget เวลารวมทั้งหมดของ Webhook ไม่ให้เกิน 4.0 วินาที (เผื่อ Dialogflow 5 วิ)
+    start_time = time.monotonic()
+    req_deadline = start_time + 4.0
     try:
         req = request.get_json(silent=True, force=True) or {}
         query_result = req.get('queryResult', {})
@@ -34,8 +38,8 @@ def webhook():
         parameters = query_result.get('parameters', {})
         output_contexts = query_result.get('outputContexts', [])
         session_id = req.get('session', '')
-
         orig_req = req.get('originalDetectIntentRequest', {})
+        
         line_user_id = orig_req.get('payload', {}).get('data', {}).get('source', {}).get('userId')
         if not line_user_id:
             line_user_id = session_id.split('/')[-1] if session_id else 'anonymous_user'
@@ -51,8 +55,24 @@ def webhook():
         print(f"🔑 [ACTIVE CONTEXTS] {active_contexts}")
         print(f"📦 [RAW PARAMS]     {parameters}")
 
+        # -------------------------------------------------------------
+        # INTENT: ทักทายเริ่มต้น (Welcome Intent & Greeting Text)
+        # -------------------------------------------------------------
+        greeting_keywords = ['สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'hello', 'hi', 'hey']
+        if intent_name in ['Welcome', 'Default Welcome Intent'] or user_query.lower() in greeting_keywords:
+            greeting_text = (
+                "สวัสดีครับ! ยินดีต้อนรับสู่ผู้ช่วยภาษีเงินได้บุคคลธรรมดา ภาษีพร้อม (Tax Assistant) ครับ 🤖📄\n\n"
+                "ผมสามารถช่วยคุณได้ดังนี้ครับ:\n"
+                "1. 🧮 คำนวณภาษีประจำปี: พิมพ์ 'อยากคำนวณภาษี'\n"
+                "2. 📜 ดูประวัติการประเมินภาษี: พิมพ์ 'ดูประวัติ'\n"
+                "3. 💡 สอบถามความรู้ภาษี: เช่น 'ลดหย่อนบุตรได้เท่าไหร่', 'ประกันสังคมลดหย่อนได้สูงสุดเท่าไหร่', 'ยื่นภาษีได้ถึงวันไหน'\n"
+                "4. 🔄 เริ่มต้นใหม่: พิมพ์ 'รีเซ็ต'\n\n"
+                "มีข้อมูลภาษีส่วนไหนให้ผมช่วยเหลือ สอบถามเข้ามาได้เลยครับ!"
+            )
+            return jsonify({"fulfillmentText": greeting_text})
+
         # 🧹 ล้างข้อมูลรีเซ็ต (บังคับ Lifespan = 0 เพื่อเคลียร์ Context ทั้งหมด)
-        if intent_name == '99_Reset_Chat' or user_query in ['รีเซ็ต', 'reset', 'เริ่มใหม่', 'ล้างข้อมูล']:
+        if intent_name == '99_Reset_Chat' or user_query.lower() in ['รีเซ็ต', 'reset', 'เริ่มใหม่', 'ล้างข้อมูล']:
             cleared_contexts = []
             for ctx in output_contexts:
                 ctx_name = ctx.get('name', '')
@@ -93,9 +113,6 @@ def webhook():
         merged_params.update(parameters)
 
         print(f"🧠 [DEBUG-STATE] รวมพารามิเตอร์สะสม (merged_params): {merged_params}")
-
-        # กำหนดค่าเริ่มต้นป้องกัน unbound variable หรือ intent หลุด
-        reply_text = "ขออภัยครับ ระบบไม่เข้าใจคำขอนี้ รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มใหม่ครับ"
 
         # ==========================================
         # STEP 1: เริ่มต้นเลือกประเภทเงินได้
@@ -226,7 +243,7 @@ def webhook():
         # ==========================================
         # STEP 3.5: ออนไลน์
         # ==========================================
-        elif intent_name == '05_Tax_Interview_Online':
+        elif intent_name == '05_Tax_Interview_Online' or 'awaiting_online' in active_contexts:
             online_income = clean_number(merged_params.get('online_income'))
             if online_income == 0.0:
                 online_income = clean_number(user_query)
@@ -249,7 +266,7 @@ def webhook():
             
             print("🔑 [DEBUG-STEP3.5-EMIT] ส่งกิ่งถัดไป: awaiting_deduction")
             return jsonify({"fulfillmentText": reply_text, "outputContexts": out_contexts})
-
+        
         # ==========================================
         # STEP 4: ลดหย่อนและการคำนวณสรุปผล
         # ==========================================
@@ -318,10 +335,10 @@ def webhook():
             print(f"   └─ ยอดสุทธิชำระ/คืน: {net_payable:,.2f} บ.")
 
             tax_advice = generate_tax_planning_advice(
-            total_income=total_income,
-            net_income=net_income,
-            current_life_ins=capped_life,
-            current_ssf=capped_ssf
+                total_income=total_income,
+                net_income=net_income,
+                current_life_ins=capped_life,
+                current_ssf=capped_ssf
             )
 
             pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
@@ -380,15 +397,19 @@ def webhook():
         else:
             clean_check = user_query.replace(',', '').replace('.', '').strip()
             print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
-            if clean_check.isdigit() and clean_check:
-                reply_text = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ ภาษีเงินได้บุคคลธรรมดามีการคำนวณจากเงินได้สุทธิและหักค่าใช้จ่ายตามเกณฑ์กฎหมาย"
+            
+            # เช็กว่ามี context การคำนวณค้างอยู่หรือไม่
+            has_interview_ctx = any(k in active_contexts for k in ['awaiting_salary', 'awaiting_rental', 'awaiting_online', 'awaiting_deduction'])
+            
+            if clean_check.isdigit() and clean_check and not has_interview_ctx:
+                reply_text = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ"
             elif user_query:
-                reply_text = query_tax_knowledge(user_query)
+                reply_text = query_tax_knowledge(user_query, deadline=req_deadline)
             else:
                 reply_text = "ขออภัยครับ ระบบไม่ได้รับข้อความของคุณ"
 
             return jsonify({"fulfillmentText": reply_text})
-
+        
     except Exception as e:
         print("\n" + "!"*75)
         print("❌ [CRITICAL ERROR TRACEBACK]")

@@ -21,6 +21,9 @@ def clean_number(val):
             except ValueError:
                 return 0.0
 
+    if isinstance(val, dict):
+        val = next(iter(val.values()), 0)
+
     # แก้บั๊ก 1: ใช้ Lookaround ดักเฉพาะเลข พ.ศ. 4 หลักโดดๆ ไม่ให้กิน 25000 หรือ 250000
     val_str_cleaned = re.sub(r'ปี\s*25\d{2}(?!\d)|(?<!\d)25\d{2}(?!\d)', '', val_str)
 

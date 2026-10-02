@@ -1,10 +1,14 @@
 import os
+import json
 import time
+import requests
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain_ollama import ChatOllama
 
-# 1. โหลด Embedding และ FAISS Index ระดับโมดูล (โหลดครั้งเดียวตอนเริ่มระบบ)
+OLLAMA_URL = "http://localhost:11434/api/generate"
+TAX_DISTANCE_THRESHOLD = 14.0
+
+# 1. โหลด FAISS Vector Store ระดับโมดูล
 print("🧠 [Knowledge Search] กำลังโหลดโมเดล Embeddings และ FAISS Index...")
 _embeddings = HuggingFaceEmbeddings(
     model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
@@ -18,23 +22,65 @@ else:
     _db = None
     print("⚠️ [Knowledge Search] ไม่พบโฟลเดอร์ faiss_tax_index")
 
-# 2. โหลด LLM ระดับโมดูล (ล็อก temperature=0 เพื่อให้คำตอบเหมือนเดิมทุกครั้ง)
-_llm = ChatOllama(
-    model="llama3.2:3b",
-    temperature=0,
-    num_predict=90,          # ลดจาก 250 เหลือ 90 เพื่อความรวดเร็ว
-    keep_alive="1h"          # สั่งให้โหลดโมเดลค้างไว้ใน VRAM/RAM 1 ชั่วโมง ไม่ต้องสลับโหลดใหม่
-)
 
-# ค่า Threshold จากการทดสอบความแม่นยำ
-TAX_DISTANCE_THRESHOLD = 14.0
+def ask_llm(prompt, deadline):
+    """
+    เรียกใช้งาน Ollama แบบ stream=True เพื่อควบคุมงบเวลาไม่ให้เกิน deadline
+    หากเกินเวลา จะหลุดจาก with statement ทันที ทำให้ connection ถูกตัด
+    Ollama ฝั่ง server จะหยุดการ generate ทันที ไม่กินทรัพยากร CPU/VRAM ตกค้าง
+    """
+    chunks = []
+    try:
+        # timeout=(connect_timeout, read_timeout_per_chunk)
+        with requests.post(
+            OLLAMA_URL,
+            json={
+                "model": "llama3.2:3b",
+                "prompt": prompt,
+                "stream": True,
+                "keep_alive": "30m",  # ป้องกันปัญหา Cold Start โมเดลหลุดจากหน่วยความจำ
+                "options": {
+                    "temperature": 0,
+                    "num_predict": 120  # ควบคุมความยาวไม่ให้ตอบเยิ่นเย้อ
+                }
+            },
+            stream=True,
+            timeout=(1.0, 3.0)
+        ) as r:
+            if r.status_code != 200:
+                print(f"⚠️ [LLM-FAIL] HTTP Error: {r.status_code}")
+                return None
 
-def query_tax_knowledge(user_question):
+            for line in r.iter_lines():
+                # ตรวจสอบ Hard Deadline ทุกครั้งที่ได้ token
+                if time.monotonic() > deadline:
+                    print(f"⏱️ [LLM-TIMEOUT] เวลาเกิน Deadline ที่กำหนด ตัดการเชื่อมต่อทันที")
+                    return None  # ออกจาก with -> connection ถูก reset ทันที
+
+                if line:
+                    data = json.loads(line)
+                    chunks.append(data.get("response", ""))
+                    if data.get("done"):
+                        break
+
+    except requests.RequestException as e:
+        print(f"⚠️ [LLM-FAIL] Request Exception: {e}")
+        return None
+
+    full_response = "".join(chunks).strip()
+    return full_response if full_response else None
+
+
+def query_tax_knowledge(user_question, deadline=None):
     if _db is None:
         return "ขออภัยครับ ระบบฐานข้อมูลความรู้ภาษียังไม่พร้อมใช้งานในขณะนี้"
 
-    t_start = time.time()
+    # หากไม่ได้ส่ง deadline มา ให้ตั้งเพดานไว้ 3.5 วินาที นับจากฟังก์ชันนี้เริ่ม
+    if deadline is None:
+        deadline = time.monotonic() + 3.5
+
     try:
+        # ค้นหา Top-2 chunks จาก FAISS
         results = _db.similarity_search_with_score(user_question, k=2)
         if not results:
             return "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในฐานข้อมูลภาษีเงินได้บุคคลธรรมดาครับ"
@@ -46,7 +92,7 @@ def query_tax_knowledge(user_question):
         if not valid_chunks:
             return "ขออภัยครับ คำถามนี้อยู่นอกเหนือขอบเขตฐานข้อมูลภาษีเงินได้บุคคลธรรมดาครับ"
 
-        # เตรียมข้อความสำรองดั้งเดิม
+        # ข้อความสำรอง (Fallback) กรณี LLM ตอบไม่ทันหรือขัดข้อง ส่งข้อมูลดิบที่ตัวเลขถูกต้องเสมอ
         fallback = f"📖 ข้อมูลจากฐานข้อมูลภาษี:\n{valid_chunks[0]}"
 
         prompt = f"""คุณคือผู้ช่วยให้ข้อมูลภาษีเงินได้บุคคลธรรมดา ตอบคำถามโดยอ้างอิงจาก [ข้อมูลอ้างอิง] เท่านั้น
@@ -62,22 +108,14 @@ def query_tax_knowledge(user_question):
 คำถาม: {user_question}
 คำตอบ:"""
 
-        try:
-            result = _llm.invoke(prompt)
-            answer = (result.content or "").strip()
-            elapsed = time.time() - t_start
-            print(f"⏱️ [LLM TIME]: {elapsed:.2f} วินาที")
-            print(f"🤖 [LLM RAW OUTPUT]: {answer}")
+        # ส่งเข้า Ollama ภายใต้งบเวลา deadline ที่เหลืออยู่
+        answer = ask_llm(prompt, deadline)
 
-            # ถ้าโมเดลตอบกลับมาและยังไม่เกินเวลา 4 วินาที ให้ใช้คำตอบของ LLM
-            if answer and elapsed < 4.0:
-                return f"📖 {answer}"
-            else:
-                print("⚠️ [TIMEOUT/EMPTY] สลับไปใช้ข้อความสำรองเนื่องจากใช้เวลานานเกินไป")
-                return fallback
-
-        except Exception as e:
-            print(f"⚠️ [LLM-FAIL] {e} — สลับไปใช้ข้อความสำรอง")
+        if answer:
+            print("🤖 [LLM] เรียบเรียงคำตอบสำเร็จ")
+            return f"📖 {answer}"
+        else:
+            print("🔄 [LLM-FALLBACK] ใช้ข้อความสำรองจากฐานข้อมูล FAISS")
             return fallback
 
     except Exception as e:
