@@ -6,7 +6,7 @@ from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory
 
 from utils.firebase_db import firebase_client
-from utils.knowledge_search import query_tax_knowledge
+from utils.knowledge_search import query_tax_knowledge, get_db
 from utils.tax_calculator import (
     clean_number,
     get_rental_expense_rate,
@@ -420,6 +420,9 @@ def webhook():
         })
 
 if __name__ == '__main__':
+    # โหลดโมเดลและ FAISS ล่วงหน้า ไม่งั้นผู้ใช้คนแรกที่ถามความรู้จะรอโหลดจนเกินงบ 5 วินาทีของ Dialogflow
+    get_db()
+
     from pyngrok import ngrok
     ngrok.kill()
     public_url_obj = ngrok.connect(5000)

@@ -11,19 +11,31 @@ from langchain_community.vectorstores import FAISS
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 TAX_DISTANCE_THRESHOLD = 14.0
 
-# 1. โหลด FAISS Vector Store ระดับโมดูล
-print("🧠 [Knowledge Search] กำลังโหลดโมเดล Embeddings และ FAISS Index...")
-_embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-)
+# 1. โหลด FAISS Vector Store เมื่อถูกเรียกครั้งแรก แล้วเก็บไว้ใช้ซ้ำ
+# _db_loaded แยกจาก _db เพื่อจำกรณี "หา index ไม่เจอ" (_db เป็น None) ไว้ด้วย ไม่งั้นจะโหลดโมเดลใหม่ทุกคำถาม
+_db = None
+_db_loaded = False
 
-_index_path = "faiss_tax_index" if os.path.exists("faiss_tax_index") else os.path.join("utils", "faiss_tax_index")
-if os.path.exists(_index_path):
-    _db = FAISS.load_local(_index_path, _embeddings, allow_dangerous_deserialization=True)
-    print("✅ [Knowledge Search] โหลด FAISS Index สำเร็จ พร้อมใช้งาน")
-else:
-    _db = None
-    print("⚠️ [Knowledge Search] ไม่พบโฟลเดอร์ faiss_tax_index")
+
+def get_db():
+    global _db, _db_loaded
+    if _db_loaded:
+        return _db
+
+    print("🧠 [Knowledge Search] กำลังโหลดโมเดล Embeddings และ FAISS Index...")
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+
+    index_path = "faiss_tax_index" if os.path.exists("faiss_tax_index") else os.path.join("utils", "faiss_tax_index")
+    if os.path.exists(index_path):
+        _db = FAISS.load_local(index_path, embeddings, allow_dangerous_deserialization=True)
+        print("✅ [Knowledge Search] โหลด FAISS Index สำเร็จ พร้อมใช้งาน")
+    else:
+        print("⚠️ [Knowledge Search] ไม่พบโฟลเดอร์ faiss_tax_index")
+
+    _db_loaded = True
+    return _db
 
 
 def ask_llm(prompt, deadline):
@@ -75,7 +87,8 @@ def ask_llm(prompt, deadline):
 
 
 def query_tax_knowledge(user_question, deadline=None):
-    if _db is None:
+    db = get_db()
+    if db is None:
         return "ขออภัยครับ ระบบฐานข้อมูลความรู้ภาษียังไม่พร้อมใช้งานในขณะนี้"
 
     # หากไม่ได้ส่ง deadline มา ให้ตั้งเพดานไว้ 3.5 วินาที นับจากฟังก์ชันนี้เริ่ม
@@ -84,7 +97,7 @@ def query_tax_knowledge(user_question, deadline=None):
 
     try:
         # ค้นหา Top-2 chunks จาก FAISS
-        results = _db.similarity_search_with_score(user_question, k=2)
+        results = db.similarity_search_with_score(user_question, k=2)
         if not results:
             return "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในฐานข้อมูลภาษีเงินได้บุคคลธรรมดาครับ"
 
