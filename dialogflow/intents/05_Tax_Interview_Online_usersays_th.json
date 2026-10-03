@@ -1,0 +1,193 @@
+[
+  {
+    "id": "85585265-49b9-4232-be8e-65d39f149de6",
+    "data": [
+      {
+        "text": "ขายของออนไลน์ ",
+        "userDefined": false
+      },
+      {
+        "text": "250000",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "bb24f06f-65de-4668-a8f8-af37e32e6bb0",
+    "data": [
+      {
+        "text": "ยอดขายออนไลน์ ",
+        "userDefined": false
+      },
+      {
+        "text": "250000",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "c935c577-9f1a-4005-91ff-0f87c0380c20",
+    "data": [
+      {
+        "text": "ยอดขาย ",
+        "userDefined": false
+      },
+      {
+        "text": "1.5 ล้าน",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "2999816b-bb91-4009-8f73-8255e8325f4f",
+    "data": [
+      {
+        "text": "รายได้ ",
+        "userDefined": false
+      },
+      {
+        "text": "1.5 ล้าน",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a64bceba-55f7-4ddf-8b7b-29098d57eda3",
+    "data": [
+      {
+        "text": "ปี 2567 รายได้ ",
+        "userDefined": false
+      },
+      {
+        "text": "1.5 ล้าน",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "16dbee03-09b2-43c3-bb1b-9ad9b798fea3",
+    "data": [
+      {
+        "text": "ขายออนไลน์ ",
+        "userDefined": false
+      },
+      {
+        "text": "150000",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "6d22869f-533a-40bd-a0d9-2028e8b4eca7",
+    "data": [
+      {
+        "text": "ขายของได้ ",
+        "userDefined": false
+      },
+      {
+        "text": "300000 บาท",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "32b6d7fc-892b-4dd9-9777-0cbee7fbbee0",
+    "data": [
+      {
+        "text": "ยอดขาย ",
+        "userDefined": false
+      },
+      {
+        "text": "500000",
+        "meta": "@sys.number",
+        "alias": "online_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "9cd32529-5a6f-4b34-9873-19ce21f31e2d",
+    "data": [
+      {
+        "text": "ขายของ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "eed8c2d2-6772-4422-80f9-73ae09e51074",
+    "data": [
+      {
+        "text": "แม่ค้าออนไลน์",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "19bcf5b2-30ee-4388-ab75-73093ca721ba",
+    "data": [
+      {
+        "text": "ขายของออนไลน์",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]

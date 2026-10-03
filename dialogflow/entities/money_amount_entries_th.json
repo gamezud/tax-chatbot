@@ -1,0 +1,38 @@
+[
+  {
+    "value": "@sys.number:value",
+    "synonyms": [
+      "@sys.number:value"
+    ]
+  },
+  {
+    "value": "ไม่มี",
+    "synonyms": [
+      "ไม่มี"
+    ]
+  },
+  {
+    "value": "ไม่ได้รับ",
+    "synonyms": [
+      "ไม่ได้รับ"
+    ]
+  },
+  {
+    "value": "ไม่มีเลย",
+    "synonyms": [
+      "ไม่มีเลย"
+    ]
+  },
+  {
+    "value": "ไม่มีครับ",
+    "synonyms": [
+      "ไม่มีครับ"
+    ]
+  },
+  {
+    "value": "ศูนย์",
+    "synonyms": [
+      "ศูนย์"
+    ]
+  }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "id": "9610fe4c-08fe-489d-a8ae-9386b5521b1b",
+    "data": [
+      {
+        "text": "reset",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "90839998-ba3f-4976-9a3b-ae83942b3cee",
+    "data": [
+      {
+        "text": "ยกเลิก",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "84725c81-e08e-4cd8-a3f8-21b040e6e91a",
+    "data": [
+      {
+        "text": "ล้างข้อมูล",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "740dff39-ebe3-4d5d-8a72-2cfcd2717d39",
+    "data": [
+      {
+        "text": "รีเซ็ต",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4bce36bb-0418-4cb7-9ae2-cb86b49a2b1e",
+    "data": [
+      {
+        "text": "เริ่มใหม่",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]

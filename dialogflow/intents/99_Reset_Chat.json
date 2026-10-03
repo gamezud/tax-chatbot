@@ -1,0 +1,40 @@
+{
+  "id": "accd81da-8a2d-4189-8122-56303ea6f2e3",
+  "name": "99_Reset_Chat",
+  "auto": true,
+  "contexts": [],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [
+        {
+          "name": "tax_session",
+          "lifespan": 0
+        }
+      ],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "speech": [
+            "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ \u0027อยากคำนวณภาษี\u0027 เพื่อเริ่มใหม่ได้เลยครับ!"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

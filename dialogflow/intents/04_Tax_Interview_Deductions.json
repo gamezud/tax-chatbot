@@ -1,0 +1,152 @@
+{
+  "id": "4ec4d0a6-c035-444f-b0f3-c72be18e6091",
+  "name": "04_Tax_Interview_Deductions",
+  "auto": true,
+  "contexts": [
+    "awaiting_deduction"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [
+        {
+          "name": "tax_session",
+          "lifespan": 20
+        }
+      ],
+      "parameters": [
+        {
+          "id": "70a648b4-af8c-43e4-80f5-01f43c584226",
+          "name": "num_children",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$num_children",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "40e38748-ee86-4efa-aa4c-e35ef010a6f0",
+          "name": "life_insurance",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$life_insurance",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "6baa8d83-c52d-4908-94ab-f3238ac75a87",
+          "name": "ssf_rmf",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$ssf_rmf",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "896a32c7-b6c3-44de-8f9e-6e295164e1c8",
+          "name": "spouse",
+          "required": false,
+          "dataType": "@marital_status",
+          "value": "$spouse",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "1c89019c-e211-41d3-86c8-17e81c0ea80c",
+          "name": "num_parents",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$num_parents",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "0ef23197-fd0e-49d5-9c31-f6690bd3cb53",
+          "name": "health_insurance",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$health_insurance",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "2b651493-1890-47af-b080-998deaeb60a4",
+          "name": "home_loan_interest",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$home_loan_interest",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "22f5d449-4ba9-43c2-86b2-d4b8d9888316",
+          "name": "donation",
+          "required": false,
+          "dataType": "@sys.number",
+          "value": "$donation",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

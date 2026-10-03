@@ -1,0 +1,39 @@
+{
+  "id": "d90f6de4-f4e4-4dec-9d47-1f8f94ea5cec",
+  "name": "Welcome",
+  "auto": true,
+  "contexts": [],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "input.welcome",
+      "affectedContexts": [],
+      "parameters": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "speech": [
+            "สวัสดีครับ! ผมคือแชตบอตผู้เชี่ยวชาญด้านภาษี ภาษีไม่ใช่เรื่องยากอีกต่อไป 💡\\n\\nหากต้องการให้ผมช่วยประเมินภาษี พิมพ์คำว่า \u0027อยากคำนวณภาษี\u0027 หรือ \u0027เริ่มสัมภาษณ์\u0027 ได้เลยครับ!"
+          ],
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [
+    {
+      "name": "WELCOME"
+    }
+  ],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

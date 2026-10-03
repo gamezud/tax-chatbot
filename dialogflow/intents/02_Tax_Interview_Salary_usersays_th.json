@@ -1,0 +1,177 @@
+[
+  {
+    "id": "b250ae82-d6bd-43be-a8be-74226f2d5344",
+    "data": [
+      {
+        "text": "30,000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "b9ea050c-a958-4adf-8817-329e44230193",
+    "data": [
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4c8ea258-9454-468d-924e-edcb597093cc",
+    "data": [
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0d517e55-3815-4768-98b2-b92fc5d10bce",
+    "data": [
+      {
+        "text": "เงินเดือน ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      },
+      {
+        "text": " โบนัส ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@money_amount",
+        "alias": "bonus",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f606b5a7-7e8f-42d6-be95-9f37716ce20a",
+    "data": [
+      {
+        "text": "มีเงินเดือนครับ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "c8e6e23c-14fe-4804-a86f-35e1d00eb969",
+    "data": [
+      {
+        "text": "ได้เงินเดือน ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7a87606c-c925-43e6-bd96-761bf3244c82",
+    "data": [
+      {
+        "text": "เงินเดือน ",
+        "userDefined": false
+      },
+      {
+        "text": "45000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "ad78e20e-6da0-403a-9660-27614e467611",
+    "data": [
+      {
+        "text": "รับอยู่ ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      },
+      {
+        "text": " บาทครับ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "962dd2ef-bdf0-4d43-82a4-789c7629cd37",
+    "data": [
+      {
+        "text": "เดือนละ ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "salary_per_month",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]

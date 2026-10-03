@@ -1,0 +1,185 @@
+[
+  {
+    "id": "0e8549f3-c26d-4777-94e3-1700f5454c5e",
+    "data": [
+      {
+        "text": "เช่ารถยนต์",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": false
+      },
+      {
+        "text": " ค่าเช่า ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "rental_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "85ddebca-7743-41cd-a40e-760ca57ad85a",
+    "data": [
+      {
+        "text": "ปล่อยเช่า",
+        "userDefined": false
+      },
+      {
+        "text": "ยานพาหนะ",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": true
+      },
+      {
+        "text": " ค่าเช่า ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "rental_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "758d90d5-cd8b-4412-9b71-724446a5deb4",
+    "data": [
+      {
+        "text": "ที่ดิน",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d31177cd-7ce3-43df-a67e-28cd8cf39181",
+    "data": [
+      {
+        "text": "ปล่อยเช่า",
+        "userDefined": false
+      },
+      {
+        "text": "บ้าน",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a1fdbf08-07df-4ab5-8e9d-db154980fe3b",
+    "data": [
+      {
+        "text": "คอนโด",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "927f7c59-0395-4970-bde5-f36751216f74",
+    "data": [
+      {
+        "text": "ปล่อยเช่า",
+        "userDefined": false
+      },
+      {
+        "text": "คอนโด",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": true
+      },
+      {
+        "text": "ปีละ ",
+        "userDefined": false
+      },
+      {
+        "text": "120000",
+        "meta": "@sys.number",
+        "alias": "rental_income",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "64a02c61-2a46-48c3-b2f7-0c99b1f144fc",
+    "data": [
+      {
+        "text": "มีค่าเช่า",
+        "userDefined": false
+      },
+      {
+        "text": "บ้าน",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "206d58ac-f019-483f-9ba5-5bc8720f6db1",
+    "data": [
+      {
+        "text": "ปล่อยเช่า",
+        "userDefined": false
+      },
+      {
+        "text": "คอนโด",
+        "meta": "@PropertyType",
+        "alias": "property_type",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d0363392-b1af-4122-8f3e-c0da82ca384c",
+    "data": [
+      {
+        "text": "มีรายได้ค่าเช่าครับ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]

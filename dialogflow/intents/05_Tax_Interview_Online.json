@@ -1,0 +1,59 @@
+{
+  "id": "ab60c650-bc84-4edb-8d14-b247e290f019",
+  "name": "05_Tax_Interview_Online",
+  "auto": true,
+  "contexts": [
+    "awaiting_online"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [
+        {
+          "name": "tax_session",
+          "lifespan": 20
+        }
+      ],
+      "parameters": [
+        {
+          "id": "ff805367-7fa2-47e7-8f92-f585ff850acd",
+          "name": "online_income",
+          "required": true,
+          "dataType": "@sys.number",
+          "value": "$online_income",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "รายได้จากการขายของออนไลน์ตลอดทั้งปีประมาณเท่าไหร่ครับ?"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

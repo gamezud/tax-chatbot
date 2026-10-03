@@ -1,0 +1,9 @@
+{
+  "id": "c7d12ee0-bd0b-433a-b0a4-9198746916f8",
+  "name": "money_amount",
+  "isOverridable": true,
+  "isEnum": true,
+  "isRegexp": false,
+  "automatedExpansion": false,
+  "allowFuzzyExtraction": false
+}

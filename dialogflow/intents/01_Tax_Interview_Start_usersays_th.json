@@ -1,0 +1,170 @@
+[
+  {
+    "id": "e21310c3-d491-4af4-81dd-0450cf19d080",
+    "data": [
+      {
+        "text": "มีรายได้จากการ",
+        "userDefined": false
+      },
+      {
+        "text": "ขายของออนไลน์",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "ce695fc5-c671-4174-85dd-5130e424ad9f",
+    "data": [
+      {
+        "text": "มีรายได้จาก",
+        "userDefined": false
+      },
+      {
+        "text": "ค่าเช่า",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      },
+      {
+        "text": "ครับ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d424b7eb-849b-4032-947e-bd27ffc6b48d",
+    "data": [
+      {
+        "text": "ฟรีแลนซ์",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      },
+      {
+        "text": "และ",
+        "userDefined": false
+      },
+      {
+        "text": "ปล่อยเช่าบ้าน",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "ddf7475e-1d8e-4707-8ef9-f874e9d39750",
+    "data": [
+      {
+        "text": "มีรายได้จาก",
+        "userDefined": false
+      },
+      {
+        "text": "เงินเดือน",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      },
+      {
+        "text": "กับ",
+        "userDefined": false
+      },
+      {
+        "text": "ขายของ",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "c9fcaeb0-a329-46f1-848f-e17033f72101",
+    "data": [
+      {
+        "text": "มี",
+        "userDefined": false
+      },
+      {
+        "text": "เงินเดือน",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      },
+      {
+        "text": " และ ",
+        "userDefined": false
+      },
+      {
+        "text": "ปล่อยเช่าคอนโด",
+        "meta": "@sys.any",
+        "alias": "income_types",
+        "userDefined": true
+      },
+      {
+        "text": "ครับ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "43829147-00a3-4cb7-b544-efbc0b8367e0",
+    "data": [
+      {
+        "text": "เริ่มสัมภาษณ์ภาษี",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a47f3509-de44-442d-af0b-800b7d21065e",
+    "data": [
+      {
+        "text": "ช่วยประเมินภาษีหน่อย",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "cb861b36-3e44-476a-8fa0-98b4cb02c9fd",
+    "data": [
+      {
+        "text": "อยากคำนวณภาษี",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]

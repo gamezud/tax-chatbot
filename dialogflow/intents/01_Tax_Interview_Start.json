@@ -1,0 +1,57 @@
+{
+  "id": "5329ddd3-0506-4326-be56-ff0f1b32a178",
+  "name": "01_Tax_Interview_Start",
+  "auto": true,
+  "contexts": [],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [
+        {
+          "name": "tax_session",
+          "lifespan": 20
+        }
+      ],
+      "parameters": [
+        {
+          "id": "33b6dc7c-2627-4923-8d82-55c5495d348d",
+          "name": "income_types",
+          "required": true,
+          "dataType": "@sys.any",
+          "value": "$income_types",
+          "defaultValue": "",
+          "isList": true,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "คุณมีรายได้ประเภทใดบ้างในปีนี้ (เลือกได้หลายข้อ พิมพ์บอกมาได้เลยครับ เช่น เงินเดือน, งานอิสระ, ค่าเช่า, ขายของ, ปันผล)"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

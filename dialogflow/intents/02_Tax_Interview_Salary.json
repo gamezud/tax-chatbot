@@ -1,0 +1,116 @@
+{
+  "id": "7af72180-f402-4bd2-af7b-02eef33ee4fe",
+  "name": "02_Tax_Interview_Salary",
+  "auto": true,
+  "contexts": [
+    "awaiting_salary"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [
+        {
+          "name": "tax_session",
+          "lifespan": 20
+        }
+      ],
+      "parameters": [
+        {
+          "id": "f9cc451c-9c87-456f-84df-f537e558208f",
+          "name": "salary_per_month",
+          "required": true,
+          "dataType": "@sys.number",
+          "value": "$salary_per_month",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "เงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ? (เผื่อบอตจับเลขไม่ได้ให้มันถามซ้ำ)"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "cd1b91c5-b4cc-4772-a3f6-9009ce00dd55",
+          "name": "bonus",
+          "required": true,
+          "dataType": "@money_amount",
+          "value": "$bonus",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "มีโบนัสไหมครับ รวมทั้งปีประมาณเท่าไหร่ (ถ้าไม่มีพิมพ์ 0 ได้เลยครับ) 💰"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "65747e2f-fb7d-4bab-a9d4-e3c7cbdaef41",
+          "name": "social_security",
+          "required": true,
+          "dataType": "@money_amount",
+          "value": "$social_security",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "โดนหักประกันสังคมเดือนละเท่าไหร่ครับ (เช่น 750) ถ้าไม่หักพิมพ์ 0 ครับ 🏥"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "7a724efd-9c61-45a3-9f70-87fa39f433a1",
+          "name": "withholding_tax",
+          "required": true,
+          "dataType": "@money_amount",
+          "value": "$withholding_tax",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "บริษัทมีหักภาษี ณ ที่จ่ายไว้ไหมครับ ทั้งปีรวมเป็นเงินเท่าไหร่ (ไม่มีพิมพ์ 0 ครับ) 📄"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

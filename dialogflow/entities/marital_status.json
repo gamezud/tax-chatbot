@@ -1,0 +1,9 @@
+{
+  "id": "9778a4ca-8d2a-456c-90ff-ec533323212f",
+  "name": "marital_status",
+  "isOverridable": true,
+  "isEnum": false,
+  "isRegexp": false,
+  "automatedExpansion": false,
+  "allowFuzzyExtraction": false
+}

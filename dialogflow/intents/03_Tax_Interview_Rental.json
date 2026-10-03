@@ -1,0 +1,78 @@
+{
+  "id": "f7e6585b-6485-44c7-8fd6-1b027eeb2ec1",
+  "name": "03_Tax_Interview_Rental",
+  "auto": true,
+  "contexts": [
+    "awaiting_rental"
+  ],
+  "responses": [
+    {
+      "resetContexts": false,
+      "action": "",
+      "affectedContexts": [
+        {
+          "name": "tax_session",
+          "lifespan": 20
+        }
+      ],
+      "parameters": [
+        {
+          "id": "e6817c28-7a48-47dd-8e74-0c71bee27b1f",
+          "name": "property_type",
+          "required": true,
+          "dataType": "@PropertyType",
+          "value": "$property_type",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "ปล่อยเช่าทรัพย์ประเภทอะไรครับ (เช่น บ้าน, คอนโด, ที่ดิน)?"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        },
+        {
+          "id": "32b40f19-2433-4498-b197-367e67b65a4e",
+          "name": "rental_income",
+          "required": true,
+          "dataType": "@sys.number",
+          "value": "$rental_income",
+          "defaultValue": "",
+          "isList": false,
+          "prompts": [
+            {
+              "lang": "th",
+              "value": "รายได้ค่าเช่ารวมทั้งปีประมาณเท่าไหร่ครับ?"
+            }
+          ],
+          "promptMessages": [],
+          "noMatchPromptMessages": [],
+          "noInputPromptMessages": [],
+          "outputDialogContexts": []
+        }
+      ],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "condition": ""
+        }
+      ],
+      "speech": []
+    }
+  ],
+  "priority": 500000,
+  "webhookUsed": true,
+  "webhookForSlotFilling": false,
+  "fallbackIntent": false,
+  "events": [],
+  "conditionalResponses": [],
+  "condition": "",
+  "conditionalFollowupEvents": []
+}

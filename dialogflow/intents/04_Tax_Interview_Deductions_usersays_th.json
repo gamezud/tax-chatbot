@@ -1,0 +1,716 @@
+[
+  {
+    "id": "a774bf2e-0990-47d0-9ec4-f402f93c5132",
+    "data": [
+      {
+        "text": "มีคู่สมรส",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "2fc13b14-d8c1-4786-9d69-6a45f5d874e2",
+    "data": [
+      {
+        "text": "ไม่มีคู่สมรส",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": false
+      },
+      {
+        "text": " ลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 1,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "49752bfe-d236-46b7-9883-645002a1adfe",
+    "data": [
+      {
+        "text": "โสด",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": true
+      },
+      {
+        "text": " ลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "25000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "3b0e0be2-9fa3-426c-93ae-43678720a9fe",
+    "data": [
+      {
+        "text": "มีคู่สมรส",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": true
+      },
+      {
+        "text": " ลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 1,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "dce74536-ed04-4a40-83c3-3281e278e275",
+    "data": [
+      {
+        "text": "ไม่มี",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "756653d2-60b5-4a97-a86a-9666b0729f5e",
+    "data": [
+      {
+        "text": "มีคู่สมรส",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": true
+      },
+      {
+        "text": " ลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "25000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "8d8ecc2c-90fe-4287-b0af-93bf443e2ee3",
+    "data": [
+      {
+        "text": "ลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "50dc5caf-39cd-4245-b05f-604be5ab82e0",
+    "data": [
+      {
+        "text": "มีลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0269ee56-420c-4811-ba43-48da7232314b",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "25000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ซื้อ SSF ",
+        "userDefined": false
+      },
+      {
+        "text": "250000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "944c2b65-c92c-4621-8252-4074ee2ba23d",
+    "data": [
+      {
+        "text": "มีคู่สมรส",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d333a25c-1f2b-45c1-b6a8-b885558587ea",
+    "data": [
+      {
+        "text": "เลี้ยงดูพ่อแม่ ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "9e7951c7-3bce-48e7-95a7-c902fcb10d21",
+    "data": [
+      {
+        "text": "ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "778140eb-9b9f-4c21-8180-e49ef85fde46",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "50,000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "43b20789-db73-470a-b09a-cd9661676d22",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "120ab7f6-8482-4203-b986-bd25f49113b2",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "90000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "25000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "65f69f11-b300-4f31-84cd-915d996f19e0",
+    "data": [
+      {
+        "text": "มีคู่สมรส",
+        "meta": "@marital_status",
+        "alias": "spouse",
+        "userDefined": true
+      },
+      {
+        "text": " บุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน เลี้ยงดูพ่อแม่ ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a0d43763-8193-49f0-9ef5-d076683f1f65",
+    "data": [
+      {
+        "text": "มีลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "3cca725c-09fa-4353-8a12-8fbb00456af7",
+    "data": [
+      {
+        "text": "ลดหย่อน ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7c073994-b001-4709-aa27-2509dbdf42fb",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " SSF ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4cf75796-1bf9-415b-917e-7985cbd04d3a",
+    "data": [
+      {
+        "text": "มีประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "300000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " และ SSF ",
+        "userDefined": false
+      },
+      {
+        "text": "500000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0b870f3f-7995-4ff8-ba2c-8d8cf92fbbb8",
+    "data": [
+      {
+        "text": "มี RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f908f519-5cbf-4f91-bc59-25e545e090f4",
+    "data": [
+      {
+        "text": "ลดหย่อน ssf ",
+        "userDefined": false
+      },
+      {
+        "text": "15000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d2a7ecd6-b028-4a5b-ac03-237d8918b0ce",
+    "data": [
+      {
+        "text": "ซื้อประกัน ",
+        "userDefined": false
+      },
+      {
+        "text": "15000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "72c51ccf-ad55-40d8-ae78-478cda225ab0",
+    "data": [
+      {
+        "text": "มีประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "752e4786-ed6e-42f6-a25b-34b13cddf91c",
+    "data": [
+      {
+        "text": "ซื้อประกันไว้ ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 1,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a5f05533-09e3-4048-a4f8-360c685b60a9",
+    "data": [
+      {
+        "text": "ไม่มีค่าลดหย่อนครับ",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "25821145-d3bc-4f45-b090-b40a20994125",
+    "data": [
+      {
+        "text": "ซื้อ SSF ไว้ ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0d30573d-5588-44d8-81c0-98678b1a829b",
+    "data": [
+      {
+        "text": "มีลูก ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": true
+      },
+      {
+        "text": " คน และซื้อประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": true
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]
