@@ -196,7 +196,12 @@ def test_deductions_all_items_full():
 
 
 def test_current_behavior_spouse_as_list_not_counted():
-    # ถ้า Dialogflow ส่ง spouse เป็น list, str(['yes']) ≠ 'yes' จึงไม่ได้ลดหย่อนคู่สมรส
+    """ถ้า spouse เป็น list, str(['yes']) ≠ 'yes' จึงไม่ได้ลดหย่อนคู่สมรส
+
+    #12 ปิดแล้ว: บน Console spouse ตั้ง isList=false จึงไม่มาเป็น list ในทางปฏิบัติ
+    กรณีนี้ถูกกันไว้ด้วย test_spouse_is_not_list ใน tests/test_dialogflow_export.py
+    เทสนี้เก็บไว้เพื่อบันทึกว่าโค้ดเองไม่รองรับ list ถ้าวันหนึ่งการตั้งค่าเปลี่ยน
+    """
     assert calculate_detailed_deductions(0, {'spouse': ['yes']}) == pytest.approx(
         (PERSONAL, 0.0, 0.0))
 
