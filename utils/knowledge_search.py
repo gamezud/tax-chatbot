@@ -5,7 +5,10 @@ import requests
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+# ใช้ 127.0.0.1 แทน localhost: บน Windows ชื่อ localhost จะลอง IPv6 (::1) ก่อน
+# แต่ Ollama รับแค่ IPv4 จึงเสียเวลาราว 2 วินาทีก่อนถอยไปใช้ 127.0.0.1 ซึ่งเกิน connect timeout (1.0 วินาที)
+# วัดจริง: GET /api/tags ผ่าน localhost = 2.05 วินาที, ผ่าน 127.0.0.1 = 0.005 วินาที
+OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 TAX_DISTANCE_THRESHOLD = 14.0
 
 # 1. โหลด FAISS Vector Store ระดับโมดูล

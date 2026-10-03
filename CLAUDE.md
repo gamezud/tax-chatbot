@@ -249,7 +249,7 @@ pytest -v
 | Python | 3.13 ใน `.venv` / รายการ package อยู่ใน `requirements.txt` |
 | ngrok | เปิดผ่าน `pyngrok` ใน `app.py` / authtoken อยู่ในไฟล์ตั้งค่าของ ngrok ไม่ได้อยู่ในโค้ด |
 | ไฟล์ลับ | `firebase_key.json` ที่ root ถูกกันไว้ใน `.gitignore` — **ห้ามเปิดอ่าน ห้าม commit** |
-| LLM | `llama3.2:3b` ผ่าน Ollama ที่ `http://localhost:11434` |
+| LLM | `llama3.2:3b` ผ่าน Ollama ที่ `http://127.0.0.1:11434` — **ห้ามเปลี่ยนกลับเป็น `localhost`** บน Windows จะลอง IPv6 ก่อน เสียเวลาราว 2 วินาที เกิน connect timeout ทำให้ LLM timeout ทุกครั้ง |
 | Embedding | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` |
 
 ---
