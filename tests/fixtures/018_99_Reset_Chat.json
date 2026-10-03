@@ -1,0 +1,82 @@
+{
+  "responseId": "65fe84f2-439d-4e1a-a90c-bedf92bf3765-43641848",
+  "queryResult": {
+    "queryText": "รีเซ็ต",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "fulfillmentText": "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!",
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!"
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "parameters": {
+          "income_types": [
+            "เงินเดือน"
+          ],
+          "income_types.original": [
+            "เงินเดือน"
+          ],
+          "salary_per_month": 50000.0,
+          "salary_per_month.original": "50000",
+          "bonus": {
+            "value": 0.0
+          },
+          "bonus.original": "0",
+          "social_security": {
+            "value": 9000.0
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 0.0
+          },
+          "withholding_tax.original": "0"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_deduction",
+        "lifespanCount": 1
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/accd81da-8a2d-4189-8122-56303ea6f2e3",
+      "displayName": "99_Reset_Chat"
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "message": {
+          "id": "634506926390771815",
+          "text": "รีเซ็ต",
+          "type": "text"
+        },
+        "timestamp": "1791026903559",
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "replyToken": "70248765439c4cb3881c7e42c9161cf3",
+        "type": "message"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

@@ -1,0 +1,46 @@
+{
+  "responseId": "8b57cdd2-6ef9-49b0-877a-087fc4967311-43641848",
+  "queryResult": {
+    "queryText": "30000",
+    "action": "input.unknown",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 1.0
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/ee9ea3b5-698c-498d-a262-febd0f49890c",
+      "displayName": "Default Fallback Intent",
+      "isFallback": true
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "type": "message",
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "replyToken": "60a5ae9724234e1599580b97ca4562c5",
+        "message": {
+          "text": "30000",
+          "id": "634506865187487847",
+          "type": "text"
+        },
+        "timestamp": "1791026867079"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

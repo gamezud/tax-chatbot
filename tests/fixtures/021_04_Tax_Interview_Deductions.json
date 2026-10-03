@@ -1,0 +1,141 @@
+{
+  "responseId": "ae89ec2a-9d1a-4cd0-b131-85b20a533d9f-43641848",
+  "queryResult": {
+    "queryText": "ไม่มี",
+    "parameters": {
+      "num_children": "",
+      "life_insurance": "",
+      "ssf_rmf": "",
+      "spouse": "",
+      "num_parents": "",
+      "health_insurance": "",
+      "home_loan_interest": "",
+      "donation": ""
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "เงินเดือน"
+          ],
+          "income_types.original": [
+            "เงินเดือน"
+          ],
+          "salary_per_month": 30000.0,
+          "salary_per_month.original": "30000",
+          "bonus": {
+            "value": 0.0
+          },
+          "bonus.original": "0",
+          "social_security": {
+            "value": 9000.0
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 0.0
+          },
+          "withholding_tax.original": "0",
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "spouse": "",
+          "spouse.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_deduction",
+        "lifespanCount": 1,
+        "parameters": {
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "spouse": "",
+          "spouse.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "spouse": "",
+          "spouse.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/4ec4d0a6-c035-444f-b0f3-c72be18e6091",
+      "displayName": "04_Tax_Interview_Deductions"
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "message": {
+          "text": "ไม่มี",
+          "id": "634506971437072581",
+          "type": "text"
+        },
+        "replyToken": "b1f486a8f13f49359f4e6a1768924113",
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "type": "message",
+        "timestamp": "1791026930503"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}
