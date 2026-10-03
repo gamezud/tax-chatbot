@@ -1,0 +1,62 @@
+{
+  "responseId": "781493a8-a8da-4c34-84b3-5aedd63c4766-43641848",
+  "queryResult": {
+    "queryText": "50000",
+    "action": "input.unknown",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 2.0,
+          "spouse": "yes",
+          "spouse.original": "มีคู่สมรส",
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/ee9ea3b5-698c-498d-a262-febd0f49890c",
+      "displayName": "Default Fallback Intent",
+      "isFallback": true
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "replyToken": "ebfa5c59c082488e982f966ea1411e4b",
+        "type": "message",
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "timestamp": "1791025596281",
+        "message": {
+          "text": "50000",
+          "type": "text",
+          "id": "634504733138878703"
+        }
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

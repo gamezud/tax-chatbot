@@ -1,0 +1,46 @@
+{
+  "responseId": "e1d404ba-6e82-4059-910a-9c22b2f74cfe-43641848",
+  "queryResult": {
+    "queryText": "ดูประวัติ",
+    "action": "input.unknown",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 1.0
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/ee9ea3b5-698c-498d-a262-febd0f49890c",
+      "displayName": "Default Fallback Intent",
+      "isFallback": true
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "type": "message",
+        "timestamp": "1791025325285",
+        "message": {
+          "text": "ดูประวัติ",
+          "type": "text",
+          "id": "634504278324805668"
+        },
+        "replyToken": "7d751f1708554fa383066e71608ba930"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

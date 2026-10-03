@@ -1,0 +1,91 @@
+{
+  "responseId": "69ebdace-2612-459b-8545-860ea0c60079-43641848",
+  "queryResult": {
+    "queryText": "400000",
+    "action": "input.unknown",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 19,
+        "parameters": {
+          "income_types": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "salary_per_month": 30000.0,
+          "salary_per_month.original": "30000",
+          "bonus": {
+            "value": 0.0
+          },
+          "bonus.original": "0",
+          "social_security": {
+            "value": 9000.0
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 0.0
+          },
+          "withholding_tax.original": "0",
+          "property_type": "คอนโด",
+          "property_type.original": "คอนโด",
+          "rental_income": 120000.0,
+          "rental_income.original": "120000"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_online",
+        "lifespanCount": 1
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_rental",
+        "parameters": {
+          "property_type": "คอนโด",
+          "property_type.original": "คอนโด",
+          "rental_income": 120000.0,
+          "rental_income.original": "120000"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 1.0
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/ee9ea3b5-698c-498d-a262-febd0f49890c",
+      "displayName": "Default Fallback Intent",
+      "isFallback": true
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "type": "message",
+        "replyToken": "f65ef86252de421590fccdbb70f31cc1",
+        "message": {
+          "type": "text",
+          "id": "634504602763133626",
+          "text": "400000"
+        },
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "timestamp": "1791025518576"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

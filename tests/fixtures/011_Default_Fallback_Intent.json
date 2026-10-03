@@ -1,0 +1,62 @@
+{
+  "responseId": "e754eded-52cf-4dd3-86a9-e58bac020060-43641848",
+  "queryResult": {
+    "queryText": "ลดหย่อนบุตรได้เท่าไหร่",
+    "action": "input.unknown",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 1.0,
+          "spouse": "yes",
+          "spouse.original": "มีคู่สมรส",
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/ee9ea3b5-698c-498d-a262-febd0f49890c",
+      "displayName": "Default Fallback Intent",
+      "isFallback": true
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "message": {
+          "type": "text",
+          "text": "ลดหย่อนบุตรได้เท่าไหร่",
+          "id": "634504715438129625"
+        },
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "type": "message",
+        "replyToken": "dc761b5cf9a4424db0db068b5af66585",
+        "timestamp": "1791025585776"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

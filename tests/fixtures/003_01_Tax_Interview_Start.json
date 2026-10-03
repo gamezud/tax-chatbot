@@ -1,0 +1,74 @@
+{
+  "responseId": "0ba2d2ae-2a03-4b11-9fb8-85568ff57e8e-43641848",
+  "queryResult": {
+    "queryText": "เงินเดือน",
+    "parameters": {
+      "income_types": [
+        "เงินเดือน"
+      ]
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "เงินเดือน"
+          ],
+          "income_types.original": [
+            "เงินเดือน"
+          ]
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "income_types": [
+            "เงินเดือน"
+          ],
+          "income_types.original": [
+            "เงินเดือน"
+          ]
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/5329ddd3-0506-4326-be56-ff0f1b32a178",
+      "displayName": "01_Tax_Interview_Start"
+    },
+    "intentDetectionConfidence": 0.6,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "message": {
+          "text": "เงินเดือน",
+          "id": "634504457220522190",
+          "type": "text"
+        },
+        "replyToken": "97369c78931c42c09a06532cc7403b30",
+        "timestamp": "1791025431834",
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "type": "message"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

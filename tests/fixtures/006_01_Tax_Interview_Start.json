@@ -1,0 +1,79 @@
+{
+  "responseId": "e7fd5042-6e6b-4f70-b01b-15685bf2ecf0-43641848",
+  "queryResult": {
+    "queryText": "เงินเดือน ค่าเช่า และขายของออนไลน์",
+    "parameters": {
+      "income_types": [
+        "ค่าเช่า",
+        "ขายของออนไลน์"
+      ]
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ]
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "income_types": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ]
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/5329ddd3-0506-4326-be56-ff0f1b32a178",
+      "displayName": "01_Tax_Interview_Start"
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "type": "message",
+        "timestamp": "1791025485435",
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "message": {
+          "id": "634504547163439666",
+          "text": "เงินเดือน ค่าเช่า และขายของออนไลน์",
+          "type": "text"
+        },
+        "replyToken": "8c348440f93745f69333766a61455d4e"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

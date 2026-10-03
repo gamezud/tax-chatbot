@@ -1,0 +1,101 @@
+{
+  "responseId": "e53ae37c-8118-4f44-abce-02c030f45c2f-43641848",
+  "queryResult": {
+    "queryText": "คอนโด 120000",
+    "parameters": {
+      "property_type": "คอนโด",
+      "rental_income": 120000.0
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "salary_per_month": 30000.0,
+          "salary_per_month.original": "30000",
+          "bonus": {
+            "value": 0.0
+          },
+          "bonus.original": "0",
+          "social_security": {
+            "value": 9000.0
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 0.0
+          },
+          "withholding_tax.original": "0",
+          "property_type": "คอนโด",
+          "property_type.original": "คอนโด",
+          "rental_income": 120000.0,
+          "rental_income.original": "120000"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_rental",
+        "lifespanCount": 1,
+        "parameters": {
+          "property_type": "คอนโด",
+          "property_type.original": "คอนโด",
+          "rental_income": 120000.0,
+          "rental_income.original": "120000"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "property_type": "คอนโด",
+          "property_type.original": "คอนโด",
+          "rental_income": 120000.0,
+          "rental_income.original": "120000"
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/f7e6585b-6485-44c7-8fd6-1b027eeb2ec1",
+      "displayName": "03_Tax_Interview_Rental"
+    },
+    "intentDetectionConfidence": 0.7186829,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "message": {
+          "text": "คอนโด 120000",
+          "id": "634504589492355498",
+          "type": "text"
+        },
+        "timestamp": "1791025510664",
+        "type": "message",
+        "replyToken": "21113fced4534ff9aa47d89bfeb9c7da"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

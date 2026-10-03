@@ -1,0 +1,149 @@
+{
+  "responseId": "d388488b-4899-4e1b-888b-108f1d8d954a-43641848",
+  "queryResult": {
+    "queryText": "มีคู่สมรสไม่มีเงินได้",
+    "parameters": {
+      "spouse": "yes",
+      "num_children": "",
+      "life_insurance": "",
+      "ssf_rmf": "",
+      "num_parents": "",
+      "health_insurance": "",
+      "home_loan_interest": "",
+      "donation": ""
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ค่าเช่า",
+            "ขายของออนไลน์"
+          ],
+          "salary_per_month": 30000.0,
+          "salary_per_month.original": "30000",
+          "bonus": {
+            "value": 0.0
+          },
+          "bonus.original": "0",
+          "social_security": {
+            "value": 9000.0
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 0.0
+          },
+          "withholding_tax.original": "0",
+          "property_type": "คอนโด",
+          "property_type.original": "คอนโด",
+          "rental_income": 120000.0,
+          "rental_income.original": "120000",
+          "online_income": 400000.0,
+          "spouse": "yes",
+          "spouse.original": "มีคู่สมรส",
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_deduction",
+        "lifespanCount": 1,
+        "parameters": {
+          "spouse": "yes",
+          "spouse.original": "มีคู่สมรส",
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "spouse": "yes",
+          "spouse.original": "มีคู่สมรส",
+          "num_children": "",
+          "num_children.original": "",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "home_loan_interest": "",
+          "home_loan_interest.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/4ec4d0a6-c035-444f-b0f3-c72be18e6091",
+      "displayName": "04_Tax_Interview_Deductions"
+    },
+    "intentDetectionConfidence": 0.73347247,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "type": "message",
+        "source": {
+          "type": "user",
+          "userId": "TEST_USER"
+        },
+        "replyToken": "9a6e054ccfcc4c6184272b19c612ae0e",
+        "timestamp": "1791025534481",
+        "message": {
+          "type": "text",
+          "id": "634504629455683841",
+          "text": "มีคู่สมรสไม่มีเงินได้"
+        }
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

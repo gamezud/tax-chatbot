@@ -1,0 +1,54 @@
+{
+  "responseId": "73267744-98d5-40fb-940b-ac3ee43aeaa0-43641848",
+  "queryResult": {
+    "queryText": "สวัสดี",
+    "action": "input.welcome",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "fulfillmentText": "สวัสดีครับ! ผมคือแชตบอตผู้เชี่ยวชาญด้านภาษี ภาษีไม่ใช่เรื่องยากอีกต่อไป 💡\\n\\nหากต้องการให้ผมช่วยประเมินภาษี พิมพ์คำว่า 'อยากคำนวณภาษี' หรือ 'เริ่มสัมภาษณ์' ได้เลยครับ!",
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            "สวัสดีครับ! ผมคือแชตบอตผู้เชี่ยวชาญด้านภาษี ภาษีไม่ใช่เรื่องยากอีกต่อไป 💡\\n\\nหากต้องการให้ผมช่วยประเมินภาษี พิมพ์คำว่า 'อยากคำนวณภาษี' หรือ 'เริ่มสัมภาษณ์' ได้เลยครับ!"
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/d90f6de4-f4e4-4dec-9d47-1f8f94ea5cec",
+      "displayName": "Welcome"
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "message": {
+          "text": "สวัสดี",
+          "id": "634504247388143855",
+          "type": "text"
+        },
+        "timestamp": "1791025306751",
+        "type": "message",
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "replyToken": "0d1bb56ef780435eb5d8b5d4ed604488"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

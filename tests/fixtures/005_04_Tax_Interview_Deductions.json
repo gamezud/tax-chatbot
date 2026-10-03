@@ -1,0 +1,141 @@
+{
+  "responseId": "1c695139-fd81-4dfb-b7a2-8e86c5a4580f-43641848",
+  "queryResult": {
+    "queryText": "มีลูก 1 คน ดอกเบี้ยบ้าน 20000",
+    "parameters": {
+      "num_children": 1.0,
+      "home_loan_interest": 20000.0,
+      "life_insurance": "",
+      "ssf_rmf": "",
+      "spouse": "",
+      "num_parents": "",
+      "health_insurance": "",
+      "donation": ""
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "เงินเดือน"
+          ],
+          "income_types.original": [
+            "เงินเดือน"
+          ],
+          "salary_per_month": 50000.0,
+          "salary_per_month.original": "50000",
+          "bonus": {
+            "value": 50000.0
+          },
+          "bonus.original": "50000",
+          "social_security": {
+            "value": 9000.0
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 12000.0
+          },
+          "withholding_tax.original": "12000",
+          "num_children": 1.0,
+          "num_children.original": "1",
+          "home_loan_interest": 20000.0,
+          "home_loan_interest.original": "20000",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "spouse": "",
+          "spouse.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_deduction",
+        "lifespanCount": 1,
+        "parameters": {
+          "num_children": 1.0,
+          "num_children.original": "1",
+          "home_loan_interest": 20000.0,
+          "home_loan_interest.original": "20000",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "spouse": "",
+          "spouse.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "num_children": 1.0,
+          "num_children.original": "1",
+          "home_loan_interest": 20000.0,
+          "home_loan_interest.original": "20000",
+          "life_insurance": "",
+          "life_insurance.original": "",
+          "ssf_rmf": "",
+          "ssf_rmf.original": "",
+          "spouse": "",
+          "spouse.original": "",
+          "num_parents": "",
+          "num_parents.original": "",
+          "health_insurance": "",
+          "health_insurance.original": "",
+          "donation": "",
+          "donation.original": ""
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/4ec4d0a6-c035-444f-b0f3-c72be18e6091",
+      "displayName": "04_Tax_Interview_Deductions"
+    },
+    "intentDetectionConfidence": 0.74924785,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "timestamp": "1791025463621",
+        "type": "message",
+        "message": {
+          "text": "มีลูก 1 คน ดอกเบี้ยบ้าน 20000",
+          "type": "text",
+          "id": "634504510386995408"
+        },
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "replyToken": "7056176187a74fa8b64234eae910638e"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

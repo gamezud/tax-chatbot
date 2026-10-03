@@ -1,0 +1,132 @@
+{
+  "responseId": "ceafdae6-3007-4a46-aad6-8247dcc5093d-43641848",
+  "queryResult": {
+    "queryText": "12000",
+    "parameters": {
+      "salary_per_month": 50000.0,
+      "bonus": {
+        "value": 50000.0
+      },
+      "social_security": {
+        "value": 9000.0
+      },
+      "withholding_tax": {
+        "value": 12000.0
+      }
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            ""
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "เงินเดือน"
+          ],
+          "income_types.original": [
+            "เงินเดือน"
+          ],
+          "salary_per_month": 50000.0,
+          "salary_per_month.original": "50000",
+          "bonus": {
+            "value": 50000.0,
+            "value.original": "50000"
+          },
+          "bonus.original": "50000",
+          "social_security": {
+            "value": 9000.0,
+            "value.original": "9000"
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 12000.0,
+            "value.original": "12000"
+          },
+          "withholding_tax.original": "12000"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_salary",
+        "lifespanCount": 1,
+        "parameters": {
+          "salary_per_month": 50000.0,
+          "salary_per_month.original": "50000",
+          "bonus": {
+            "value": 50000.0,
+            "value.original": "50000"
+          },
+          "bonus.original": "50000",
+          "social_security": {
+            "value": 9000.0,
+            "value.original": "9000"
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 12000.0,
+            "value.original": "12000"
+          },
+          "withholding_tax.original": "12000"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0.0,
+          "no-match": 0.0,
+          "salary_per_month": 50000.0,
+          "salary_per_month.original": "50000",
+          "bonus": {
+            "value": 50000.0,
+            "value.original": "50000"
+          },
+          "bonus.original": "50000",
+          "social_security": {
+            "value": 9000.0,
+            "value.original": "9000"
+          },
+          "social_security.original": "9000",
+          "withholding_tax": {
+            "value": 12000.0,
+            "value.original": "12000"
+          },
+          "withholding_tax.original": "12000"
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/7af72180-f402-4bd2-af7b-02eef33ee4fe",
+      "displayName": "02_Tax_Interview_Salary"
+    },
+    "intentDetectionConfidence": 1.0,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "line",
+    "payload": {
+      "data": {
+        "timestamp": "1791025458883",
+        "message": {
+          "text": "12000",
+          "id": "634504502619931118",
+          "type": "text"
+        },
+        "source": {
+          "userId": "TEST_USER",
+          "type": "user"
+        },
+        "replyToken": "d803e3032f43468abe444111c706f3ab",
+        "type": "message"
+      }
+    }
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}
