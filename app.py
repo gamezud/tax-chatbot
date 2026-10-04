@@ -215,6 +215,127 @@ def handle_online(merged_params, user_query, session_id):
     print("🔑 [DEBUG-STEP3.5-EMIT] ส่งกิ่งถัดไป: awaiting_deduction")
     return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
 
+def handle_deductions(merged_params, session_id, line_user_id):
+    salary_per_month = clean_number(merged_params.get('salary_per_month'))
+    bonus = clean_number(merged_params.get('bonus'))
+    withholding_tax = clean_number(merged_params.get('withholding_tax'))
+    rental_income = clean_number(merged_params.get('rental_income'))
+    property_type = merged_params.get('property_type', 'บ้าน/คอนโด')
+    online_income = clean_number(merged_params.get('online_income'))
+
+    salary_total = (salary_per_month * 12) + bonus
+    total_income = salary_total + rental_income + online_income
+
+    # 🛡️ Safety Guard
+    if total_income <= 0:
+        print("⚠️ [CALC-ABORT] รายได้รวมเป็น 0.00 บาท")
+        return {
+            "fulfillmentText": "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มต้นใหม่อีกครั้งครับ",
+            "outputContexts": [
+                {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 0},
+                {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0}
+            ]
+        }
+
+    salary_expense = min(salary_total * 0.50, 100000.0)
+    rental_rate = get_rental_expense_rate(property_type)
+    rental_expense = rental_income * rental_rate
+    online_expense = online_income * 0.60
+    total_expense = salary_expense + rental_expense + online_expense
+
+    subtotal_deduct, capped_life, capped_ssf = calculate_detailed_deductions(total_income, merged_params)
+    income_before_donation = max(0.0, total_income - total_expense - subtotal_deduct)
+    raw_donation = clean_number(merged_params.get('donation', 0))
+    capped_donation = min(raw_donation, income_before_donation * 0.10)
+    
+    total_deduction = subtotal_deduct + capped_donation
+    net_income = max(0.0, income_before_donation - capped_donation)
+
+    tax_method_1 = compute_tax_from_net(net_income)
+    non_salary_income = rental_income + online_income
+    tax_method_2 = compute_method_2_tax(non_salary_income)
+
+    final_tax = max(tax_method_1, tax_method_2)
+    method_remark = ""
+    if final_tax == tax_method_2 and tax_method_2 > 0:
+        method_remark = " (คิดตามวิธีคำนวณร้อยละ 0.5 ของเงินได้ที่ไม่ใช่เงินเดือน เนื่องจากสูงกว่า)"
+
+    net_payable = final_tax - withholding_tax
+    if net_payable > 0:
+        tax_status_str = f"ต้องชำระภาษีเพิ่มเติม: {net_payable:,.2f} บาท"
+    elif net_payable < 0:
+        tax_status_str = f"ได้รับเงินคืนภาษี: {abs(net_payable):,.2f} บาท"
+    else:
+        tax_status_str = "ภาษีที่ชำระไว้พอดีแล้ว"
+
+    print(f"🧮 [DEBUG-CALC-SUMMARY]")
+    print(f"   ├─ รายได้รวม:       {total_income:,.2f} บ.")
+    print(f"   ├─ ค่าใช้จ่ายรวม:    {total_expense:,.2f} บ.")
+    print(f"   ├─ ค่าลดหย่อนรวม:   {total_deduction:,.2f} บ. (ลดหย่อนทั่วไป: {subtotal_deduct:,.2f}, บริจาค: {capped_donation:,.2f})")
+    print(f"   ├─ เงินได้สุทธิ:      {net_income:,.2f} บ.")
+    print(f"   ├─ ภาษีวิธี 1:       {tax_method_1:,.2f} บ.")
+    print(f"   ├─ ภาษีวิธี 2:       {tax_method_2:,.2f} บ.")
+    print(f"   ├─ ภาษีทั้งสิ้น:      {final_tax:,.2f} บ.")
+    print(f"   ├─ หัก ณ ที่จ่าย:    {withholding_tax:,.2f} บ.")
+    print(f"   └─ ยอดสุทธิชำระ/คืน: {net_payable:,.2f} บ.")
+
+    tax_advice = generate_tax_planning_advice(
+        total_income=total_income,
+        net_income=net_income,
+        current_life_ins=capped_life,
+        current_ssf=capped_ssf
+    )
+
+    pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
+    pdf_filepath = os.path.join("static", "reports", pdf_filename)
+    os.makedirs(os.path.dirname(pdf_filepath), exist_ok=True)
+
+    tax_report_data = {
+        "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "user_id": line_user_id,
+        "salary_total": salary_total,        
+        "rental_income": rental_income,     
+        "online_income": online_income,      
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "total_deduction": total_deduction,
+        "net_income": net_income,
+        "tax_payable": final_tax,
+        "withholding_tax": withholding_tax,
+        "net_payable": net_payable,
+        "tax_advice": tax_advice,         
+    }
+
+    generate_tax_pdf(pdf_filepath, tax_report_data)
+    download_url = f"{PUBLIC_URL}/download/{pdf_filename}" if PUBLIC_URL else ""
+    pdf_msg = f"\n📄 ดาวน์โหลดเอกสารสรุป PDF: {download_url}" if download_url else ""  
+    tax_report_data["pdf_file_url"] = download_url
+    firebase_client.save_tax_report(line_user_id, tax_report_data)
+
+    reply_text = (
+        f"📊 สรุปผลการประเมินภาษีประจำปี\n"
+        f"--------------------------------\n"
+        f"1. เงินได้พึงประเมินรวม: {total_income:,.2f} บาท\n"
+        f"2. หักค่าใช้จ่ายตามกฎหมาย: {total_expense:,.2f} บาท\n"
+        f"3. รวมค่าลดหย่อนภาษี: {total_deduction:,.2f} บาท\n"
+        f"4. เงินได้สุทธิ: {net_income:,.2f} บาท\n"
+        f"5. ภาษีที่คำนวณได้ทั้งสิ้น: {final_tax:,.2f} บาท{method_remark}\n"
+        f"6. ภาษีหัก ณ ที่จ่ายสะสม: {withholding_tax:,.2f} บาท\n"
+        f"--------------------------------\n"
+        f"👉 ผลสรุป: {tax_status_str}\n\n"
+        f"{tax_advice}\n"
+        f"{pdf_msg}"
+    )
+
+    # จบการคำนวณ ล้างบริบททั้งหมด
+    return {
+        "fulfillmentText": reply_text,
+        "outputContexts": [
+            {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0},
+            {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 0}
+        ]
+    }
+
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
     print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
@@ -313,125 +434,7 @@ def webhook():
         # STEP 4: ลดหย่อนและการคำนวณสรุปผล
         # ==========================================
         elif intent_name == '04_Tax_Interview_Deductions':
-            salary_per_month = clean_number(merged_params.get('salary_per_month'))
-            bonus = clean_number(merged_params.get('bonus'))
-            withholding_tax = clean_number(merged_params.get('withholding_tax'))
-            rental_income = clean_number(merged_params.get('rental_income'))
-            property_type = merged_params.get('property_type', 'บ้าน/คอนโด')
-            online_income = clean_number(merged_params.get('online_income'))
-
-            salary_total = (salary_per_month * 12) + bonus
-            total_income = salary_total + rental_income + online_income
-
-            # 🛡️ Safety Guard
-            if total_income <= 0:
-                print("⚠️ [CALC-ABORT] รายได้รวมเป็น 0.00 บาท")
-                return jsonify({
-                    "fulfillmentText": "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มต้นใหม่อีกครั้งครับ",
-                    "outputContexts": [
-                        {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 0},
-                        {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0}
-                    ]
-                })
-
-            salary_expense = min(salary_total * 0.50, 100000.0)
-            rental_rate = get_rental_expense_rate(property_type)
-            rental_expense = rental_income * rental_rate
-            online_expense = online_income * 0.60
-            total_expense = salary_expense + rental_expense + online_expense
-
-            subtotal_deduct, capped_life, capped_ssf = calculate_detailed_deductions(total_income, merged_params)
-            income_before_donation = max(0.0, total_income - total_expense - subtotal_deduct)
-            raw_donation = clean_number(merged_params.get('donation', 0))
-            capped_donation = min(raw_donation, income_before_donation * 0.10)
-            
-            total_deduction = subtotal_deduct + capped_donation
-            net_income = max(0.0, income_before_donation - capped_donation)
-
-            tax_method_1 = compute_tax_from_net(net_income)
-            non_salary_income = rental_income + online_income
-            tax_method_2 = compute_method_2_tax(non_salary_income)
-
-            final_tax = max(tax_method_1, tax_method_2)
-            method_remark = ""
-            if final_tax == tax_method_2 and tax_method_2 > 0:
-                method_remark = " (คิดตามวิธีคำนวณร้อยละ 0.5 ของเงินได้ที่ไม่ใช่เงินเดือน เนื่องจากสูงกว่า)"
-
-            net_payable = final_tax - withholding_tax
-            if net_payable > 0:
-                tax_status_str = f"ต้องชำระภาษีเพิ่มเติม: {net_payable:,.2f} บาท"
-            elif net_payable < 0:
-                tax_status_str = f"ได้รับเงินคืนภาษี: {abs(net_payable):,.2f} บาท"
-            else:
-                tax_status_str = "ภาษีที่ชำระไว้พอดีแล้ว"
-
-            print(f"🧮 [DEBUG-CALC-SUMMARY]")
-            print(f"   ├─ รายได้รวม:       {total_income:,.2f} บ.")
-            print(f"   ├─ ค่าใช้จ่ายรวม:    {total_expense:,.2f} บ.")
-            print(f"   ├─ ค่าลดหย่อนรวม:   {total_deduction:,.2f} บ. (ลดหย่อนทั่วไป: {subtotal_deduct:,.2f}, บริจาค: {capped_donation:,.2f})")
-            print(f"   ├─ เงินได้สุทธิ:      {net_income:,.2f} บ.")
-            print(f"   ├─ ภาษีวิธี 1:       {tax_method_1:,.2f} บ.")
-            print(f"   ├─ ภาษีวิธี 2:       {tax_method_2:,.2f} บ.")
-            print(f"   ├─ ภาษีทั้งสิ้น:      {final_tax:,.2f} บ.")
-            print(f"   ├─ หัก ณ ที่จ่าย:    {withholding_tax:,.2f} บ.")
-            print(f"   └─ ยอดสุทธิชำระ/คืน: {net_payable:,.2f} บ.")
-
-            tax_advice = generate_tax_planning_advice(
-                total_income=total_income,
-                net_income=net_income,
-                current_life_ins=capped_life,
-                current_ssf=capped_ssf
-            )
-
-            pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
-            pdf_filepath = os.path.join("static", "reports", pdf_filename)
-            os.makedirs(os.path.dirname(pdf_filepath), exist_ok=True)
-
-            tax_report_data = {
-                "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
-                "user_id": line_user_id,
-                "salary_total": salary_total,        
-                "rental_income": rental_income,     
-                "online_income": online_income,      
-                "total_income": total_income,
-                "total_expense": total_expense,
-                "total_deduction": total_deduction,
-                "net_income": net_income,
-                "tax_payable": final_tax,
-                "withholding_tax": withholding_tax,
-                "net_payable": net_payable,
-                "tax_advice": tax_advice,         
-            }
-
-            generate_tax_pdf(pdf_filepath, tax_report_data)
-            download_url = f"{PUBLIC_URL}/download/{pdf_filename}" if PUBLIC_URL else ""
-            pdf_msg = f"\n📄 ดาวน์โหลดเอกสารสรุป PDF: {download_url}" if download_url else ""  
-            tax_report_data["pdf_file_url"] = download_url
-            firebase_client.save_tax_report(line_user_id, tax_report_data)
-
-            reply_text = (
-                f"📊 สรุปผลการประเมินภาษีประจำปี\n"
-                f"--------------------------------\n"
-                f"1. เงินได้พึงประเมินรวม: {total_income:,.2f} บาท\n"
-                f"2. หักค่าใช้จ่ายตามกฎหมาย: {total_expense:,.2f} บาท\n"
-                f"3. รวมค่าลดหย่อนภาษี: {total_deduction:,.2f} บาท\n"
-                f"4. เงินได้สุทธิ: {net_income:,.2f} บาท\n"
-                f"5. ภาษีที่คำนวณได้ทั้งสิ้น: {final_tax:,.2f} บาท{method_remark}\n"
-                f"6. ภาษีหัก ณ ที่จ่ายสะสม: {withholding_tax:,.2f} บาท\n"
-                f"--------------------------------\n"
-                f"👉 ผลสรุป: {tax_status_str}\n\n"
-                f"{tax_advice}\n"
-                f"{pdf_msg}"
-            )
-
-            # จบการคำนวณ ล้างบริบททั้งหมด
-            return jsonify({
-                "fulfillmentText": reply_text,
-                "outputContexts": [
-                    {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0},
-                    {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 0}
-                ]
-            })
+            return jsonify(handle_deductions(merged_params, session_id, line_user_id))
 
         # ==========================================
         # FALLBACK / KNOWLEDGE BASE (RAG)
