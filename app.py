@@ -74,6 +74,47 @@ def handle_history(line_user_id):
         reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
     return {"fulfillmentText": reply_text}
 
+def handle_interview_start(user_query, parameters, merged_params, session_id):
+    full_text = user_query.lower()
+    income_types = parameters.get('income_types', [])
+    if isinstance(income_types, str):
+        income_types = [income_types]
+
+    has_salary = "เงินเดือน" in full_text or any("เงินเดือน" in str(i) for i in income_types)
+    has_rental = any(k in full_text for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"]) or any(any(k in str(i) for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"]) for i in income_types)
+    has_online = any(k in full_text for k in ["ออนไลน์", "ขาย", "ธุรกิจ"]) or any(any(k in str(i) for k in ["ออนไลน์", "ขาย", "ธุรกิจ"]) for i in income_types)
+
+    print(f"🚦 [DEBUG-STEP1] การวิเคราะห์รายได้ -> Salary: {has_salary}, Rental: {has_rental}, Online: {has_online}")
+
+    if has_salary:
+        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'เงินเดือน' เป็นอันดับแรกนะครับ 📝\n- ได้รับเงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
+        next_ctx = "awaiting_salary"
+    elif has_rental:
+        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ค่าเช่า' เป็นอันดับแรกนะครับ 🏠\n- ปล่อยเช่าทรัพย์สินประเภทไหนครับ (เช่น คอนโด, บ้าน, ที่ดิน)?"
+        next_ctx = "awaiting_rental"
+    elif has_online:
+        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ขายของออนไลน์' เป็นอันดับแรกนะครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
+        next_ctx = "awaiting_online"
+    else:
+        reply_text = "คุณมีรายได้ประเภทไหนบ้างครับในปีนี้ (เช่น เงินเดือน, ค่าเช่า, ขายของออนไลน์)?"
+        next_ctx = None
+
+    out_contexts = [
+        {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
+        {"name": f"{session_id}/contexts/awaiting_salary", "lifespanCount": 0},
+        {"name": f"{session_id}/contexts/awaiting_rental", "lifespanCount": 0},
+        {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
+        {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0}
+    ]
+    if next_ctx:
+        out_contexts.append({"name": f"{session_id}/contexts/{next_ctx}", "lifespanCount": 2})
+
+    print(f"🔑 [DEBUG-STEP1-EMIT] ส่ง Contexts ไปยัง Dialogflow: {[c['name'].split('/')[-1] for c in out_contexts]}")
+    return {
+        "fulfillmentText": reply_text,
+        "outputContexts": out_contexts
+    }
+
 def handle_salary(merged_params, user_query, session_id):
     salary_per_month = clean_number(merged_params.get('salary_per_month'))
     bonus = clean_number(merged_params.get('bonus'))
@@ -248,45 +289,7 @@ def webhook():
         # STEP 1: เริ่มต้นเลือกประเภทเงินได้
         # ==========================================
         if intent_name == '01_Tax_Interview_Start':
-            full_text = user_query.lower()
-            income_types = parameters.get('income_types', [])
-            if isinstance(income_types, str): 
-                income_types = [income_types]
-            
-            has_salary = "เงินเดือน" in full_text or any("เงินเดือน" in str(i) for i in income_types)
-            has_rental = any(k in full_text for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"]) or any(any(k in str(i) for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"]) for i in income_types)
-            has_online = any(k in full_text for k in ["ออนไลน์", "ขาย", "ธุรกิจ"]) or any(any(k in str(i) for k in ["ออนไลน์", "ขาย", "ธุรกิจ"]) for i in income_types)
-
-            print(f"🚦 [DEBUG-STEP1] การวิเคราะห์รายได้ -> Salary: {has_salary}, Rental: {has_rental}, Online: {has_online}")
-
-            if has_salary:
-                reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'เงินเดือน' เป็นอันดับแรกนะครับ 📝\n- ได้รับเงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
-                next_ctx = "awaiting_salary"
-            elif has_rental:
-                reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ค่าเช่า' เป็นอันดับแรกนะครับ 🏠\n- ปล่อยเช่าทรัพย์สินประเภทไหนครับ (เช่น คอนโด, บ้าน, ที่ดิน)?"
-                next_ctx = "awaiting_rental"
-            elif has_online:
-                reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ขายของออนไลน์' เป็นอันดับแรกนะครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
-                next_ctx = "awaiting_online"
-            else:
-                reply_text = "คุณมีรายได้ประเภทไหนบ้างครับในปีนี้ (เช่น เงินเดือน, ค่าเช่า, ขายของออนไลน์)?"
-                next_ctx = None
-
-            out_contexts = [
-                {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
-                {"name": f"{session_id}/contexts/awaiting_salary", "lifespanCount": 0},
-                {"name": f"{session_id}/contexts/awaiting_rental", "lifespanCount": 0},
-                {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
-                {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0}
-            ]
-            if next_ctx:
-                out_contexts.append({"name": f"{session_id}/contexts/{next_ctx}", "lifespanCount": 2})
-
-            print(f"🔑 [DEBUG-STEP1-EMIT] ส่ง Contexts ไปยัง Dialogflow: {[c['name'].split('/')[-1] for c in out_contexts]}")
-            return jsonify({
-                "fulfillmentText": reply_text,
-                "outputContexts": out_contexts
-            })
+            return jsonify(handle_interview_start(user_query, parameters, merged_params, session_id))
 
         # ==========================================
         # STEP 2: เงินเดือน
