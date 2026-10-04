@@ -57,6 +57,23 @@ def handle_reset(output_contexts):
         "outputContexts": cleared_contexts
     }
 
+def handle_history(line_user_id):
+    print(f"📜 [DEBUG-HISTORY] กำลังดึงประวัติของ User: {line_user_id}")
+    records = firebase_client.get_user_history(line_user_id, limit=3)
+    if records:
+        history_list = []
+        for data in records:
+            dt = data.get('created_at', '')
+            income_val = data.get('total_income', 0.0)
+            tax_val = data.get('tax_payable', 0.0)
+            pdf_link = data.get('pdf_file_url', '')
+            link_text = f"\n  [ดาวน์โหลด PDF: {pdf_link}]" if pdf_link else ""
+            history_list.append(f"📅 {dt}\n- เงินได้รวม: {income_val:,.2f} บาท\n- ภาษีสุทธิ: {tax_val:,.2f} บาท{link_text}")
+        reply_text = "📜 ประวัติการคำนวณภาษีล่าสุดของคุณ:\n\n" + "\n------------------\n".join(history_list)
+    else:
+        reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
+    return {"fulfillmentText": reply_text}
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     # 1. ตั้ง Budget เวลารวมทั้งหมดของ Webhook ไม่ให้เกิน 4.0 วินาที (เผื่อ Dialogflow 5 วิ)
@@ -100,21 +117,7 @@ def webhook():
 
         # ดึงประวัติผ่าน firebase_db.py
         if user_query in ['ดูประวัติ', 'ดูประวัติการคำนวณ', 'ประวัติภาษี', 'ประวัติ']:
-            print(f"📜 [DEBUG-HISTORY] กำลังดึงประวัติของ User: {line_user_id}")
-            records = firebase_client.get_user_history(line_user_id, limit=3)
-            if records:
-                history_list = []
-                for data in records:
-                    dt = data.get('created_at', '')
-                    income_val = data.get('total_income', 0.0)
-                    tax_val = data.get('tax_payable', 0.0)
-                    pdf_link = data.get('pdf_file_url', '')
-                    link_text = f"\n  [ดาวน์โหลด PDF: {pdf_link}]" if pdf_link else ""
-                    history_list.append(f"📅 {dt}\n- เงินได้รวม: {income_val:,.2f} บาท\n- ภาษีสุทธิ: {tax_val:,.2f} บาท{link_text}")
-                reply_text = "📜 ประวัติการคำนวณภาษีล่าสุดของคุณ:\n\n" + "\n------------------\n".join(history_list)
-            else:
-                reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
-            return jsonify({"fulfillmentText": reply_text})
+            return jsonify(handle_history(line_user_id))
 
         # กรอง Context — เอาเฉพาะ tax_session
         merged_params = {}
