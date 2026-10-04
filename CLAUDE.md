@@ -318,6 +318,10 @@ pytest -v
     จึงไม่ต่อ Firestore ไม่สร้าง PDF และไม่เรียก Ollama
     (โมดูลปลอมอยู่ใน `sys.modules` ตลอดการรัน ถ้ามีไฟล์ test อื่นต้อง `import app` ให้ย้ายไป `tests/conftest.py`)
 - รันทั้งชุดราว 1–2 วินาที ส่วนใหญ่คือเวลา import langchain ตอน `import app`
+- `1 warning` ท้ายผล pytest: `langchain-community` แจ้ง `DeprecationWarning` ตอน import FAISS
+  ใน `utils/knowledge_search.py` (มีมาก่อน refactor) ยังใช้งานได้ปกติเพราะ `requirements.txt` ล็อกเวอร์ชันไว้
+  **ห้ามซ่อนคำเตือนด้วย `filterwarnings`** ย้ายไป package ใหม่หลัง refactor เสร็จ
+  และต้องตรวจว่า FAISS index เดิม (`faiss_tax_index/`) ยังโหลดได้
 - ชื่อ test บอกประเภท:
   - test ธรรมดา: ค่าที่คาดหวังมาจากกฎหมายหรือสูตร และโค้ดให้ผลตรงแล้ว
   - `xfail(strict=True)`: บั๊กที่ยืนยันแล้ว ค่าที่คาดหวังในเทสคือ "ค่าที่ถูก" เทสจึงยังไม่ผ่านจนกว่าจะแก้บั๊ก
