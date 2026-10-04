@@ -112,6 +112,44 @@ def handle_salary(merged_params, user_query, session_id):
     print(f"🔑 [DEBUG-STEP2-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
     return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
 
+def handle_rental(merged_params, session_id):
+    property_type = merged_params.get('property_type', 'บ้าน/คอนโด')
+    rental_income = clean_number(merged_params.get('rental_income'))
+    rate = get_rental_expense_rate(property_type)
+    rental_expense = rental_income * rate
+
+    print(f"🏠 [DEBUG-STEP3] อสังหาฯ: {property_type} | รายได้ค่าเช่า: {rental_income:,.2f} | อัตราหักเหมา: {rate*100}%")
+
+    all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower()
+    has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
+
+    reply_text = (
+        f"เก็บข้อมูลรายได้ค่าเช่าเรียบร้อยครับ 🏠\n"
+        f"- ทรัพย์สิน: {property_type}\n"
+        f"- ค่าเช่ารวมทั้งปี: {rental_income:,.2f} บาท\n"
+        f"- หักค่าใช้จ่ายเหมา ({rate*100:.0f}%): {rental_expense:,.2f} บาท\n\n"
+    )
+    if has_online:
+        reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
+        next_ctx = "awaiting_online"
+    else:
+        reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        next_ctx = "awaiting_deduction"
+
+    out_contexts = [
+        {
+            "name": f"{session_id}/contexts/tax_session",
+            "lifespanCount": 20,
+            "parameters": merged_params
+        },
+        {
+            "name": f"{session_id}/contexts/{next_ctx}",
+            "lifespanCount": 2
+        }
+    ]
+    print(f"🔑 [DEBUG-STEP3-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
+    return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
+
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
     print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
@@ -236,42 +274,7 @@ def webhook():
         # STEP 3: ค่าเช่า
         # ==========================================
         elif intent_name == '03_Tax_Interview_Rental':
-            property_type = merged_params.get('property_type', 'บ้าน/คอนโด')
-            rental_income = clean_number(merged_params.get('rental_income'))
-            rate = get_rental_expense_rate(property_type)
-            rental_expense = rental_income * rate
-
-            print(f"🏠 [DEBUG-STEP3] อสังหาฯ: {property_type} | รายได้ค่าเช่า: {rental_income:,.2f} | อัตราหักเหมา: {rate*100}%")
-
-            all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower()
-            has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
-
-            reply_text = (
-                f"เก็บข้อมูลรายได้ค่าเช่าเรียบร้อยครับ 🏠\n"
-                f"- ทรัพย์สิน: {property_type}\n"
-                f"- ค่าเช่ารวมทั้งปี: {rental_income:,.2f} บาท\n"
-                f"- หักค่าใช้จ่ายเหมา ({rate*100:.0f}%): {rental_expense:,.2f} บาท\n\n"
-            )
-            if has_online:
-                reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
-                next_ctx = "awaiting_online"
-            else:
-                reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-                next_ctx = "awaiting_deduction"
-
-            out_contexts = [
-                {
-                    "name": f"{session_id}/contexts/tax_session",
-                    "lifespanCount": 20,
-                    "parameters": merged_params
-                },
-                {
-                    "name": f"{session_id}/contexts/{next_ctx}",
-                    "lifespanCount": 2
-                }
-            ]
-            print(f"🔑 [DEBUG-STEP3-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
-            return jsonify({"fulfillmentText": reply_text, "outputContexts": out_contexts})
+            return jsonify(handle_rental(merged_params, session_id))
 
         # ==========================================
         # STEP 3.5: ออนไลน์
