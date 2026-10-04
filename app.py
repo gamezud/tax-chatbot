@@ -74,6 +74,22 @@ def handle_history(line_user_id):
         reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
     return {"fulfillmentText": reply_text}
 
+def handle_knowledge(user_query, active_contexts, deadline):
+    clean_check = user_query.replace(',', '').replace('.', '').strip()
+    print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
+
+    # เช็กว่ามี context การคำนวณค้างอยู่หรือไม่
+    has_interview_ctx = any(k in active_contexts for k in ['awaiting_salary', 'awaiting_rental', 'awaiting_online', 'awaiting_deduction'])
+
+    if clean_check.isdigit() and clean_check and not has_interview_ctx:
+        reply_text = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ"
+    elif user_query:
+        reply_text = query_tax_knowledge(user_query, deadline=deadline)
+    else:
+        reply_text = "ขออภัยครับ ระบบไม่ได้รับข้อความของคุณ"
+
+    return {"fulfillmentText": reply_text}
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     # 1. ตั้ง Budget เวลารวมทั้งหมดของ Webhook ไม่ให้เกิน 4.0 วินาที (เผื่อ Dialogflow 5 วิ)
@@ -409,20 +425,7 @@ def webhook():
         # FALLBACK / KNOWLEDGE BASE (RAG)
         # ==========================================
         else:
-            clean_check = user_query.replace(',', '').replace('.', '').strip()
-            print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
-            
-            # เช็กว่ามี context การคำนวณค้างอยู่หรือไม่
-            has_interview_ctx = any(k in active_contexts for k in ['awaiting_salary', 'awaiting_rental', 'awaiting_online', 'awaiting_deduction'])
-            
-            if clean_check.isdigit() and clean_check and not has_interview_ctx:
-                reply_text = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ"
-            elif user_query:
-                reply_text = query_tax_knowledge(user_query, deadline=req_deadline)
-            else:
-                reply_text = "ขออภัยครับ ระบบไม่ได้รับข้อความของคุณ"
-
-            return jsonify({"fulfillmentText": reply_text})
+            return jsonify(handle_knowledge(user_query, active_contexts, req_deadline))
         
     except Exception as e:
         print("\n" + "!"*75)
