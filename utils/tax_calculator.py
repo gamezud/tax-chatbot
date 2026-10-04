@@ -2,15 +2,28 @@ import re
 
 def clean_number(val):
     """
-    สกัดตัวเลข รองรับ '1.5 ล้าน', ป้องกัน Regex กินเลข 25000/250000 (แก้บั๊ก 1)
+    สกัดตัวเลข รองรับ '1.5 ล้าน' และตัดปี พ.ศ. ที่มี "ปี"/"พ.ศ." นำหน้าออกก่อน
     """
     if isinstance(val, list):
         val = val[0] if len(val) > 0 else 0
     if val is None:
         return 0.0
+
+    # Dialogflow ตีความมาแล้วว่าเป็นตัวเลข ไม่ต้องผ่าน regex ตัดปี (#9)
+    # ไม่รับ bool เพราะ bool เป็น int ใน Python — เดิม True ได้ 0.0 ให้คงไว้
+    if isinstance(val, (int, float)) and not isinstance(val, bool):
+        return float(val)
+    if isinstance(val, dict) and 'amount' in val:  # รูปแบบ sys.unit-currency
+        return clean_number(val['amount'])
+
     val_str = str(val).strip().replace(',', '')
     if val_str == "":
         return 0.0
+
+    # ตัดปี พ.ศ. เฉพาะที่มี "ปี" หรือ "พ.ศ." นำหน้า เลข 25xx โดด ๆ ถือเป็นเงิน (#9)
+    # (?!\d) กันไม่ให้ตัด "ปี 25000" เหลือ "0"
+    # ต้องตัดก่อนสาขา "ล้าน" ไม่งั้นปีจะถูกเอาไปคูณล้าน (#10)
+    val_str = re.sub(r'(?:ปี|พ\.ศ\.)\s*25\d{2}(?!\d)', '', val_str)
 
     # จัดการกรณีคำว่า "ล้าน"
     if "ล้าน" in val_str:
@@ -21,13 +34,7 @@ def clean_number(val):
             except ValueError:
                 return 0.0
 
-    if isinstance(val, dict):
-        val = next(iter(val.values()), 0)
-
-    # แก้บั๊ก 1: ใช้ Lookaround ดักเฉพาะเลข พ.ศ. 4 หลักโดดๆ ไม่ให้กิน 25000 หรือ 250000
-    val_str_cleaned = re.sub(r'ปี\s*25\d{2}(?!\d)|(?<!\d)25\d{2}(?!\d)', '', val_str)
-
-    matches = re.findall(r'[-+]?\d*\.\d+|\d+', val_str_cleaned)
+    matches = re.findall(r'[-+]?\d*\.\d+|\d+', val_str)
     if matches:
         best_match = max(matches, key=len)
         try:

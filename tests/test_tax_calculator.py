@@ -227,18 +227,22 @@ def test_current_behavior_negative_social_security_becomes_positive():
     ("50000.5", 50000.5),
     ("1.5 ล้าน", 1500000.0),
     ("2ล้าน", 2000000.0),
-    ("25000", 25000.0),              # regression บั๊ก 1: lookaround ต้องไม่กิน 25000
+    ("25000", 25000.0),              # 25xx โดด ๆ ไม่ถูกตัดตามทาง ก (#9) เคสนี้กันไม่ให้นำ regex ที่ตัดเลขโดดกลับมา
     ("250000", 250000.0),
-    ("2567", 0.0),                   # ปี พ.ศ. โดด ๆ ถูกตัด
+    ("ปี 25000", 25000.0),           # (?!\d) กันไม่ให้ตัด "ปี 2500" ออกจาก "ปี 25000" จนเหลือ "0"
+    ("2567", 2567.0),                # เปลี่ยนจาก 0 เพราะตัดสินใจทาง ก (#9): 25xx โดด ๆ คือเงิน
     ("ปี 2567", 0.0),
+    ("ปี2567", 0.0),
     ("ปี 2567 เงินเดือน 30000", 30000.0),
+    ("พ.ศ. 2567 เงินเดือน 30000", 30000.0),
+    ("พ.ศ.2567", 0.0),               # ถ้าไม่ตัดทั้งก้อน regex ทศนิยมจะจับ ".2567"
     ({'amount': 5000, 'currency': 'THB'}, 5000.0),  # รูปแบบ sys.unit-currency
 ])
 def test_clean_number(val, expected):
     assert clean_number(val) == pytest.approx(expected)
 
 
-@pytest.mark.xfail(strict=True, reason="จำนวนเงิน 2,500–2,599 ถูกมองเป็นปี พ.ศ. แล้วถูกตัดทิ้งเหลือ 0")
+# #9: จำนวนเงิน 2,500–2,599 เคยถูกมองเป็นปี พ.ศ. แล้วถูกตัดทิ้งเหลือ 0
 @pytest.mark.parametrize("val, expected", [
     ("2500", 2500.0),
     (2500.0, 2500.0),
@@ -249,7 +253,7 @@ def test_clean_number_amount_looks_like_buddhist_year(val, expected):
     assert clean_number(val) == pytest.approx(expected)
 
 
-@pytest.mark.xfail(strict=True, reason="สาขา 'ล้าน' ไม่ตัดปี พ.ศ. ก่อน เลยเอา 2567 มาคูณล้าน")
+# #10: สาขา "ล้าน" เคยทำงานก่อนตัดปี พ.ศ. เลยเอา 2567 มาคูณล้าน
 def test_clean_number_million_with_year():
     assert clean_number("ปี 2567 รายได้ 1 ล้าน") == pytest.approx(1000000.0)
 
