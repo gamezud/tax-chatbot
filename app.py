@@ -150,6 +150,30 @@ def handle_rental(merged_params, session_id):
     print(f"🔑 [DEBUG-STEP3-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
     return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
 
+def handle_online(merged_params, user_query, session_id):
+    online_income = clean_number(merged_params.get('online_income'))
+    if online_income == 0.0:
+        online_income = clean_number(user_query)
+    online_expense = online_income * 0.60
+    merged_params['online_income'] = online_income
+
+    print(f"📦 [DEBUG-STEP3.5] ยอดขายออนไลน์: {online_income:,.2f} | ค่าใช้จ่าย 60%: {online_expense:,.2f}")
+
+    reply_text = (
+        f"เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ 📦\n"
+        f"- ยอดขายรวมทั้งปี: {online_income:,.2f} บาท\n"
+        f"- หักค่าใช้จ่ายเหมา (60%): {online_expense:,.2f} บาท\n\n"
+        f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+    )
+    out_contexts = [
+        {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
+        {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
+        {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 2}
+    ]
+
+    print("🔑 [DEBUG-STEP3.5-EMIT] ส่งกิ่งถัดไป: awaiting_deduction")
+    return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
+
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
     print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
@@ -280,28 +304,7 @@ def webhook():
         # STEP 3.5: ออนไลน์
         # ==========================================
         elif intent_name == '05_Tax_Interview_Online' or 'awaiting_online' in active_contexts:
-            online_income = clean_number(merged_params.get('online_income'))
-            if online_income == 0.0:
-                online_income = clean_number(user_query)
-            online_expense = online_income * 0.60
-            merged_params['online_income'] = online_income
-
-            print(f"📦 [DEBUG-STEP3.5] ยอดขายออนไลน์: {online_income:,.2f} | ค่าใช้จ่าย 60%: {online_expense:,.2f}")
-
-            reply_text = (
-                f"เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ 📦\n"
-                f"- ยอดขายรวมทั้งปี: {online_income:,.2f} บาท\n"
-                f"- หักค่าใช้จ่ายเหมา (60%): {online_expense:,.2f} บาท\n\n"
-                f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-            )
-            out_contexts = [
-                {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
-                {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
-                {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 2}
-            ]
-            
-            print("🔑 [DEBUG-STEP3.5-EMIT] ส่งกิ่งถัดไป: awaiting_deduction")
-            return jsonify({"fulfillmentText": reply_text, "outputContexts": out_contexts})
+            return jsonify(handle_online(merged_params, user_query, session_id))
         
         # ==========================================
         # STEP 4: ลดหย่อนและการคำนวณสรุปผล
