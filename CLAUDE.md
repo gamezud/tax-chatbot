@@ -260,7 +260,7 @@ URL ของ ngrok เป็น static domain ที่ผูกกับบั
 
 ### รันชุด test
 
-แยกจากขั้นที่ 1–4 เพราะไม่ต้องใช้ Ollama, Flask หรือ ngrok แค่เปิด `.venv` (ขั้นที่ 2) แล้วรันที่ root
+แยกจากขั้นที่ 1–4 เพราะไม่ต้องเปิด Ollama, เซิร์ฟเวอร์ Flask หรือ ngrok แค่เปิด `.venv` (ขั้นที่ 2) แล้วรันที่ root
 
 ```powershell
 pytest -v
@@ -268,14 +268,21 @@ pytest -v
 
 **เกณฑ์ผ่าน: ต้องไม่มี `failed` และไม่มี `XPASS`**
 
-ตัวเลข ณ ตอนนี้คือ `111 passed, 5 xfailed` ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
+ตัวเลข ณ ตอนนี้คือ `212 passed, 5 xfailed` ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
 (passed เพิ่ม xfailed ลด) จึงใช้ตัดสินผ่าน/ไม่ผ่านไม่ได้ ให้ดูเกณฑ์ข้างบนแทน
 
 - `pytest.ini` ที่ root บอก pytest สองอย่าง: `pythonpath = .` ให้ใส่ root ของโปรเจกต์ลง path
   เพื่อให้ `from utils.tax_calculator import ...` หาเจอ (ถ้าไม่มีจะได้ `No module named 'utils'`)
   และ `testpaths = tests` ให้หา test เฉพาะในโฟลเดอร์ `tests/`
-- ตอนนี้เทส `utils/tax_calculator.py` ซึ่ง import แค่ `re` และไฟล์ export ใน `dialogflow/` (`test_dialogflow_export.py`)
-  ไม่มีตัวไหนพึ่ง Flask หรือ Firebase เลยรันเสร็จในไม่ถึงวินาที
+- เทสมีสามไฟล์
+  - `test_tax_calculator.py` — สูตรใน `utils/tax_calculator.py` (import แค่ `re`)
+  - `test_dialogflow_export.py` — การตั้งค่าในไฟล์ export ใน `dialogflow/`
+  - `test_webhook.py` — ยิง fixture ใน `tests/fixtures/` เข้า `/webhook` ผ่าน Flask test client
+    เพื่อล็อกการเลือกสาขา, outputContexts และข้อความตอบ ก่อน refactor `webhook()`
+    ใส่โมดูลปลอมแทน `utils.firebase_db` ก่อน `import app` และ mock PDF / RAG ทุกเทส
+    จึงไม่ต่อ Firestore ไม่สร้าง PDF และไม่เรียก Ollama
+    (โมดูลปลอมอยู่ใน `sys.modules` ตลอดการรัน ถ้ามีไฟล์ test อื่นต้อง `import app` ให้ย้ายไป `tests/conftest.py`)
+- รันทั้งชุดราว 1–2 วินาที ส่วนใหญ่คือเวลา import langchain ตอน `import app`
 - ชื่อ test บอกประเภท:
   - test ธรรมดา: ค่าที่คาดหวังมาจากกฎหมายหรือสูตร และโค้ดให้ผลตรงแล้ว
   - `xfail(strict=True)`: บั๊กที่ยืนยันแล้ว ค่าที่คาดหวังในเทสคือ "ค่าที่ถูก" เทสจึงยังไม่ผ่านจนกว่าจะแก้บั๊ก
