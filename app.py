@@ -42,6 +42,21 @@ def handle_greeting():
     )
     return {"fulfillmentText": greeting_text}
 
+def handle_reset(output_contexts):
+    cleared_contexts = []
+    for ctx in output_contexts:
+        ctx_name = ctx.get('name', '')
+        if ctx_name:
+            cleared_contexts.append({
+                "name": ctx_name,
+                "lifespanCount": 0
+            })
+    print("🔄 [DEBUG-RESET] สั่งรีเซ็ตและเคลียร์ Context ทั้งหมดทิ้ง")
+    return {
+        "fulfillmentText": "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!",
+        "outputContexts": cleared_contexts
+    }
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     # 1. ตั้ง Budget เวลารวมทั้งหมดของ Webhook ไม่ให้เกิน 4.0 วินาที (เผื่อ Dialogflow 5 วิ)
@@ -81,19 +96,7 @@ def webhook():
 
         # 🧹 ล้างข้อมูลรีเซ็ต (บังคับ Lifespan = 0 เพื่อเคลียร์ Context ทั้งหมด)
         if intent_name == '99_Reset_Chat' or user_query.lower() in ['รีเซ็ต', 'reset', 'เริ่มใหม่', 'ล้างข้อมูล']:
-            cleared_contexts = []
-            for ctx in output_contexts:
-                ctx_name = ctx.get('name', '')
-                if ctx_name:
-                    cleared_contexts.append({
-                        "name": ctx_name,
-                        "lifespanCount": 0
-                    })
-            print("🔄 [DEBUG-RESET] สั่งรีเซ็ตและเคลียร์ Context ทั้งหมดทิ้ง")
-            return jsonify({
-                "fulfillmentText": "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!",
-                "outputContexts": cleared_contexts
-            })
+            return jsonify(handle_reset(output_contexts))
 
         # ดึงประวัติผ่าน firebase_db.py
         if user_query in ['ดูประวัติ', 'ดูประวัติการคำนวณ', 'ประวัติภาษี', 'ประวัติ']:
