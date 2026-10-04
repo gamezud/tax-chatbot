@@ -74,6 +74,44 @@ def handle_history(line_user_id):
         reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
     return {"fulfillmentText": reply_text}
 
+def handle_salary(merged_params, user_query, session_id):
+    salary_per_month = clean_number(merged_params.get('salary_per_month'))
+    bonus = clean_number(merged_params.get('bonus'))
+    social_security = clean_number(merged_params.get('social_security'))
+    withholding_tax = clean_number(merged_params.get('withholding_tax'))
+    total_salary = (salary_per_month * 12) + bonus
+
+    print(f"💵 [DEBUG-STEP2] เงินเดือน/ด: {salary_per_month:,.2f} | ทั้งปี: {total_salary:,.2f} | ประกันสังคม: {social_security:,.2f} | หัก ณ ที่จ่าย: {withholding_tax:,.2f}")
+
+    all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower() + " " + user_query.lower()
+    has_rental = any(k in all_income_str for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"])
+    has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
+
+    reply_text = (
+        f"เก็บข้อมูลเงินเดือนเรียบร้อยครับ 📝\n"
+        f"- เงินเดือนรวมทั้งปี: {total_salary:,.2f} บาท\n"
+        f"- หักประกันสังคม: {social_security:,.2f} บาท\n"
+        f"- ภาษีหัก ณ ที่จ่าย: {withholding_tax:,.2f} บาท\n\n"
+    )
+    if has_rental:
+        reply_text += "ต่อไปขอสอบถามข้อมูลส่วนของ 'ค่าเช่า' ครับ 🏠\n- ปล่อยเช่าทรัพย์สินประเภทไหน และค่าเช่ารวมทั้งปีประมาณเท่าไหร่ครับ?"
+        next_ctx = "awaiting_rental"
+    elif has_online:
+        reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
+        next_ctx = "awaiting_online"
+    else:
+        reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        next_ctx = "awaiting_deduction"
+
+    out_contexts = [
+        {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
+        {"name": f"{session_id}/contexts/awaiting_salary", "lifespanCount": 0},
+        {"name": f"{session_id}/contexts/{next_ctx}", "lifespanCount": 2}
+    ]
+
+    print(f"🔑 [DEBUG-STEP2-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
+    return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
+
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
     print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
@@ -192,42 +230,7 @@ def webhook():
         # STEP 2: เงินเดือน
         # ==========================================
         elif intent_name == '02_Tax_Interview_Salary':
-            salary_per_month = clean_number(merged_params.get('salary_per_month'))
-            bonus = clean_number(merged_params.get('bonus'))
-            social_security = clean_number(merged_params.get('social_security'))
-            withholding_tax = clean_number(merged_params.get('withholding_tax'))
-            total_salary = (salary_per_month * 12) + bonus
-
-            print(f"💵 [DEBUG-STEP2] เงินเดือน/ด: {salary_per_month:,.2f} | ทั้งปี: {total_salary:,.2f} | ประกันสังคม: {social_security:,.2f} | หัก ณ ที่จ่าย: {withholding_tax:,.2f}")
-
-            all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower() + " " + user_query.lower()
-            has_rental = any(k in all_income_str for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"])
-            has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
-
-            reply_text = (
-                f"เก็บข้อมูลเงินเดือนเรียบร้อยครับ 📝\n"
-                f"- เงินเดือนรวมทั้งปี: {total_salary:,.2f} บาท\n"
-                f"- หักประกันสังคม: {social_security:,.2f} บาท\n"
-                f"- ภาษีหัก ณ ที่จ่าย: {withholding_tax:,.2f} บาท\n\n"
-            )
-            if has_rental:
-                reply_text += "ต่อไปขอสอบถามข้อมูลส่วนของ 'ค่าเช่า' ครับ 🏠\n- ปล่อยเช่าทรัพย์สินประเภทไหน และค่าเช่ารวมทั้งปีประมาณเท่าไหร่ครับ?"
-                next_ctx = "awaiting_rental"
-            elif has_online:
-                reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
-                next_ctx = "awaiting_online"
-            else:
-                reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-                next_ctx = "awaiting_deduction"
-
-            out_contexts = [
-                {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
-                {"name": f"{session_id}/contexts/awaiting_salary", "lifespanCount": 0},
-                {"name": f"{session_id}/contexts/{next_ctx}", "lifespanCount": 2}
-            ]
-
-            print(f"🔑 [DEBUG-STEP2-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
-            return jsonify({"fulfillmentText": reply_text, "outputContexts": out_contexts})
+            return jsonify(handle_salary(merged_params, user_query, session_id))
 
         # ==========================================
         # STEP 3: ค่าเช่า
