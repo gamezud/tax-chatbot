@@ -15,6 +15,7 @@ from utils.tax_calculator import (
     compute_method_2_tax,
     generate_tax_planning_advice
 )
+from utils import tax_rules
 from utils.pdf_generator import generate_tax_pdf
 
 app = Flask(__name__)
@@ -195,15 +196,16 @@ def handle_online(merged_params, user_query, session_id):
     online_income = clean_number(merged_params.get('online_income'))
     if online_income == 0.0:
         online_income = clean_number(user_query)
-    online_expense = online_income * 0.60
+    online_rate = tax_rules.TAX_RULES["expense"]["online_sale_rate"]
+    online_expense = online_income * online_rate
     merged_params['online_income'] = online_income
 
-    print(f"📦 [DEBUG-STEP3.5] ยอดขายออนไลน์: {online_income:,.2f} | ค่าใช้จ่าย 60%: {online_expense:,.2f}")
+    print(f"📦 [DEBUG-STEP3.5] ยอดขายออนไลน์: {online_income:,.2f} | ค่าใช้จ่าย {online_rate*100:.0f}%: {online_expense:,.2f}")
 
     reply_text = (
         f"เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ 📦\n"
         f"- ยอดขายรวมทั้งปี: {online_income:,.2f} บาท\n"
-        f"- หักค่าใช้จ่ายเหมา (60%): {online_expense:,.2f} บาท\n\n"
+        f"- หักค่าใช้จ่ายเหมา ({online_rate*100:.0f}%): {online_expense:,.2f} บาท\n\n"
         f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, SSF, ดอกเบี้ยบ้าน, เงินบริจาค - หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
     )
     out_contexts = [
@@ -237,16 +239,17 @@ def handle_deductions(merged_params, session_id, line_user_id):
             ]
         }
 
-    salary_expense = min(salary_total * 0.50, 100000.0)
+    rules = tax_rules.TAX_RULES
+    salary_expense = min(salary_total * rules["expense"]["salary_rate"], rules["expense"]["salary_cap"])
     rental_rate = get_rental_expense_rate(property_type)
     rental_expense = rental_income * rental_rate
-    online_expense = online_income * 0.60
+    online_expense = online_income * rules["expense"]["online_sale_rate"]
     total_expense = salary_expense + rental_expense + online_expense
 
     subtotal_deduct, capped_life, capped_ssf = calculate_detailed_deductions(total_income, merged_params)
     income_before_donation = max(0.0, total_income - total_expense - subtotal_deduct)
     raw_donation = clean_number(merged_params.get('donation', 0))
-    capped_donation = min(raw_donation, income_before_donation * 0.10)
+    capped_donation = min(raw_donation, income_before_donation * rules["deduction"]["donation_rate"])
     
     total_deduction = subtotal_deduct + capped_donation
     net_income = max(0.0, income_before_donation - capped_donation)
@@ -258,7 +261,7 @@ def handle_deductions(merged_params, session_id, line_user_id):
     final_tax = max(tax_method_1, tax_method_2)
     method_remark = ""
     if final_tax == tax_method_2 and tax_method_2 > 0:
-        method_remark = " (คิดตามวิธีคำนวณร้อยละ 0.5 ของเงินได้ที่ไม่ใช่เงินเดือน เนื่องจากสูงกว่า)"
+        method_remark = f" (คิดตามวิธีคำนวณร้อยละ {rules['method_2']['rate']*100:g} ของเงินได้ที่ไม่ใช่เงินเดือน เนื่องจากสูงกว่า)"
 
     net_payable = final_tax - withholding_tax
     if net_payable > 0:
