@@ -1,5 +1,7 @@
 import re
 
+from utils import tax_rules
+
 def clean_number(val):
     """
     สกัดตัวเลข รองรับ '1.5 ล้าน' และตัดปี พ.ศ. ที่มี "ปี"/"พ.ศ." นำหน้าออกก่อน
@@ -44,16 +46,15 @@ def clean_number(val):
     return 0.0
 
 def compute_tax_from_net(net_income):
-    brackets = [
-        (150000, 0.00),
-        (150000, 0.05),
-        (200000, 0.10),
-        (250000, 0.15),
-        (250000, 0.20),
-        (1000000, 0.25),
-        (3000000, 0.30),
-        (float('inf'), 0.35)
-    ]
+    # config เก็บเพดานบนของขั้น แปลงเป็นความกว้างของขั้นเพื่อใช้ลูปเดิม
+    brackets = []
+    prev_upper = 0
+    for upper, rate in tax_rules.TAX_RULES["tax_brackets"]:
+        if upper is None:
+            brackets.append((float('inf'), rate))
+        else:
+            brackets.append((upper - prev_upper, rate))
+            prev_upper = upper
     tax = 0.0
     remain = max(0.0, net_income)
     for cap, rate in brackets:
@@ -65,78 +66,77 @@ def compute_tax_from_net(net_income):
     return tax
 
 def compute_method_2_tax(non_salary_income):
-    if non_salary_income >= 120000.0:
-        tax_method_2 = non_salary_income * 0.005
-        if tax_method_2 > 5000.0:
+    method_2 = tax_rules.TAX_RULES["method_2"]
+    if non_salary_income >= method_2["income_threshold"]:
+        tax_method_2 = non_salary_income * method_2["rate"]
+        if tax_method_2 > method_2["exempt_tax_up_to"]:
             return tax_method_2
     return 0.0
 
 def get_rental_expense_rate(property_type):
+    rates = tax_rules.TAX_RULES["expense"]["rental_rate"]
     prop = str(property_type).lower()
     if any(k in prop for k in ['บ้าน', 'คอนโด', 'ตึก', 'อาคาร', 'สิ่งปลูกสร้าง', 'หอพัก', 'ห้องพัก']):
-        return 0.30
+        return rates["building"]
     elif 'เกษตร' in prop:
-        return 0.20
+        return rates["agricultural_land"]
     elif 'ที่ดิน' in prop:
-        return 0.15
-    # ยานพาหนะ 30% ตาม พ.ร.ฎ. ฉบับที่ 11 ม.5
-    # "โรงเรือน" มี "เรือ" อยู่ข้างใน จึงตกสาขานี้ด้วย ได้ 30% ถูกเพราะอัตราเท่ากับโรงเรือนพอดี
+        return rates["land"]
+    # ยานพาหนะใช้อัตราเดียวกับโรงเรือน (key building) ตาม พ.ร.ฎ. ฉบับที่ 11 ม.5
+    # "โรงเรือน" มี "เรือ" อยู่ข้างใน จึงตกสาขานี้ด้วย ได้อัตราถูกเพราะใช้ key building เหมือนกัน
     elif any(k in prop for k in ['รถ', 'เรือ', 'ยานพาหนะ']):
-        return 0.30
+        return rates["building"]
     else:
-        return 0.30
+        return rates["unmatched"]
 
 def get_tax_bracket_rate(net_income):
-    if net_income <= 150000: return 0.00
-    elif net_income <= 300000: return 0.05
-    elif net_income <= 500000: return 0.10
-    elif net_income <= 750000: return 0.15
-    elif net_income <= 1000000: return 0.20
-    elif net_income <= 2000000: return 0.25
-    elif net_income <= 5000000: return 0.30
-    else: return 0.35
+    for upper, rate in tax_rules.TAX_RULES["tax_brackets"]:
+        if upper is None or net_income <= upper:
+            return rate
 
 def calculate_detailed_deductions(total_income, params):
     """
     คำนวณและคุมเพดานค่าลดหย่อนครบตามกฎหมาย (แก้บั๊ก 2 และ 3)
     """
+    deduction_rules = tax_rules.TAX_RULES["deduction"]
+
     # 1. ส่วนตัว
-    personal = 60000.0
+    personal = deduction_rules["personal"]
 
     # 2. คู่สมรส (อ่านค่า yes/no จาก Custom Entity โดยตรง)
     spouse_val = str(params.get('spouse', '')).strip().lower()
     has_spouse = (spouse_val == 'yes')
-    spouse_deduct = 60000.0 if has_spouse else 0.0
+    spouse_deduct = deduction_rules["spouse"] if has_spouse else 0.0
 
-    # 3. แก้บั๊ก 3: บุตร (คนแรก 30,000 / บุตรคนที่ 2 ขึ้นไปอัตรา 60,000 ตามเกณฑ์เกิด >= 2561)
+    # 3. แก้บั๊ก 3: บุตร (คนแรก child_first / บุตรคนที่ 2 ขึ้นไป child_second_onward ตามเกณฑ์เกิด >= 2561)
     num_children = int(clean_number(params.get('num_children', 0)))
     if num_children <= 0:
         child_deduct = 0.0
     elif num_children == 1:
-        child_deduct = 30000.0
+        child_deduct = deduction_rules["child_first"]
     else:
         # สมมติฐานตามแนวปฏิบัติกรมสรรพากร: บุตรคนที่ 2 ขึ้นไปเกิดตั้งแต่ปี 2561
-        child_deduct = 30000.0 + ((num_children - 1) * 60000.0)
+        child_deduct = deduction_rules["child_first"] + ((num_children - 1) * deduction_rules["child_second_onward"])
 
-    # 4. บิดามารดา (คนละ 30,000 สูงสุด 4 คน = 120,000)
-    num_parents = min(4, int(clean_number(params.get('num_parents', 0))))
-    parent_deduct = num_parents * 30000.0
+    # 4. บิดามารดา (คนละ parent_per_person ไม่เกิน parent_max_count คน)
+    num_parents = min(deduction_rules["parent_max_count"], int(clean_number(params.get('num_parents', 0))))
+    parent_deduct = num_parents * deduction_rules["parent_per_person"]
 
-    # 5. ประกันสังคม (สูงสุด 9,000)
-    social_sec = min(clean_number(params.get('social_security', 0)), 9000.0)
+    # 5. ประกันสังคม (ไม่เกิน social_security_cap)
+    social_sec = min(clean_number(params.get('social_security', 0)), deduction_rules["social_security_cap"])
 
-    # 6. ประกันชีวิต + สุขภาพ (รวมไม่เกิน 100,000 / สุขภาพไม่เกิน 25,000)
+    # 6. ประกันชีวิต + สุขภาพ (รวมไม่เกิน life_health_combined_cap / สุขภาพไม่เกิน health_insurance_cap)
     raw_life = clean_number(params.get('life_insurance', 0))
-    raw_health = min(clean_number(params.get('health_insurance', 0)), 25000.0)
-    life_health_deduct = min(raw_life + raw_health, 100000.0)
+    raw_health = min(clean_number(params.get('health_insurance', 0)), deduction_rules["health_insurance_cap"])
+    life_health_deduct = min(raw_life + raw_health, deduction_rules["life_health_combined_cap"])
 
-    # 7. ดอกเบี้ยกู้ซื้อบ้าน (สูงสุด 100,000)
-    home_loan_interest = min(clean_number(params.get('home_loan_interest', 0)), 100000.0)
+    # 7. ดอกเบี้ยกู้ซื้อบ้าน (ไม่เกิน home_loan_interest_cap)
+    home_loan_interest = min(clean_number(params.get('home_loan_interest', 0)), deduction_rules["home_loan_interest_cap"])
 
-    # 8. กองทุน SSF/RMF (สูงสุดไม่เกิน 30% ของเงินได้ และเพดานกลุ่มเกษียณไม่เกิน 500,000)
+    # 8. กองทุน SSF/RMF (ไม่เกิน ssf_rmf_income_rate ของเงินได้และไม่เกิน ssf_rmf_cap แล้วคุมด้วยเพดานกลุ่มเกษียณ retirement_group_cap)
     raw_ssf = clean_number(params.get('ssf_rmf', 0))
-    ssf_by_income = min(raw_ssf, total_income * 0.30, 200000.0)
-    retirement_deduct = min(ssf_by_income, 500000.0)
+    ssf_by_income = min(raw_ssf, total_income * deduction_rules["ssf_rmf_income_rate"], deduction_rules["ssf_rmf_cap"])
+    retirement_deduct = min(ssf_by_income, deduction_rules["retirement_group_cap"])
 
     subtotal_deductions = (personal + spouse_deduct + child_deduct + parent_deduct + 
                            social_sec + life_health_deduct + home_loan_interest + retirement_deduct)
@@ -150,8 +150,9 @@ def generate_tax_planning_advice(total_income, net_income, current_life_ins, cur
     if current_tax == 0.0:
         return "💡 สิทธิประโยชน์: เงินได้สุทธิของคุณได้รับการยกเว้นภาษี จึงยังไม่จำเป็นต้องซื้อสิทธิลดหย่อนเพิ่มเติมครับ"
 
-    remain_life = max(0.0, 100000.0 - current_life_ins)
-    max_ssf_allowed = min(total_income * 0.30, 200000.0)
+    deduction_rules = tax_rules.TAX_RULES["deduction"]
+    remain_life = max(0.0, deduction_rules["life_health_combined_cap"] - current_life_ins)
+    max_ssf_allowed = min(total_income * deduction_rules["ssf_rmf_income_rate"], deduction_rules["ssf_rmf_cap"])
     remain_ssf = max(0.0, max_ssf_allowed - current_ssf)
 
     advices = []
