@@ -1,0 +1,197 @@
+[
+  {
+    "id": "5f1dd80e-9ff3-4965-a8b0-0c1f4645589d",
+    "data": [
+      {
+        "text": "ค่าเช่าหักค่าใช้จ่ายได้เท่าไหร่",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "85c18661-7961-4fc5-92ec-8516f4d4c130",
+    "data": [
+      {
+        "text": "บริจาคลดหย่อนได้ไหม",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "c660f81a-e0f3-440a-ae0a-ab8efa49c205",
+    "data": [
+      {
+        "text": "ภาษีขั้นบันไดคิดยังไง",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0939132e-9cac-4c25-9e36-391c1abc3919",
+    "data": [
+      {
+        "text": "เงินได้พึงประเมินคืออะไร",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "3806065f-9816-4ff8-b831-bacc9306230d",
+    "data": [
+      {
+        "text": "ยื่นภาษีออนไลน์ยังไง",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5575613b-5d1a-4565-8f09-b848a1332efa",
+    "data": [
+      {
+        "text": "ประกันชีวิตลดหย่อนได้เท่าไหร่",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "ff2fc128-7bb5-41af-a41f-223de7ab6997",
+    "data": [
+      {
+        "text": "ลดหย่อนพ่อแม่ได้กี่คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "2666430e-947c-4d84-85e9-a70749bd6220",
+    "data": [
+      {
+        "text": "ดอกเบี้ยบ้านลดหย่อนได้ไหม",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "33762580-2e33-4389-9476-cfaa206444c2",
+    "data": [
+      {
+        "text": "ภาษีหัก ณ ที่จ่ายคืออะไร",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0de9ae84-2a1c-444c-bbca-140737ff4448",
+    "data": [
+      {
+        "text": "ต้องยื่นภาษีไหม",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "6a47ead3-f73c-4e8b-be27-c1a13c954356",
+    "data": [
+      {
+        "text": "เงินได้ประเภทที่ 8 คืออะไร",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f5dd9288-cafa-4818-bc15-b478109ddfc4",
+    "data": [
+      {
+        "text": "ค่าลดหย่อนมีอะไรบ้าง",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7050ba79-d9da-4fe3-b544-67fd7dd3a5e6",
+    "data": [
+      {
+        "text": "ประกันสังคมลดหย่อนได้สูงสุดเท่าไหร่",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "9b306303-0326-42a1-bd15-14d72bad33b3",
+    "data": [
+      {
+        "text": "ลดหย่อนบุตรได้เท่าไหร่",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "8dd58979-9352-4157-9c34-aa71958b8a36",
+    "data": [
+      {
+        "text": "ยื่นภาษีได้ถึงวันไหน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  }
+]
