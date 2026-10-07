@@ -21,3 +21,13 @@ def test_spouse_is_not_list():
     # ถ้า spouse เป็น list จะได้ "['yes']" แล้วค่าลดหย่อนคู่สมรส 60,000 หายเงียบ ๆ
     spouse = load_intent_parameters('04_Tax_Interview_Deductions')['spouse']
     assert spouse['isList'] is False
+
+
+def test_social_security_prompt_asks_yearly():
+    # #18: โค้ดนับ social_security เป็นยอดทั้งปี (ไม่คูณ 12) prompt จึงต้องถามยอดทั้งปี
+    social_security = load_intent_parameters('02_Tax_Interview_Salary')['social_security']
+    prompts = [p['value'] for p in social_security['prompts']]
+    assert prompts
+    for prompt in prompts:
+        assert 'ทั้งปี' in prompt
+        assert 'เดือนละ' not in prompt

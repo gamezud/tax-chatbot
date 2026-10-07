@@ -17,7 +17,7 @@
       ],
       "parameters": [
         {
-          "id": "f9cc451c-9c87-456f-84df-f537e558208f",
+          "id": "2d78e12f-f351-42c3-bbc0-050381042d39",
           "name": "salary_per_month",
           "required": true,
           "dataType": "@sys.number",
@@ -36,7 +36,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "cd1b91c5-b4cc-4772-a3f6-9009ce00dd55",
+          "id": "300c5d59-bee1-41df-89d0-034dd8ccf4da",
           "name": "bonus",
           "required": true,
           "dataType": "@money_amount",
@@ -55,7 +55,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "65747e2f-fb7d-4bab-a9d4-e3c7cbdaef41",
+          "id": "ddc7eff9-b9a1-465d-9300-18a075e89ee6",
           "name": "social_security",
           "required": true,
           "dataType": "@money_amount",
@@ -65,7 +65,7 @@
           "prompts": [
             {
               "lang": "th",
-              "value": "โดนหักประกันสังคมเดือนละเท่าไหร่ครับ (เช่น 750) ถ้าไม่หักพิมพ์ 0 ครับ 🏥"
+              "value": "ปีนี้ถูกหักเงินสมทบประกันสังคมรวมทั้งปีเท่าไหร่ครับ 🏥 ดูได้จากใบ 50 ทวิ (หนังสือรับรองการหักภาษี ณ ที่จ่าย) ที่บริษัทออกให้ ถ้าจำได้แค่ยอดรายเดือน ให้คูณจำนวนเดือนที่ถูกหักเอง แล้วพิมพ์เฉพาะยอดรวม เช่น 9000 ถ้าไม่ถูกหักพิมพ์ 0 ครับ"
             }
           ],
           "promptMessages": [],
@@ -74,7 +74,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "7a724efd-9c61-45a3-9f70-87fa39f433a1",
+          "id": "59c99108-edd7-4ee7-a409-e39c5686998c",
           "name": "withholding_tax",
           "required": true,
           "dataType": "@money_amount",

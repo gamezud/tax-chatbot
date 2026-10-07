@@ -283,7 +283,7 @@ def test_salary_branch(post, name, total, next_prompt, next_ctx):
 def test_salary_branch_details_and_carries_params(post):
     body = post("004_02_Tax_Interview_Salary")
     text = body["fulfillmentText"]
-    assert "- หักประกันสังคม: 9,000.00 บาท" in text
+    assert "- หักประกันสังคมทั้งปี: 9,000.00 บาท" in text
     assert "- ภาษีหัก ณ ที่จ่าย: 12,000.00 บาท" in text
     # tax_session ส่งค่าที่สะสมกลับไปให้ Dialogflow เก็บต่อ
     params = ctx_params(body, "tax_session")
@@ -314,6 +314,29 @@ def test_online_branch_via_context_and_raw_text(post):
     assert "- หักค่าใช้จ่ายเหมา (60%): 240,000.00 บาท" in text
     assert ctx_params(body, "tax_session")["online_income"] == 400000.0
     assert ctx_list(body) == [("tax_session", 20), ("awaiting_online", 0), ("awaiting_deduction", 2)]
+
+
+def _rental_without_online():
+    # ไม่มี fixture ที่ค่าเช่าเป็นสาขาสุดท้าย (008 มีขายออนไลน์ต่อ) จึงตัดออนไลน์ออกจาก income_types
+    payload = load("008_03_Tax_Interview_Rental")
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["income_types"] = ["ค่าเช่า"]
+            ctx["parameters"]["income_types.original"] = ["ค่าเช่า"]
+    return payload
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",   # เงินเดือน → ค่าลดหย่อน
+    _rental_without_online(),        # ค่าเช่า → ค่าลดหย่อน
+    "009_Default_Fallback_Intent",   # ขายออนไลน์ → ค่าลดหย่อน
+], ids=["salary", "rental", "online"])
+def test_deduction_question_asks_yearly(post, payload):
+    # #19: โค้ดนับยอดค่าลดหย่อนเป็นยอดทั้งปี คำถามจึงต้องบอกหน่วย
+    text = post(payload)["fulfillmentText"]
+    # ดูเฉพาะส่วนคำถาม เพราะส่วนสรุปก่อนหน้ามี "รวมทั้งปี" อยู่แล้ว
+    question = text.split("'ค่าลดหย่อน'", 1)[1]
+    assert "ทั้งปี" in question
 
 
 def test_summary_salary_with_child_and_home_loan(post, mocks):
