@@ -133,13 +133,20 @@ def calculate_detailed_deductions(total_income, params):
     # 7. ดอกเบี้ยกู้ซื้อบ้าน (ไม่เกิน home_loan_interest_cap)
     home_loan_interest = min(clean_number(params.get('home_loan_interest', 0)), deduction_rules["home_loan_interest_cap"])
 
-    # 8. กองทุน SSF/RMF (ไม่เกิน ssf_rmf_income_rate ของเงินได้และไม่เกิน ssf_rmf_cap แล้วคุมด้วยเพดานกลุ่มเกษียณ retirement_group_cap)
+    # 8. กองทุน RMF (ไม่เกิน ssf_rmf_income_rate ของเงินได้และไม่เกิน ssf_rmf_cap แล้วคุมด้วยเพดานกลุ่มเกษียณ retirement_group_cap)
+    #    parameter ยังชื่อ ssf_rmf เพราะผูกกับ Dialogflow แต่ถือเป็น RMF อย่างเดียว (SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567)
     raw_ssf = clean_number(params.get('ssf_rmf', 0))
     ssf_by_income = min(raw_ssf, total_income * deduction_rules["ssf_rmf_income_rate"], deduction_rules["ssf_rmf_cap"])
     retirement_deduct = min(ssf_by_income, deduction_rules["retirement_group_cap"])
 
-    subtotal_deductions = (personal + spouse_deduct + child_deduct + parent_deduct + 
-                           social_sec + life_health_deduct + home_loan_interest + retirement_deduct)
+    # 9. ThaiESG (ไม่เกิน thai_esg_income_rate ของเงินได้และไม่เกิน thai_esg_cap) แยกจาก retirement_group_cap (docs หัวข้อ 3 [8])
+    #    parameter thai_esg ยังไม่มีบน Dialogflow Console ถ้าไม่มีค่า clean_number คืน 0
+    raw_thai_esg = clean_number(params.get('thai_esg', 0))
+    thai_esg_deduct = min(raw_thai_esg, total_income * deduction_rules["thai_esg_income_rate"], deduction_rules["thai_esg_cap"])
+
+    subtotal_deductions = (personal + spouse_deduct + child_deduct + parent_deduct +
+                           social_sec + life_health_deduct + home_loan_interest + retirement_deduct +
+                           thai_esg_deduct)
 
     return subtotal_deductions, life_health_deduct, retirement_deduct
 

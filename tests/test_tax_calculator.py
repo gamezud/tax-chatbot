@@ -126,7 +126,8 @@ def test_current_behavior_rental_expense_rate(property_type, current):
 
 
 # ---------------------------------------------------------------------------
-# E. ค่าลดหย่อน calculate_detailed_deductions → (subtotal, life_health, ssf)
+# E. ค่าลดหย่อน calculate_detailed_deductions → (subtotal, life_health, retirement)
+#    ตัวเลขตามปีภาษี 2569 (docs/tax-rules-2569.md)
 #    ส่วนตัว 60,000 ได้เสมอ ทุกเคสใส่เฉพาะคีย์ที่กำลังทดสอบ
 # ---------------------------------------------------------------------------
 PERSONAL = 60000.0
@@ -154,10 +155,11 @@ PERSONAL = 60000.0
     (0, {'num_parents': 4}, (PERSONAL + 120000, 0.0, 0.0)),
     (0, {'num_parents': 5}, (PERSONAL + 120000, 0.0, 0.0)),   # ตัดที่ 4 คน
 
-    # ประกันสังคม เพดาน 9,000
+    # ประกันสังคม เพดาน 10,500 = ค่าจ้างขั้นสูง 17,500 × 5% × 12 (docs ข้อ 2.2 หมายเหตุ [6])
     (0, {'social_security': 5000}, (PERSONAL + 5000, 0.0, 0.0)),
     (0, {'social_security': 9000}, (PERSONAL + 9000, 0.0, 0.0)),
-    (0, {'social_security': 12000}, (PERSONAL + 9000, 0.0, 0.0)),
+    (0, {'social_security': 10500}, (PERSONAL + 10500, 0.0, 0.0)),
+    (0, {'social_security': 12000}, (PERSONAL + 10500, 0.0, 0.0)),  # ปี 2567 ตัดที่ 9,000
 
     # ประกันชีวิต+สุขภาพ รวมไม่เกิน 100,000 / สุขภาพไม่เกิน 25,000
     (0, {'life_insurance': 50000}, (PERSONAL + 50000, 50000.0, 0.0)),
@@ -170,10 +172,19 @@ PERSONAL = 60000.0
     (0, {'home_loan_interest': 80000}, (PERSONAL + 80000, 0.0, 0.0)),
     (0, {'home_loan_interest': 150000}, (PERSONAL + 100000, 0.0, 0.0)),
 
-    # SSF/RMF: min(ที่ซื้อ, 30% ของเงินได้, 200,000)
-    (1000000, {'ssf_rmf': 250000}, (PERSONAL + 200000, 0.0, 200000.0)),  # ติด 200,000
+    # RMF (parameter ssf_rmf): min(ที่ซื้อ, 30% ของเงินได้, 500,000) (docs ข้อ 2.2 แถว RMF [4][5])
+    # SSF ใช้ไม่ได้แล้ว (docs ข้อ 2.2 แถว SSF [5]) จึงไม่มีเพดาน 200,000
+    (1000000, {'ssf_rmf': 250000}, (PERSONAL + 250000, 0.0, 250000.0)),  # 30% = 300,000 ไม่ติด (ปี 2567 ตัดที่ 200,000)
     (400000, {'ssf_rmf': 150000}, (PERSONAL + 120000, 0.0, 120000.0)),   # ติด 30% × 400,000
     (500000, {'ssf_rmf': 100000}, (PERSONAL + 100000, 0.0, 100000.0)),   # ไม่ติดเพดาน
+    (2000000, {'ssf_rmf': 600000}, (PERSONAL + 500000, 0.0, 500000.0)),  # 30% = 600,000 ติด 500,000
+
+    # ThaiESG: min(ที่ซื้อ, 30% ของเงินได้พึงประเมิน, 300,000) (docs หัวข้อ 3 [8])
+    # รวมอยู่ใน subtotal ไม่อยู่ในค่าที่ 3 (retirement) เพราะแยกจากเพดานกลุ่มเกษียณ
+    (0, {'thai_esg': ''}, (PERSONAL, 0.0, 0.0)),                          # Dialogflow ส่งค่าว่าง → 0
+    (1000000, {'thai_esg': 100000}, (PERSONAL + 100000, 0.0, 0.0)),      # ไม่ติดเพดาน
+    (500000, {'thai_esg': 200000}, (PERSONAL + 150000, 0.0, 0.0)),       # ติด 30% × 500,000
+    (2000000, {'thai_esg': 400000}, (PERSONAL + 300000, 0.0, 0.0)),      # 30% = 600,000 ติด 300,000
 ])
 def test_deductions_each_item(total_income, params, expected):
     assert calculate_detailed_deductions(total_income, params) == pytest.approx(expected)
@@ -193,6 +204,15 @@ def test_deductions_all_items_full():
     # 60,000 + 60,000 + 90,000 + 60,000 + 9,000 + 100,000 + 100,000 + 200,000 = 679,000
     assert calculate_detailed_deductions(1000000, params) == pytest.approx(
         (679000.0, 100000.0, 200000.0))
+
+
+def test_thai_esg_separate_from_retirement_cap():
+    # RMF 500,000 + ThaiESG 300,000 = 800,000 เกินเพดานกลุ่มเกษียณ 500,000 แต่ได้ครบทั้งสองก้อน
+    # เพราะ ThaiESG มีเพดานของตัวเอง ไม่นับรวมกับกลุ่มเกษียณ (docs หัวข้อ 3 [8])
+    # เงินได้ 3,000,000: 30% = 900,000 จึงไม่ติดเพดานสัดส่วนของทั้งสองรายการ
+    params = {'ssf_rmf': 500000, 'thai_esg': 300000}
+    assert calculate_detailed_deductions(3000000, params) == pytest.approx(
+        (PERSONAL + 800000, 0.0, 500000.0))
 
 
 def test_current_behavior_spouse_as_list_not_counted():

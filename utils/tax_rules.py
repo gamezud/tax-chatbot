@@ -1,6 +1,6 @@
 """
 ตัวเลขภาษีที่เปลี่ยนตามปีภาษี (เพดาน อัตรา ขั้นบันได เกณฑ์วิธีที่ 2)
-สเปกและแหล่งอ้างอิงอยู่ใน docs/tax-rules-2569.md คอลัมน์ "โค้ด (2567)"
+สเปกและแหล่งอ้างอิงอยู่ใน docs/tax-rules-2569.md คอลัมน์ "ปี 2569" (ThaiESG อยู่หัวข้อ 3)
 
 ไฟล์นี้เป็นค่าคงที่ล้วน ไม่ import อะไรและไม่มี I/O
 
@@ -11,7 +11,7 @@
 """
 
 TAX_RULES = {
-    "tax_year": 2567,
+    "tax_year": 2569,
 
     # ค่าใช้จ่าย (docs ข้อ 2.1)
     "expense": {
@@ -34,13 +34,17 @@ TAX_RULES = {
         "child_second_onward": 60000.0,
         "parent_per_person": 30000.0,
         "parent_max_count": 4,
-        "social_security_cap": 9000.0,
+        "social_security_cap": 10500.0,    # ไม่ใช่เพดานในประมวลรัษฎากร — ยอดสูงสุดที่ผู้ประกันตน ม.33 จ่ายได้ทั้งปี (docs ข้อ 2.2 หมายเหตุ)
         "health_insurance_cap": 25000.0,
         "life_health_combined_cap": 100000.0,
         "home_loan_interest_cap": 100000.0,
+        # RMF อย่างเดียว (SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567) ชื่อ key จะเปลี่ยนเป็น rmf_* ในขั้นแก้คำแนะนำวางแผนภาษี
         "ssf_rmf_income_rate": 0.30,
-        "ssf_rmf_cap": 200000.0,
+        "ssf_rmf_cap": 500000.0,
         "retirement_group_cap": 500000.0,
+        # ThaiESG แยกจาก retirement_group_cap (docs หัวข้อ 3 [8])
+        "thai_esg_income_rate": 0.30,
+        "thai_esg_cap": 300000.0,
         "donation_rate": 0.10,
     },
 
