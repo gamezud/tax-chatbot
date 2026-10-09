@@ -148,35 +148,43 @@ def calculate_detailed_deductions(total_income, params):
                            social_sec + life_health_deduct + home_loan_interest + retirement_deduct +
                            thai_esg_deduct)
 
-    return subtotal_deductions, life_health_deduct, retirement_deduct
+    # คืนยอด ThaiESG แยกด้วย เพราะ generate_tax_planning_advice ต้องรู้ยอดที่ใช้ไปแล้ว
+    return subtotal_deductions, life_health_deduct, retirement_deduct, thai_esg_deduct
 
-def generate_tax_planning_advice(total_income, net_income, current_life_ins, current_ssf):
-    current_tax = compute_tax_from_net(net_income)
-    bracket_rate = get_tax_bracket_rate(net_income)
-    
-    if current_tax == 0.0:
-        return "💡 สิทธิประโยชน์: เงินได้สุทธิของคุณได้รับการยกเว้นภาษี จึงยังไม่จำเป็นต้องซื้อสิทธิลดหย่อนเพิ่มเติมครับ"
+def generate_tax_planning_advice(total_income, net_income, current_life_ins, current_rmf, current_thai_esg):
+    """
+    บอกสิทธิทางภาษีที่ผู้ใช้ยังใช้ได้อีก เป็นข้อมูลสิทธิ ไม่ใช่คำแนะนำการลงทุน
+    current_* คือยอดหลังคุมเพดานแล้วจาก calculate_detailed_deductions
+    """
+    if compute_tax_from_net(net_income) == 0.0:
+        return "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลงครับ"
 
     deduction_rules = tax_rules.TAX_RULES["deduction"]
+
+    # RMF: ไม่เกิน rmf_income_rate ของเงินได้และไม่เกิน rmf_cap แล้วต้องไม่เกินที่เหลือของ retirement_group_cap
+    #      บอทรองรับกลุ่มเกษียณแค่ RMF ยอดที่ใช้ไปของกลุ่มจึงเท่ากับ current_rmf
+    rmf_limit = min(total_income * deduction_rules["rmf_income_rate"], deduction_rules["rmf_cap"])
+    remain_rmf = max(0.0, min(rmf_limit - current_rmf,
+                              deduction_rules["retirement_group_cap"] - current_rmf))
+
+    # ThaiESG: ไม่เกิน thai_esg_income_rate ของเงินได้และไม่เกิน thai_esg_cap แยกจาก retirement_group_cap (docs หัวข้อ 3 [8])
+    thai_esg_limit = min(total_income * deduction_rules["thai_esg_income_rate"], deduction_rules["thai_esg_cap"])
+    remain_thai_esg = max(0.0, thai_esg_limit - current_thai_esg)
+
+    # ประกันชีวิต: current_life_ins เป็นยอดประกันชีวิต+สุขภาพรวมกัน จึงเทียบกับ life_health_combined_cap
     remain_life = max(0.0, deduction_rules["life_health_combined_cap"] - current_life_ins)
-    max_ssf_allowed = min(total_income * deduction_rules["rmf_income_rate"], deduction_rules["rmf_cap"])
-    remain_ssf = max(0.0, max_ssf_allowed - current_ssf)
 
-    advices = []
-    if remain_ssf > 0:
-        suggest_ssf = min(remain_ssf, 50000.0)
-        tax_after_ssf = compute_tax_from_net(max(0.0, net_income - suggest_ssf))
-        save_tax = current_tax - tax_after_ssf
-        advices.append(f"- กองทุน SSF: ซื้อเพิ่มได้อีก {remain_ssf:,.0f} บ. (หากซื้อ {suggest_ssf:,.0f} บ. จะประหยัดภาษีจริง {save_tax:,.0f} บ.)")
+    lines = []
+    for label, remain in (("กองทุน RMF", remain_rmf),
+                          ("กองทุน ThaiESG", remain_thai_esg),
+                          ("ประกันชีวิต", remain_life)):
+        if remain > 0:
+            lines.append(f"- {label}: ยังใช้สิทธิได้อีก {remain:,.0f} บาท")
 
-    if remain_life > 0:
-        suggest_life = min(remain_life, 30000.0)
-        tax_after_life = compute_tax_from_net(max(0.0, net_income - suggest_life))
-        save_tax = current_tax - tax_after_life
-        advices.append(f"- ประกันชีวิต: ซื้อเพิ่มได้อีก {remain_life:,.0f} บ. (หากซื้อ {suggest_life:,.0f} บ. จะประหยัดภาษีจริง {save_tax:,.0f} บ.)")
+    if not lines:
+        return "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้วครับ"
 
-    if not advices:
-        return "💡 คุณใช้สิทธิลดหย่อนหลักครบเต็มเพดานแล้ว เยี่ยมมากครับ!"
-
-    # ปรับข้อความเพื่อระบุอัตราภาษีส่วนเพิ่มตามขั้นบันไดอย่างชัดเจน
-    return f"💡 คำแนะนำการวางแผนภาษี (อัตราภาษีขั้นสูงสุดของคุณอยู่ที่ {bracket_rate*100:.0f}%):\n" + "\n".join(advices)
+    bracket_rate = get_tax_bracket_rate(net_income)
+    return (f"💡 สิทธิทางภาษีที่ยังใช้ได้ (อัตราภาษีขั้นสูงสุดของคุณอยู่ที่ {bracket_rate*100:.0f}%):\n"
+            + "\n".join(lines)
+            + "\n(เป็นข้อมูลสิทธิทางภาษีตามกฎหมาย กองทุนแต่ละประเภทมีเงื่อนไขการถือครอง ไม่ใช่คำแนะนำการลงทุน)")

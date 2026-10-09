@@ -367,6 +367,10 @@ def test_summary_salary_with_child_and_home_loan(post, mocks):
     data = assert_summary_side_effects(body, mocks)
     assert data["tax_payable"] == pytest.approx(20600.0)
     assert data["net_payable"] == pytest.approx(8600.0)
+    # สิทธิที่ยังใช้ได้: ไม่มี RMF/ThaiESG/ประกันชีวิต → 30% × 650,000 = 195,000 (handle_deductions ส่งค่าถูกตัว)
+    assert "- กองทุน RMF: ยังใช้สิทธิได้อีก 195,000 บาท" in text
+    assert "- กองทุน ThaiESG: ยังใช้สิทธิได้อีก 195,000 บาท" in text
+    assert "SSF" not in text
 
 
 def test_summary_salary_only_no_deductions(post, mocks):

@@ -246,7 +246,7 @@ def handle_deductions(merged_params, session_id, line_user_id):
     online_expense = online_income * rules["expense"]["online_sale_rate"]
     total_expense = salary_expense + rental_expense + online_expense
 
-    subtotal_deduct, capped_life, capped_ssf = calculate_detailed_deductions(total_income, merged_params)
+    subtotal_deduct, capped_life, capped_rmf, capped_thai_esg = calculate_detailed_deductions(total_income, merged_params)
     income_before_donation = max(0.0, total_income - total_expense - subtotal_deduct)
     raw_donation = clean_number(merged_params.get('donation', 0))
     capped_donation = min(raw_donation, income_before_donation * rules["deduction"]["donation_rate"])
@@ -286,7 +286,8 @@ def handle_deductions(merged_params, session_id, line_user_id):
         total_income=total_income,
         net_income=net_income,
         current_life_ins=capped_life,
-        current_ssf=capped_ssf
+        current_rmf=capped_rmf,
+        current_thai_esg=capped_thai_esg
     )
 
     pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
