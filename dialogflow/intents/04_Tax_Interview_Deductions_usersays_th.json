@@ -251,13 +251,7 @@
         "userDefined": false
       },
       {
-        "text": " ซื้อ SSF ",
-        "userDefined": false
-      },
-      {
-        "text": "250000",
-        "meta": "@sys.number",
-        "alias": "ssf_rmf",
+        "text": " ซื้อ SSF 250000",
         "userDefined": false
       }
     ],
@@ -502,17 +496,17 @@
         "text": "50000",
         "meta": "@sys.number",
         "alias": "life_insurance",
-        "userDefined": false
+        "userDefined": true
       },
       {
-        "text": " SSF ",
+        "text": " RMF ",
         "userDefined": false
       },
       {
         "text": "50000",
         "meta": "@sys.number",
         "alias": "ssf_rmf",
-        "userDefined": false
+        "userDefined": true
       }
     ],
     "isTemplate": false,
@@ -528,19 +522,375 @@
         "userDefined": false
       },
       {
-        "text": "300000",
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": true
+      },
+      {
+        "text": " และ RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "200000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": true
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "9cee30c9-52c6-497e-898c-5885830b7ef7",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
         "meta": "@sys.number",
         "alias": "life_insurance",
         "userDefined": false
       },
       {
-        "text": " และ SSF ",
+        "text": " RMF ",
         "userDefined": false
       },
       {
-        "text": "500000",
+        "text": "100000",
         "meta": "@sys.number",
         "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "6ce46544-fe37-451f-9763-fb315bad0952",
+    "data": [
+      {
+        "text": "มี RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " กับ ไทยอีเอสจี ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f3fb68f7-e0f7-44a7-b0bf-16649c027d59",
+    "data": [
+      {
+        "text": "ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      },
+      {
+        "text": " RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "53ae8756-82fa-4cc0-9683-0d8555a9796b",
+    "data": [
+      {
+        "text": "RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " และ ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "e89b2a63-f7da-4c6c-879b-00e37622ee55",
+    "data": [
+      {
+        "text": "ซื้อ RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f85edd70-0062-4901-bfbc-f00707f67b81",
+    "data": [
+      {
+        "text": "กองทุน RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "2803ea42-efe1-43da-b0a1-8232bf5c82a9",
+    "data": [
+      {
+        "text": "TESG ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "ca3caf36-c69e-4148-9aeb-37763301e112",
+    "data": [
+      {
+        "text": "กองทุนไทยเพื่อความยั่งยืน ",
+        "userDefined": false
+      },
+      {
+        "text": "80000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "057d79fe-7840-40c2-bc42-5e9e595f88b0",
+    "data": [
+      {
+        "text": "ไทยอีเอสจี ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "301ab699-725b-4a4c-a613-cc264cfb2b1d",
+    "data": [
+      {
+        "text": "มี Thai ESG ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "92631b1d-447b-4a85-a7a8-902ded200e7a",
+    "data": [
+      {
+        "text": "กองทุน ESG 50000",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "1f6431b2-11a3-48ac-8dbb-57f4abc849e6",
+    "data": [
+      {
+        "text": "Thai ESG ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d146ab7c-ae04-42d7-a782-580f223e18a8",
+    "data": [
+      {
+        "text": "กองทุน ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "2d4c3ec5-15ae-45af-a640-f0264d9e78e7",
+    "data": [
+      {
+        "text": "ซื้อ ThaiESG ไว้ ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "ea7da639-28d0-414d-bae1-c7fad49dd46b",
+    "data": [
+      {
+        "text": "ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "73cb87a8-c3b1-429e-82f9-3e3a5ac40add",
+    "data": [
+      {
+        "text": "RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "100000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " SSF 50000",
         "userDefined": false
       }
     ],
@@ -572,13 +922,7 @@
     "id": "f908f519-5cbf-4f91-bc59-25e545e090f4",
     "data": [
       {
-        "text": "ลดหย่อน ssf ",
-        "userDefined": false
-      },
-      {
-        "text": "15000",
-        "meta": "@sys.number",
-        "alias": "ssf_rmf",
+        "text": "ลดหย่อน ssf 15000",
         "userDefined": false
       }
     ],
@@ -640,7 +984,7 @@
         "text": "20000",
         "meta": "@sys.number",
         "alias": "life_insurance",
-        "userDefined": false
+        "userDefined": true
       }
     ],
     "isTemplate": false,
@@ -665,14 +1009,8 @@
     "id": "25821145-d3bc-4f45-b090-b40a20994125",
     "data": [
       {
-        "text": "ซื้อ SSF ไว้ ",
+        "text": "ซื้อ SSF ไว้ 20000",
         "userDefined": false
-      },
-      {
-        "text": "20000",
-        "meta": "@sys.number",
-        "alias": "ssf_rmf",
-        "userDefined": true
       }
     ],
     "isTemplate": false,

@@ -423,6 +423,22 @@ def test_ssf_note_with_rmf_in_same_message(post):
     assert SSF_NOTE in text
 
 
+def test_thai_esg_counted_in_summary(post):
+    # parameter thai_esg จาก Console ต้องเข้าการคำนวณจริง (fixture 021 + ThaiESG 20,000)
+    # 3. ลดหย่อน: 69,000 + ThaiESG min(20,000, 30% × 360,000 = 108,000, 300,000)  =  89,000 (docs หัวข้อ 3 [8])
+    # 4. เงินได้สุทธิ: 360,000 − 100,000 − 89,000                                = 171,000
+    # 5. ภาษี: 150,001–171,000: 21,000 × 5%                                       =   1,050
+    # สิทธิ ThaiESG ที่เหลือ: 108,000 − 20,000                                    =  88,000
+    payload = load("021_04_Tax_Interview_Deductions")
+    payload["queryResult"]["queryText"] = "ThaiESG 20000"
+    payload["queryResult"]["parameters"]["thai_esg"] = 20000.0
+    text = post(payload)["fulfillmentText"]
+    for line in summary_lines("360,000.00", "100,000.00", "89,000.00", "171,000.00",
+                              "1,050.00", "0.00", "ต้องชำระภาษีเพิ่มเติม: 1,050.00 บาท"):
+        assert line in text
+    assert "- กองทุน ThaiESG: ยังใช้สิทธิได้อีก 88,000 บาท" in text
+
+
 def test_no_ssf_note_without_ssf(post):
     assert "SSF" not in post("021_04_Tax_Interview_Deductions")["fulfillmentText"]
 
