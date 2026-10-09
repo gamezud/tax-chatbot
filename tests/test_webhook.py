@@ -339,6 +339,20 @@ def test_deduction_question_asks_yearly(post, payload):
     assert "ทั้งปี" in question
 
 
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",   # เงินเดือน → ค่าลดหย่อน
+    _rental_without_online(),        # ค่าเช่า → ค่าลดหย่อน
+    "009_Default_Fallback_Intent",   # ขายออนไลน์ → ค่าลดหย่อน
+], ids=["salary", "rental", "online"])
+def test_deduction_question_lists_rmf_and_thai_esg(post, payload):
+    # #3: SSF ลดหย่อนไม่ได้แล้วหลังปีภาษี 2567 (docs ข้อ 2.2 แถว SSF [5]) คำถามจึงยกตัวอย่าง RMF และ ThaiESG แทน
+    text = post(payload)["fulfillmentText"]
+    question = text.split("'ค่าลดหย่อน'", 1)[1]
+    assert "RMF" in question
+    assert "ThaiESG" in question
+    assert "SSF" not in question.upper()
+
+
 def test_summary_salary_with_child_and_home_loan(post, mocks):
     # 005: คำนวณมือตามกฎหมาย ปีภาษี 2569 (ค่าที่โค้ดใช้อยู่)
     # เงินเดือน 50,000/เดือน โบนัส 50,000 ลูก 1 คน ดอกเบี้ยบ้าน 20,000 ประกันสังคม 9,000 หัก ณ ที่จ่าย 12,000
