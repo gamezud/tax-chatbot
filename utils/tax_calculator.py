@@ -133,11 +133,11 @@ def calculate_detailed_deductions(total_income, params):
     # 7. ดอกเบี้ยกู้ซื้อบ้าน (ไม่เกิน home_loan_interest_cap)
     home_loan_interest = min(clean_number(params.get('home_loan_interest', 0)), deduction_rules["home_loan_interest_cap"])
 
-    # 8. กองทุน RMF (ไม่เกิน ssf_rmf_income_rate ของเงินได้และไม่เกิน ssf_rmf_cap แล้วคุมด้วยเพดานกลุ่มเกษียณ retirement_group_cap)
+    # 8. กองทุน RMF (ไม่เกิน rmf_income_rate ของเงินได้และไม่เกิน rmf_cap แล้วคุมด้วยเพดานกลุ่มเกษียณ retirement_group_cap)
     #    parameter ยังชื่อ ssf_rmf เพราะผูกกับ Dialogflow แต่ถือเป็น RMF อย่างเดียว (SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567)
-    raw_ssf = clean_number(params.get('ssf_rmf', 0))
-    ssf_by_income = min(raw_ssf, total_income * deduction_rules["ssf_rmf_income_rate"], deduction_rules["ssf_rmf_cap"])
-    retirement_deduct = min(ssf_by_income, deduction_rules["retirement_group_cap"])
+    raw_rmf = clean_number(params.get('ssf_rmf', 0))
+    rmf_by_income = min(raw_rmf, total_income * deduction_rules["rmf_income_rate"], deduction_rules["rmf_cap"])
+    retirement_deduct = min(rmf_by_income, deduction_rules["retirement_group_cap"])
 
     # 9. ThaiESG (ไม่เกิน thai_esg_income_rate ของเงินได้และไม่เกิน thai_esg_cap) แยกจาก retirement_group_cap (docs หัวข้อ 3 [8])
     #    parameter thai_esg ยังไม่มีบน Dialogflow Console ถ้าไม่มีค่า clean_number คืน 0
@@ -159,7 +159,7 @@ def generate_tax_planning_advice(total_income, net_income, current_life_ins, cur
 
     deduction_rules = tax_rules.TAX_RULES["deduction"]
     remain_life = max(0.0, deduction_rules["life_health_combined_cap"] - current_life_ins)
-    max_ssf_allowed = min(total_income * deduction_rules["ssf_rmf_income_rate"], deduction_rules["ssf_rmf_cap"])
+    max_ssf_allowed = min(total_income * deduction_rules["rmf_income_rate"], deduction_rules["rmf_cap"])
     remain_ssf = max(0.0, max_ssf_allowed - current_ssf)
 
     advices = []

@@ -38,9 +38,9 @@ TAX_RULES = {
         "health_insurance_cap": 25000.0,
         "life_health_combined_cap": 100000.0,
         "home_loan_interest_cap": 100000.0,
-        # RMF อย่างเดียว (SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567) ชื่อ key จะเปลี่ยนเป็น rmf_* ในขั้นแก้คำแนะนำวางแผนภาษี
-        "ssf_rmf_income_rate": 0.30,
-        "ssf_rmf_cap": 500000.0,
+        # RMF (SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567 จึงไม่มี key ของ SSF)
+        "rmf_income_rate": 0.30,
+        "rmf_cap": 500000.0,
         "retirement_group_cap": 500000.0,
         # ThaiESG แยกจาก retirement_group_cap (docs หัวข้อ 3 [8])
         "thai_esg_income_rate": 0.30,
