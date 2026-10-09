@@ -40,6 +40,7 @@ sys.modules["utils.firebase_db"] = _fake_firebase_db
 
 import app as app_module  # noqa: E402
 import utils.knowledge_search as knowledge_search  # noqa: E402
+from utils import tax_rules  # noqa: E402
 
 # path อิงตำแหน่งไฟล์นี้ ไม่ใช่ cwd เพราะเทส chdir ไป tmp_path
 FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
@@ -443,6 +444,28 @@ def test_no_ssf_note_without_ssf(post):
     assert "SSF" not in post("021_04_Tax_Interview_Deductions")["fulfillmentText"]
 
 
+def test_summary_shows_tax_year(post, mocks):
+    # ปีภาษีเป้าหมายของ docs/tax-rules-2569.md ต้องไปถึง LINE, PDF และ Firestore
+    text = post("021_04_Tax_Interview_Deductions")["fulfillmentText"]
+    assert "📊 สรุปผลการประเมินภาษีประจำปีภาษี 2569\n" in text
+    _, firestore_data = mocks.firebase.save_tax_report.call_args.args
+    _, pdf_data = mocks.pdf.call_args.args
+    assert firestore_data["tax_year"] == 2569
+    assert pdf_data["tax_year"] == 2569
+
+
+def test_tax_year_read_at_call_time(post, mocks, monkeypatch):
+    # แทนที่ TAX_RULES ทั้งก้อนแบบที่ระบบ Admin จะทำ (ไม่ใช่ setitem) ปีที่แสดงต้องเปลี่ยนตาม
+    # ถ้ามีจุดไหนผูก TAX_RULES ไว้ตอน import หรือเป็นค่า default ของ parameter (กับดักข้อ 9) เทสนี้จะล้ม
+    monkeypatch.setattr(tax_rules, "TAX_RULES", {**tax_rules.TAX_RULES, "tax_year": 2570})
+    text = post("021_04_Tax_Interview_Deductions")["fulfillmentText"]
+    assert "📊 สรุปผลการประเมินภาษีประจำปีภาษี 2570\n" in text
+    _, firestore_data = mocks.firebase.save_tax_report.call_args.args
+    _, pdf_data = mocks.pdf.call_args.args
+    assert firestore_data["tax_year"] == 2570
+    assert pdf_data["tax_year"] == 2570
+
+
 def test_summary_salary_only_no_deductions(post, mocks):
     # 021: คำนวณมือตามกฎหมาย ปีภาษี 2569 ผู้ใช้ตอบ "ไม่มี" ค่าลดหย่อนเพิ่ม
     # เงินเดือน 30,000/เดือน ไม่มีโบนัส ประกันสังคม 9,000 ไม่มีหัก ณ ที่จ่าย
@@ -571,6 +594,32 @@ def test_history_formats_records(post, mocks):
         "- ภาษีสุทธิ: 2,050.00 บาท\n"
         "  [ดาวน์โหลด PDF: https://example.test/download/tax_report_x.pdf]"
     )
+
+
+def test_history_shows_tax_year(post, mocks):
+    mocks.firebase.get_user_history.return_value = [{
+        "created_at": "09/10/2026 10:00:00",
+        "tax_year": 2569,
+        "total_income": 360000.0,
+        "tax_payable": 2050.0,
+        "pdf_file_url": "",
+    }]
+    text = post("002_Default_Fallback_Intent")["fulfillmentText"]
+    assert "📅 09/10/2026 10:00:00 (ปีภาษี 2569)\n- เงินได้รวม: 360,000.00 บาท" in text
+
+
+@pytest.mark.parametrize("record_extra", [{}, {"tax_year": None}], ids=["no_key", "none"])
+def test_history_without_tax_year(post, mocks, record_extra):
+    # รายการที่บันทึกก่อนมี field tax_year ต้องไม่ error และไม่แสดงปี (ไม่เดาปีจาก tax_rules)
+    mocks.firebase.get_user_history.return_value = [{
+        "created_at": "01/10/2026 10:00:00",
+        "total_income": 360000.0,
+        "tax_payable": 2050.0,
+        **record_extra,
+    }]
+    text = post("002_Default_Fallback_Intent")["fulfillmentText"]
+    assert "📅 01/10/2026 10:00:00\n- เงินได้รวม: 360,000.00 บาท" in text
+    assert "ปีภาษี" not in text
 
 
 def test_current_behavior_raw_text_is_what_finds_salary(post):

@@ -99,6 +99,10 @@ def generate_tax_pdf(output_path, tax_data):
     # หัวรายงาน
     story.append(Paragraph("<b>ใบสรุปผลการประเมินภาษีเงินได้บุคคลธรรมดา</b>", title_style))
     story.append(Spacer(1, 4))
+    # ปีภาษีมาจาก tax_data (handle_deductions อ่าน tax_rules ให้) ไม่มี key นี้ก็ไม่แสดงบรรทัด
+    tax_year = tax_data.get('tax_year')
+    if tax_year:
+        story.append(Paragraph(f"ปีภาษี {tax_year}", sub_style))
     raw_uid = str(tax_data.get('user_id', 'General User'))
     masked_uid = f"User-{raw_uid[:8]}" if raw_uid != 'General User' else raw_uid
     story.append(Paragraph(f"วันที่ประเมิน: {tax_data.get('date', '')} | รหัสผู้ใช้งาน: {masked_uid}", sub_style))

@@ -69,7 +69,11 @@ def handle_history(line_user_id):
             tax_val = data.get('tax_payable', 0.0)
             pdf_link = data.get('pdf_file_url', '')
             link_text = f"\n  [ดาวน์โหลด PDF: {pdf_link}]" if pdf_link else ""
-            history_list.append(f"📅 {dt}\n- เงินได้รวม: {income_val:,.2f} บาท\n- ภาษีสุทธิ: {tax_val:,.2f} บาท{link_text}")
+            # อ่านปีจาก field ที่บันทึกไว้ ไม่ใช่ tax_rules — รายการเก่าคำนวณด้วยกติกาปีอื่น
+            # รายการที่บันทึกก่อนมี field นี้ไม่แสดงปี (ไม่เดา)
+            tax_year = data.get('tax_year')
+            year_text = f" (ปีภาษี {tax_year})" if tax_year else ""
+            history_list.append(f"📅 {dt}{year_text}\n- เงินได้รวม: {income_val:,.2f} บาท\n- ภาษีสุทธิ: {tax_val:,.2f} บาท{link_text}")
         reply_text = "📜 ประวัติการคำนวณภาษีล่าสุดของคุณ:\n\n" + "\n------------------\n".join(history_list)
     else:
         reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
@@ -240,6 +244,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         }
 
     rules = tax_rules.TAX_RULES
+    # อ่านครั้งเดียวแล้วส่งต่อผ่าน tax_report_data ให้ LINE, PDF และ Firestore ได้ปีเดียวกัน
+    tax_year = rules["tax_year"]
     salary_expense = min(salary_total * rules["expense"]["salary_rate"], rules["expense"]["salary_cap"])
     rental_rate = get_rental_expense_rate(property_type)
     rental_expense = rental_income * rental_rate
@@ -303,6 +309,7 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
 
     tax_report_data = {
         "date": datetime.now().strftime("%d/%m/%Y %H:%M"),
+        "tax_year": tax_year,
         "user_id": line_user_id,
         "salary_total": salary_total,        
         "rental_income": rental_income,     
@@ -324,7 +331,7 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     firebase_client.save_tax_report(line_user_id, tax_report_data)
 
     reply_text = (
-        f"📊 สรุปผลการประเมินภาษีประจำปี\n"
+        f"📊 สรุปผลการประเมินภาษีประจำปีภาษี {tax_year}\n"
         f"--------------------------------\n"
         f"1. เงินได้พึงประเมินรวม: {total_income:,.2f} บาท\n"
         f"2. หักค่าใช้จ่ายตามกฎหมาย: {total_expense:,.2f} บาท\n"

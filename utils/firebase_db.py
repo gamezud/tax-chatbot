@@ -22,6 +22,7 @@ class FirebaseManager:
                 "user_id": user_id,
                 "timestamp": firestore.SERVER_TIMESTAMP,
                 "created_at": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "tax_year": report_data.get("tax_year"),
                 "total_income": report_data.get("total_income", 0.0),
                 "total_expense": report_data.get("total_expense", 0.0),
                 "total_deduction": report_data.get("total_deduction", 0.0),
