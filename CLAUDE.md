@@ -124,7 +124,9 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
 
 **ทุกครั้งที่แก้บน Console ต้อง export agent ใหม่ลง `dialogflow/` แล้ว commit**
 
-> เหตุผล: `tests/test_dialogflow_export.py` ตรวจการตั้งค่า (เช่น `isList` ของ `spouse`) จากไฟล์ใน `dialogflow/`
+> เหตุผล: `tests/test_dialogflow_export.py` ตรวจการตั้งค่า (เช่น `isList` ของ `spouse` และ parameter ตัวเลขใน 04) จากไฟล์ใน `dialogflow/`
+> ตัวอย่างจริง: export ขั้น E ครั้งแรก `life_insurance` ถูกเปลี่ยนเป็น `isList: true` บน Console โดยไม่ได้ตั้งใจ
+> `test_deduction_numbers_are_not_lists` จับได้ก่อน commit
 > ถ้าแก้บน Console แล้วไม่ export เทสจะยังผ่านทั้งที่การตั้งค่าจริงเปลี่ยนไปแล้ว
 
 **Parameter** (อ่านจาก `queryResult.parameters` รวมกับที่สะสมใน `tax_session`)
@@ -132,10 +134,10 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
 `income_types`, `salary_per_month`, `bonus`, `social_security`, `withholding_tax`,
 `property_type`, `rental_income`, `online_income`,
 `spouse` (ค่าเป็น `yes`/`no` จาก custom entity), `num_children`, `num_parents`,
-`life_insurance`, `health_insurance`, `home_loan_interest`, `ssf_rmf`, `donation`
+`life_insurance`, `health_insurance`, `home_loan_interest`, `ssf_rmf`, `thai_esg`, `donation`
 
-`thai_esg` — `calculate_detailed_deductions` อ่านแล้ว แต่ยังไม่มีบน Console (สร้างในขั้น E ด้วยชื่อนี้ตรงตัว)
-ระหว่างนี้ไม่มีค่าส่งมา `clean_number` จึงคืน 0 เสมอ
+`ssf_rmf` เก็บยอด RMF อย่างเดียว (ชื่อเดิมคงไว้เพราะผูกกับ Console) ยอด SSF ไม่ถูก annotate เข้า parameter ไหน
+`thai_esg` เป็น `@sys.number` แบบเดียวกับ `ssf_rmf` (สร้างในขั้น E)
 
 ### 4. ห้ามแก้พฤติกรรมไปพร้อมกับย้ายโค้ด
 
@@ -337,7 +339,7 @@ pytest -v
 
 **เกณฑ์ผ่าน: ต้องไม่มี `failed` และไม่มี `XPASS`**
 
-ตัวเลข ณ ตอนนี้คือ `244 passed` ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
+ตัวเลข ณ ตอนนี้คือ `257 passed` ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
 (passed เพิ่ม xfailed ลด) จึงใช้ตัดสินผ่าน/ไม่ผ่านไม่ได้ ให้ดูเกณฑ์ข้างบนแทน
 
 - `pytest.ini` ที่ root บอก pytest สองอย่าง: `pythonpath = .` ให้ใส่ root ของโปรเจกต์ลง path
@@ -402,7 +404,7 @@ pytest -v
 **ทำเสร็จแล้ว**
 เงินได้ 4 ประเภท (เงินเดือน, โบนัส, ค่าเช่า, ขายออนไลน์) ·
 ค่าลดหย่อน 9 รายการ (ส่วนตัว, คู่สมรส, บุตร, บิดามารดา, ประกันสังคม, ประกันชีวิต+สุขภาพ,
-ดอกเบี้ยบ้าน, RMF, เงินบริจาค) + ThaiESG ในสูตรคำนวณ (ยังไม่ได้ถามผู้ใช้จนถึงขั้น E) ·
+ดอกเบี้ยบ้าน, RMF, เงินบริจาค) + ThaiESG (เงินได้ที่ได้รับยกเว้น) · แจ้งผู้ใช้เมื่อกรอก SSF ว่าลดหย่อนไม่ได้แล้ว ·
 ตัวเลขตามปีภาษี 2569 · ภาษีวิธีที่ 2 (0.5%) · สิทธิทางภาษีที่ยังใช้ได้ (RMF, ThaiESG, ประกันชีวิต) ·
 ตอบคำถามความรู้ด้วย RAG · PDF สรุปผล · ประวัติการคำนวณ
 
@@ -437,8 +439,13 @@ pytest -v
     ในการเขียนครั้งเดิม (ไม่เพิ่มการเรียก — กฎเหล็กข้อ 1) อ่านจาก `tax_rules.TAX_RULES` ตอนถูกเรียก (กฎเหล็กข้อ 2)
     > เหตุผล: ตอนนี้ไม่มีโค้ดไหนอ่าน `tax_year` ผู้ใช้จึงไม่รู้ว่าผลคำนวณใช้กติกาปีไหน
     > และประวัติใน Firestore แยกไม่ออกว่าคำนวณด้วยกติกาปีไหน
-  - **ขั้น E**: ข้อความใน `app.py` และ training phrase บน Console ที่พูดถึง SSF
-    และสร้าง parameter `thai_esg` บน Console (ชื่อนี้ตรงตัว โค้ดอ่านอยู่แล้ว) แล้ว export ลง `dialogflow/` ตามกฎเหล็กข้อ 3
+  - ✅ **ขั้น E** (4180200, 4d67799, e7d8d14): ปิด #3
+    คำถามค่าลดหย่อนยกตัวอย่าง RMF และ ThaiESG แทน SSF · Console มี parameter `thai_esg`
+    และ training phrase ของ ThaiESG ทุกแบบที่คนพิมพ์ (ThaiESG, Thai ESG, ไทยอีเอสจี, กองทุนไทยเพื่อความยั่งยืน, TESG)
+    รวมประโยคที่มีทั้ง RMF และ ThaiESG · ประโยค SSF และ "กองทุน ESG" คงไว้แต่ไม่ annotate
+    (ให้ยัง match 04 แต่ไม่นับยอด — ถ้าลบทิ้ง ข้อความจะตกเป็น Fallback แล้วเข้าสาขาความรู้)
+    · ผู้ใช้พิมพ์ SSF → ต่อท้ายผลสรุปว่าลดหย่อนไม่ได้แล้ว อ่านปีจาก key `ssf_last_tax_year`
+    — ทดสอบผ่าน LINE แล้ว 7 กรณี (ไม่มี / RMF / ThaiESG / RMF+ThaiESG / SSF / RMF+SSF / กองทุน ESG) ภาษีตรงกับที่คิดมือ
   - **ขั้น F**: แก้ `tax_knowledge.txt` แล้วรัน `utils/create_knowledge.py` สร้าง FAISS ใหม่
     ไม่งั้นคำตอบความรู้กับผลคำนวณจะขัดกัน (เช่น ยังบอกว่าประกันสังคมลดหย่อนได้ไม่เกิน 9,000)
 
@@ -486,18 +493,20 @@ pytest -v
   — แก้แค่ข้อความ (ปิดใน commit เดียวกับที่บันทึกข้อนี้): คำถาม "คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ?" ทั้ง 3 จุด
   (`handle_salary`, `handle_rental`, `handle_online` — `app.py` บรรทัด 145, 178, 209 ณ commit 0347426)
   เติม "จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี" — เทส: `test_deduction_question_asks_yearly`
+- #3 SSF และ RMF ใช้ parameter เดียวกัน (`ssf_rmf`) — ปิดแล้วในขั้น C และ E
+  เพดาน: `ssf_rmf` ถือเป็น RMF อย่างเดียว ใช้ `rmf_cap` (85df929)
+  คำถามค่าลดหย่อนเลิกพูดถึง SSF (4180200) · Console ไม่ annotate ยอด SSF เป็น `ssf_rmf` แล้ว (e7d8d14)
+  · ผู้ใช้ที่พิมพ์ SSF ได้หมายเหตุว่า SSF ลดหย่อนไม่ได้แล้ว เช็กจากข้อความดิบ
+  `if any(k in user_query.lower() for k in ['ssf', 'เอสเอสเอฟ']):` ใน `handle_deductions` (`app.py` บรรทัด 295 ณ commit e7d8d14)
+  ข้อความว่า "ไม่มี SSF" ก็ได้หมายเหตุด้วย ยอมรับไว้เพราะเป็นแค่ข้อมูล ไม่กระทบตัวเลข
+  — เทส: `test_ssf_rmf_annotation_follows_rmf_not_ssf`, `test_ssf_note_and_ssf_not_counted`,
+  `test_ssf_note_with_rmf_in_same_message`, `test_deduction_question_lists_rmf_and_thai_esg`
 
 ข้อใหม่ให้ใช้เลขถัดจากเลขสูงสุด
 
 - **#2** **ตรวจคำว่า "บ้าน" ก่อนคำว่า "ที่ดิน"** ข้อความอย่าง "ที่ดินพร้อมบ้าน" จะได้ 30% เสมอ
   — อาจถูกหรือผิดขึ้นกับเจตนา ต้องตัดสินใจ
   — 📌 ล็อกพฤติกรรม: `test_current_behavior_rental_expense_rate`
-- **#3** **SSF และ RMF ใช้ parameter เดียวกัน** (`ssf_rmf`) — ปิดบางส่วน
-  — ✅ เพดาน: แก้แล้วในขั้น C (85df929) `ssf_rmf` ถือเป็น RMF อย่างเดียว ใช้ `rmf_cap` ของ RMF แทนเพดาน SSF
-  (เทส: `test_deductions_each_item` แถว RMF)
-  — ยังเปิด: คำถามค่าลดหย่อนใน `app.py` ยังมีคำว่า SSF และ Console อาจยังจับยอด SSF เข้า `ssf_rmf`
-  ยอด SSF จึงได้ลดหย่อนแบบ RMF ทั้งที่ปีภาษี 2569 ลดหย่อนไม่ได้แล้ว
-  — ปิดในขั้น E: แก้คำถามใน `app.py` และตรวจ training phrase ของ `04_Tax_Interview_Deductions` กับ entity ของ `ssf_rmf` บน Console
 - **#4** **การจัดการ context ไม่สม่ำเสมอ** สาขาเงินเดือนและออนไลน์ปิด `awaiting_*` ของตัวเอง
   แต่สาขาค่าเช่าไม่ปิด `awaiting_rental` (ปล่อยให้หมดอายุเอง)
   — หลักฐาน: `tests/fixtures/009_Default_Fallback_Intent.json` มี `awaiting_rental` ค้างอยู่คู่กับ `awaiting_online` ตอนถึงสาขาออนไลน์
@@ -533,5 +542,11 @@ pytest -v
   หรือแสดงสิทธิที่เหลือทั้งที่ใช้เพิ่มแล้วภาษีไม่ลด — แก้ต้องส่ง `tax_method_2` เข้าฟังก์ชัน (commit แยก)
   — สิทธิที่เหลือแต่ละรายการรวมกันอาจเกินส่วนที่ลดภาษีได้จริง (ใช้ครบแล้วเงินได้สุทธิต่ำกว่าขั้นยกเว้น
   ส่วนที่ต่ำกว่านั้นไม่ลดภาษีเพิ่ม) ระบบแสดงสิทธิตามกฎหมาย ไม่ได้คำนวณแผน — เขียนเป็นข้อจำกัดในเล่ม
+- **#21** **ตัวกรองอักษรใน PDF ปล่อยสัญลักษณ์ที่ Unicode จัดเป็นตัวอักษรผ่าน** (ความสำคัญต่ำ)
+  `advice_clean = re.sub(...)` ที่เก็บแค่อักษรไทย `\w` ช่องว่าง และเครื่องหมายบางตัว (`utils/pdf_generator.py` บรรทัด 151 ณ commit e7d8d14)
+  `\w` ของ Python รับทุกอักขระที่เป็นตัวอักษรหรือตัวเลขใน Unicode เช่น ℹ (U+2139 หมวด `Ll`) จึงไม่ถูกตัด
+  ฟอนต์ TH Sarabun อาจไม่มีอักขระเหล่านี้ PDF จะแสดงเป็นสี่เหลี่ยม (emoji หมวด `So` อย่าง 💡 ถูกตัดตามปกติ)
+  — ตอนนี้ไม่มีผล เพราะ `tax_advice` มีแต่ข้อความที่เราเขียนเอง (หมายเหตุ SSF จึงไม่ใส่ ℹ️)
+  ถ้าวันหน้า `tax_advice` มีข้อความจากภายนอก (เช่น LLM) ต้องแก้
 
 🔒 = มี xfail คุมอยู่ (บั๊กชัดเจน) · 📌 = ล็อกพฤติกรรมปัจจุบันไว้ (ยังไม่ตัดสินใจ) · ไม่มีป้าย = ยังไม่มีเทส
