@@ -387,6 +387,46 @@ def test_summary_salary_with_child_and_home_loan(post, mocks):
     assert "SSF" not in text
 
 
+SSF_NOTE = ("หมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี 2568 "
+            "ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
+
+
+@pytest.mark.parametrize("query_text", ["SSF 50000", "ซื้อ ssf ไว้ 20000", "เอสเอสเอฟ 30000"])
+def test_ssf_note_and_ssf_not_counted(post, mocks, query_text):
+    # #3: SSF ลดหย่อนได้เฉพาะเงินได้ถึง 31 ธ.ค. 2567 (กฎกระทรวง ฉบับที่ 357 ข้อ 3 — docs ข้อ 2.2 แถว SSF [5])
+    # Console ไม่ annotate ยอด SSF เข้า parameter ไหน ssf_rmf จึงว่าง (ค่าใน fixture 021)
+    # ค่าลดหย่อนจึงเท่ากับ test_summary_salary_only_no_deductions: 69,000 → เงินได้สุทธิ 191,000 → ภาษี 2,050
+    payload = load("021_04_Tax_Interview_Deductions")
+    payload["queryResult"]["queryText"] = query_text
+    body = post(payload)
+    text = body["fulfillmentText"]
+    for line in summary_lines("360,000.00", "100,000.00", "69,000.00", "191,000.00",
+                              "2,050.00", "0.00", "ต้องชำระภาษีเพิ่มเติม: 2,050.00 บาท"):
+        assert line in text
+    assert SSF_NOTE in text
+    # หมายเหตุอยู่ใน tax_advice จึงไปถึง Firestore และ PDF ด้วย
+    _, data = mocks.firebase.save_tax_report.call_args.args
+    assert SSF_NOTE in data["tax_advice"]
+
+
+def test_ssf_note_with_rmf_in_same_message(post):
+    # "RMF 100000 SSF 50000": Dialogflow annotate เฉพาะยอด RMF → ssf_rmf = 100,000
+    # 3. ลดหย่อน: 69,000 + RMF min(100,000, 30% × 360,000 = 108,000, 500,000) = 169,000
+    # 4. เงินได้สุทธิ: 360,000 − 100,000 − 169,000                = 91,000 → อยู่ในขั้นยกเว้น ภาษี 0
+    payload = load("021_04_Tax_Interview_Deductions")
+    payload["queryResult"]["queryText"] = "RMF 100000 SSF 50000"
+    payload["queryResult"]["parameters"]["ssf_rmf"] = 100000.0
+    text = post(payload)["fulfillmentText"]
+    for line in summary_lines("360,000.00", "100,000.00", "169,000.00", "91,000.00",
+                              "0.00", "0.00", "ภาษีที่ชำระไว้พอดีแล้ว"):
+        assert line in text
+    assert SSF_NOTE in text
+
+
+def test_no_ssf_note_without_ssf(post):
+    assert "SSF" not in post("021_04_Tax_Interview_Deductions")["fulfillmentText"]
+
+
 def test_summary_salary_only_no_deductions(post, mocks):
     # 021: คำนวณมือตามกฎหมาย ปีภาษี 2569 ผู้ใช้ตอบ "ไม่มี" ค่าลดหย่อนเพิ่ม
     # เงินเดือน 30,000/เดือน ไม่มีโบนัส ประกันสังคม 9,000 ไม่มีหัก ณ ที่จ่าย

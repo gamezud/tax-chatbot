@@ -217,7 +217,7 @@ def handle_online(merged_params, user_query, session_id):
     print("🔑 [DEBUG-STEP3.5-EMIT] ส่งกิ่งถัดไป: awaiting_deduction")
     return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
 
-def handle_deductions(merged_params, session_id, line_user_id):
+def handle_deductions(merged_params, user_query, session_id, line_user_id):
     salary_per_month = clean_number(merged_params.get('salary_per_month'))
     bonus = clean_number(merged_params.get('bonus'))
     withholding_tax = clean_number(merged_params.get('withholding_tax'))
@@ -289,6 +289,13 @@ def handle_deductions(merged_params, session_id, line_user_id):
         current_rmf=capped_rmf,
         current_thai_esg=capped_thai_esg
     )
+
+    # SSF ลดหย่อนไม่ได้แล้วหลัง ssf_last_tax_year (docs ข้อ 2.2 แถว SSF [5]) Console ไม่ annotate ยอด SSF จึงไม่ถูกนับ
+    # เช็กจากข้อความดิบเพื่อบอกเหตุผล ต่อท้าย tax_advice ให้ไปถึงทั้ง LINE, PDF และ Firestore ในการเขียนครั้งเดิม
+    if any(k in user_query.lower() for k in ['ssf', 'เอสเอสเอฟ']):
+        ssf_last_tax_year = rules["deduction"]["ssf_last_tax_year"]
+        tax_advice += (f"\nหมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี {ssf_last_tax_year + 1} "
+                       f"ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
 
     pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
     pdf_filepath = os.path.join("static", "reports", pdf_filename)
@@ -438,7 +445,7 @@ def webhook():
         # STEP 4: ลดหย่อนและการคำนวณสรุปผล
         # ==========================================
         elif intent_name == '04_Tax_Interview_Deductions':
-            return jsonify(handle_deductions(merged_params, session_id, line_user_id))
+            return jsonify(handle_deductions(merged_params, user_query, session_id, line_user_id))
 
         # ==========================================
         # FALLBACK / KNOWLEDGE BASE (RAG)
