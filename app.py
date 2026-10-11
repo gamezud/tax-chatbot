@@ -2,8 +2,10 @@ import os
 import uuid
 import traceback
 import time
+import threading
 from datetime import datetime
 from flask import Flask, request, jsonify, send_from_directory, render_template
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from utils.firebase_db import firebase_client
 from utils.knowledge_search import query_tax_knowledge, get_db
@@ -17,6 +19,9 @@ from utils.tax_calculator import (
 )
 from utils import tax_rules
 from utils.pdf_generator import generate_tax_pdf
+# import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
+from utils import ocr, liff_auth
+from utils.receipt_parser import extract_donation_amount, format_amount
 
 app = Flask(__name__)
 PUBLIC_URL = ""
@@ -32,6 +37,79 @@ def liff_donation():
     # ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
     liff_id = os.environ.get('LIFF_ID', '').strip() or None
     return render_template('liff_donation.html', liff_id=liff_id)
+
+# ขนาดไฟล์รูปสูงสุดของ /liff/ocr — ตั้งเฉพาะ route นี้ผ่าน request.max_content_length
+# ห้ามตั้ง app.config['MAX_CONTENT_LENGTH'] เพราะจะมีผลกับ /webhook ด้วย
+LIFF_OCR_MAX_BYTES = 10 * 1024 * 1024
+
+# อ่านรูปได้ทีละรูป: OCR ใช้ CPU เครื่องเดียวกับ webhook ถ้าอ่านพร้อมกันหลายรูป
+# คำตอบของ Dialogflow อาจเกินงบ 5 วินาที (CLAUDE.md กฎเหล็กข้อ 1) — รูปที่มาตอนไม่ว่างตอบ busy ทันที ไม่รอคิว
+_ocr_slot = threading.Semaphore(1)
+
+def liff_channel_id():
+    # Channel ID ของ LINE Login channel คือตัวเลขหน้า "-" ของ LIFF ID
+    # (เทียบกับ Channel ID บน LINE Developers Console แล้วว่าตรงกัน 2026-10-11)
+    liff_id = os.environ.get('LIFF_ID', '').strip()
+    return liff_id.split('-')[0] if liff_id else ''
+
+@app.route('/liff/ocr', methods=['POST'])
+def liff_ocr():
+    # รับรูปจากหน้า LIFF คืนยอดเงินบริจาค — ไม่บันทึกรูปลงดิสก์
+    started = time.time()
+    body, http_status = read_donation_amount()
+    # log แค่ผลกับเวลา ไม่มีข้อความที่อ่านได้ ยอดเงิน หรือ token (ข้อมูลส่วนตัว)
+    print(f"🧾 [LIFF-OCR] {body['status']} ({time.time() - started:.2f}s)")
+    return jsonify(body), http_status
+
+def read_donation_amount():
+    """คืน (body, http_status) — body["status"] บอกหน้า LIFF ว่าควรแสดงข้อความอะไร"""
+    channel_id = liff_channel_id()
+    if not channel_id:
+        return {"status": "not_configured"}, 503
+
+    # เช็กขนาดจาก header ก่อน จะได้ไม่ต้องเรียก LINE ถ้ารูปใหญ่เกินอยู่แล้ว
+    request.max_content_length = LIFF_OCR_MAX_BYTES
+    if request.content_length is not None and request.content_length > LIFF_OCR_MAX_BYTES:
+        return {"status": "too_large"}, 413
+
+    auth = request.headers.get('Authorization', '')
+    token = auth[len('Bearer '):] if auth.startswith('Bearer ') else ''
+    try:
+        liff_auth.verify_liff_token(token, channel_id)
+    except liff_auth.InvalidTokenError:
+        return {"status": "invalid_token"}, 401
+    except liff_auth.LineUnavailableError:
+        return {"status": "line_unavailable"}, 503
+
+    if not ocr.ocr_available():
+        return {"status": "ocr_unavailable"}, 503
+
+    try:
+        image = request.files.get('image')
+    except RequestEntityTooLarge:
+        # ไม่มี Content-Length (ส่งแบบ chunked) แต่อ่านแล้วเกิน max_content_length
+        return {"status": "too_large"}, 413
+    if image is None:
+        return {"status": "no_image"}, 400
+
+    if not _ocr_slot.acquire(blocking=False):
+        return {"status": "busy"}, 503
+    try:
+        text = ocr.read_text(image.read())
+    except ocr.InvalidImageError:
+        return {"status": "invalid_image"}, 415
+    except ocr.ImageTooLargeError:
+        return {"status": "too_large"}, 413
+    except ocr.OcrUnavailableError:
+        return {"status": "ocr_unavailable"}, 503
+    except ocr.OcrFailedError:
+        return {"status": "ocr_failed"}, 500
+    finally:
+        _ocr_slot.release()
+
+    result = extract_donation_amount(text)
+    amount = format_amount(result["amount"]) if result["amount"] is not None else None
+    return {"status": result["status"], "amount": amount}, 200
 
 # -------------------------------------------------------------
 # Handler ของแต่ละสาขาใน webhook()
