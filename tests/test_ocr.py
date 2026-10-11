@@ -8,7 +8,7 @@ import io
 from pathlib import Path
 
 import pytest
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from utils import ocr
 from utils.receipt_parser import extract_donation_amount
@@ -29,6 +29,22 @@ def image_bytes(fmt="PNG", size=(40, 20), lines=()):
             draw.text((20, 20 + i * 90), text, font=font, fill=0)
     buf = io.BytesIO()
     img.save(buf, format=fmt)
+    return buf.getvalue()
+
+
+# EXIF Orientation 6 = ต้องหมุนตามเข็มนาฬิกา 90 องศาจึงจะตั้งตรง
+EXIF_ORIENTATION = 0x0112
+ROTATE_CW_TO_DISPLAY = 6
+
+
+def phone_style_jpeg(size, lines):
+    """JPEG แบบรูปจากมือถือ: พิกเซลถูกเก็บหมุนทวนเข็ม 90 องศา และ EXIF บอกให้หมุนกลับ"""
+    upright = Image.open(io.BytesIO(image_bytes(size=size, lines=lines)))
+    stored = upright.rotate(90, expand=True)   # Pillow หมุนทวนเข็มนาฬิกา
+    exif = Image.Exif()
+    exif[EXIF_ORIENTATION] = ROTATE_CW_TO_DISPLAY
+    buf = io.BytesIO()
+    stored.save(buf, format="JPEG", exif=exif.tobytes())
     return buf.getvalue()
 
 
@@ -129,6 +145,21 @@ def test_read_text_real(fmt):
 def test_read_text_then_extract_amount():
     data = image_bytes(size=(900, 110), lines=["จำนวนเงิน 5,000 บาท"])
     assert extract_donation_amount(ocr.read_text(data)) == {"status": "ok", "amount": 5000}
+
+
+def test_phone_style_jpeg_fixture_is_rotated():
+    # ยืนยันว่ารูปทดสอบสร้างถูก: พิกเซลที่เก็บอยู่ตะแคง แต่หมุนตาม EXIF แล้วได้ขนาดตั้งตรงเดิม
+    with Image.open(io.BytesIO(phone_style_jpeg((900, 110), ["x"]))) as img:
+        assert img.size == (110, 900)
+        assert img.getexif()[EXIF_ORIENTATION] == ROTATE_CW_TO_DISPLAY
+        assert ImageOps.exif_transpose(img).size == (900, 110)
+
+
+@requires_tesseract
+def test_read_text_follows_exif_orientation():
+    # รูปจากมือถือเก็บทิศทางไว้ใน EXIF — cv2.imdecode ต้องหมุนให้ ไม่งั้นอ่านตัวหนังสือตะแคง
+    data = phone_style_jpeg((900, 110), ["จำนวนเงิน 5,000 บาท"])
+    assert "5,000" in ocr.read_text(data)
 
 
 @requires_tesseract
