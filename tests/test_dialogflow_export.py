@@ -5,9 +5,27 @@
 — แก้บน Console แล้วต้อง export ใหม่ลง dialogflow/ แล้ว commit
 """
 import json
+import re
 from pathlib import Path
 
+import pytest
+
 DIALOGFLOW_DIR = Path(__file__).resolve().parent.parent / 'dialogflow'
+
+# คำสำคัญหน้าตัวเลขใน training phrase ของ 04 → parameter ที่ตัวเลขนั้นต้องถูก annotate
+# None = คงประโยคไว้ให้ match 04 แต่ห้าม annotate (SSF ตาม #3, "กองทุน ESG" ตามขั้น E)
+DEDUCTION_KEYWORDS = {
+    'ประกันชีวิต': 'life_insurance', 'ประกัน': 'life_insurance',  # "ซื้อประกัน 15000 บาท"
+    'ประกันสุขภาพ': 'health_insurance',
+    'ดอกเบี้ยบ้าน': 'home_loan_interest',
+    'บริจาค': 'donation',
+    'rmf': 'ssf_rmf',
+    'thaiesg': 'thai_esg', 'thai esg': 'thai_esg', 'tesg': 'thai_esg',
+    'ไทยอีเอสจี': 'thai_esg', 'กองทุนไทยเพื่อความยั่งยืน': 'thai_esg',
+    'ลูก': 'num_children', 'บุตร': 'num_children',
+    'พ่อแม่': 'num_parents',
+    'ssf': None, 'เอสเอสเอฟ': None, 'กองทุน esg': None,
+}
 
 
 def load_intent_parameters(intent_name):
@@ -23,6 +41,14 @@ def load_usersays(intent_name):
 
 def phrase_text(phrase):
     return ''.join(part['text'] for part in phrase['data'])
+
+
+def nearest_keyword(text):
+    # คำสำคัญที่อยู่ท้ายสุดของ text (ใกล้ตัวเลขที่ตามมาที่สุด) ไม่เจอคืน None
+    # ตำแหน่งเท่ากันเลือกคำที่ยาวกว่า: "ประกันสุขภาพ" ต้องชนะ "ประกัน" ที่ขึ้นต้นตำแหน่งเดียวกัน
+    lower = text.lower()
+    found = [(lower.rfind(k), len(k), k) for k in DEDUCTION_KEYWORDS if k in lower]
+    return max(found)[2] if found else None
 
 
 def test_spouse_is_not_list():
@@ -80,3 +106,47 @@ def test_phrase_separates_rmf_and_thai_esg():
     aliases = [{part.get('alias') for part in phrase['data']}
                for phrase in load_usersays('04_Tax_Interview_Deductions')]
     assert any({'ssf_rmf', 'thai_esg'} <= a for a in aliases)
+
+
+@pytest.mark.xfail(strict=True, reason="#23 ยังไม่มีประโยคที่มีบริจาคคู่กับค่าลดหย่อนอื่น — ถอดใน commit เดียวกับ export ใหม่")
+@pytest.mark.parametrize('other', [
+    'life_insurance', 'health_insurance', 'ssf_rmf', 'thai_esg', 'home_loan_interest',
+])
+def test_donation_paired_with_each_deduction_both_orders(other):
+    # #23: "บริจาค 3500 ประกันชีวิต 20000" ได้แค่ donation ค่าอื่นหายเงียบ ๆ ภาษีสูงเกินจริง
+    # เพราะ donation มีแต่ประโยคที่บริจาคอย่างเดียว ต้องมีตัวอย่างทั้งบริจาคอยู่หน้าและอยู่หลัง
+    orders = set()
+    for phrase in load_usersays('04_Tax_Interview_Deductions'):
+        aliases = [part['alias'] for part in phrase['data'] if part.get('alias')]
+        if 'donation' in aliases and other in aliases:
+            orders.add(aliases.index('donation') < aliases.index(other))
+    assert orders == {True, False}
+
+
+def test_annotation_follows_nearest_keyword():
+    # ตัวเลขที่ annotate ผิดตัว (เช่น ยอดประกันชีวิตไปเป็น donation) Dialogflow จะเรียนแบบผิด ๆ
+    # แล้วยอดเข้าเพดานผิดรายการโดยไม่มี error — ดูคำสำคัญที่ใกล้ตัวเลขที่สุด ไม่ใช่ทั้งประโยค
+    params = load_intent_parameters('04_Tax_Interview_Deductions')
+    numbers = {name for name, p in params.items() if p['dataType'] == '@sys.number'}
+    for phrase in load_usersays('04_Tax_Interview_Deductions'):
+        before = ''
+        for part in phrase['data']:
+            if part.get('alias') in numbers:
+                keyword = nearest_keyword(before)
+                assert keyword is not None, phrase_text(phrase)
+                assert DEDUCTION_KEYWORDS[keyword] == part['alias'], phrase_text(phrase)
+            before += part['text']
+
+
+def test_numbers_after_keywords_are_annotated():
+    # ตัวเลขที่ลืม annotate สอน Dialogflow ว่าไม่ต้องเก็บยอดนั้น (แบบเดียวกับ #23)
+    # ยกเว้นตัวเลขหลังคำที่ตั้งใจไม่ annotate (SSF, "กองทุน ESG")
+    for phrase in load_usersays('04_Tax_Interview_Deductions'):
+        before = ''
+        for part in phrase['data']:
+            if not part.get('alias'):
+                for match in re.finditer(r'\d[\d,]*', part['text']):
+                    keyword = nearest_keyword(before + part['text'][:match.start()])
+                    assert keyword is not None, phrase_text(phrase)
+                    assert DEDUCTION_KEYWORDS[keyword] is None, phrase_text(phrase)
+            before += part['text']
