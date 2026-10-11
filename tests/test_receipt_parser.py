@@ -102,6 +102,13 @@ def test_garbled_number_is_ambiguous(text):
     assert extract_donation_amount(text) == AMBIGUOUS
 
 
+def test_sara_am_split_by_ocr():
+    # Tesseract เขียน ำ (U+0E33) เป็น ํ + า (U+0E4D U+0E32) — "จำนวนเงิน" ต้องยังเป็นคำสำคัญ
+    # ไม่มี "บาท" ในข้อความ ยอดจึงได้มาจากคำสำคัญอย่างเดียว
+    split_am = "\N{THAI CHARACTER NIKHAHIT}\N{THAI CHARACTER SARA AA}"
+    assert extract_donation_amount(f"จ{split_am}นวนเงิน 3,000") == ok("3000")
+
+
 def test_thai_date_alone_is_not_amount():
     assert extract_donation_amount("วันที่ 11 ตุลาคม 2569\n11 ต.ค. 69") == NOT_FOUND
 
