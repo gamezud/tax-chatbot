@@ -339,13 +339,13 @@ pytest -v
 
 **เกณฑ์ผ่าน: ต้องไม่มี `failed` และไม่มี `XPASS`**
 
-ตัวเลข ณ ตอนนี้คือ `266 passed` ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
+ตัวเลข ณ ตอนนี้คือ `269 passed` ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
 (passed เพิ่ม xfailed ลด) จึงใช้ตัดสินผ่าน/ไม่ผ่านไม่ได้ ให้ดูเกณฑ์ข้างบนแทน
 
 - `pytest.ini` ที่ root บอก pytest สองอย่าง: `pythonpath = .` ให้ใส่ root ของโปรเจกต์ลง path
   เพื่อให้ `from utils.tax_calculator import ...` หาเจอ (ถ้าไม่มีจะได้ `No module named 'utils'`)
   และ `testpaths = tests` ให้หา test เฉพาะในโฟลเดอร์ `tests/`
-- เทสมีห้าไฟล์
+- เทสมีหกไฟล์
   - `test_tax_calculator.py` — สูตรใน `utils/tax_calculator.py` (import แค่ `re` กับ `utils.tax_rules`)
   - `test_dialogflow_export.py` — การตั้งค่าในไฟล์ export ใน `dialogflow/`
   - `test_firebase_db.py` — `utils/firebase_db.py` ตัวจริง (ไฟล์อื่นใช้โมดูลปลอม จึงไม่ครอบไฟล์นี้)
@@ -355,12 +355,15 @@ pytest -v
     ไม่อ่านไฟล์ key และไม่ต่อ Firestore จากนั้นเทสใส่ `db = MagicMock()` เองเพื่อตรวจ doc ที่จะเขียน
   - `test_pdf_generator.py` — smoke test ของ `generate_tax_pdf` ตัวจริง เขียน PDF ลง `tmp_path` (ฟังก์ชันเขียนเฉพาะ path ที่ส่งเข้าไป)
     ตรวจแค่ว่าได้ไฟล์ `%PDF` และ `static/reports/` ไม่เปลี่ยน ไม่ตรวจข้อความใน PDF
+  - `test_knowledge_index.py` — `faiss_tax_index/` สร้างจาก `tax_knowledge.txt` ฉบับปัจจุบันหรือไม่ โดยเทียบ hash
+    ไม่โหลด FAISS หรือ embedding (กับดักข้อ 4) · hash ไม่ขึ้นกับ CRLF/LF · import `utils.create_knowledge` ไม่ลาก langchain
+    (เทสหลังรันใน process แยกด้วย `sys.executable` เพราะ `test_webhook.py` โหลด langchain เข้า `sys.modules` ไปแล้ว)
   - `test_webhook.py` — ยิง fixture ใน `tests/fixtures/` เข้า `/webhook` ผ่าน Flask test client
     เพื่อล็อกการเลือกสาขา, outputContexts และข้อความตอบ ก่อน refactor `webhook()`
     ใส่โมดูลปลอมแทน `utils.firebase_db` ก่อน `import app` และ mock PDF / RAG ทุกเทส
     จึงไม่ต่อ Firestore ไม่สร้าง PDF และไม่เรียก Ollama
     (โมดูลปลอมอยู่ใน `sys.modules` ตลอดการรัน ถ้ามีไฟล์ test อื่นต้อง `import app` ให้ย้ายไป `tests/conftest.py`
-    — `test_firebase_db.py` และ `test_pdf_generator.py` ไม่ import `app` จึงยังไม่ต้องย้าย)
+    — `test_firebase_db.py`, `test_pdf_generator.py` และ `test_knowledge_index.py` ไม่ import `app` จึงยังไม่ต้องย้าย)
 - รันทั้งชุดราว 1–2 วินาที ส่วนใหญ่คือเวลา import langchain ตอน `import app`
 - `1 warning` ท้ายผล pytest: `langchain-community` แจ้ง `DeprecationWarning` ตอน import FAISS
   ใน `utils/knowledge_search.py` (มีมาก่อน refactor) ยังใช้งานได้ปกติเพราะ `requirements.txt` ล็อกเวอร์ชันไว้
@@ -400,9 +403,9 @@ pytest -v
 | `utils/knowledge_search.py` | ค้นฐานความรู้ด้วย FAISS + ให้ Ollama เรียบเรียงคำตอบภายใน deadline | มีข้อความสำรองเมื่อ LLM ใช้ไม่ได้ |
 | `utils/pdf_generator.py` | สร้าง PDF สรุปผลด้วย ReportLab | ใช้ฟอนต์ไทย `static/fonts/THSarabunNew.ttf` |
 | `utils/firebase_db.py` | `firebase_client` สำหรับ `save_tax_report()` และ `get_user_history()` | อ่าน key จาก `firebase_key.json` |
-| `utils/create_knowledge.py` | สร้าง FAISS index ใหม่จาก `tax_knowledge.txt` | รันแยกเมื่อแก้ฐานความรู้ ต้องรันจาก root |
-| `tax_knowledge.txt` | ฐานความรู้ภาษี (Markdown) | แก้ไฟล์นี้แล้วต้องรัน `create_knowledge.py` ใหม่ · หัวข้อ 5.1 แยกเป็น `###` ละรายการ (แก้โครงสร้าง ไม่ใช่เนื้อหา) เพื่อให้แต่ละรายการอยู่คนละ chunk — ห้ามรวมกลับ |
-| `faiss_tax_index/` | ฐานข้อมูลเวกเตอร์ที่สร้างแล้ว (100 chunk ~260 KB) | เก็บใน git เพราะเล็ก · **ต้องสร้างจาก `tax_knowledge.txt` เสมอ และ commit คู่กับไฟล์นั้นใน commit เดียวกัน** |
+| `utils/create_knowledge.py` | สร้าง FAISS index ใหม่จาก `tax_knowledge.txt` แล้วเขียน hash ของไฟล์นั้นลง `faiss_tax_index/tax_knowledge.sha256` | รันแยกเมื่อแก้ฐานความรู้ ต้องรันจาก root (`python utils\create_knowledge.py`) · import langchain อยู่ใน `build_vector_store()` ให้เทส import `knowledge_sha256` ได้เบา — ห้ามย้ายขึ้นหัวไฟล์ (`test_create_knowledge_import_is_light` จับ) |
+| `tax_knowledge.txt` | ฐานความรู้ภาษี (Markdown) | แก้ไฟล์นี้แล้วต้องรัน `create_knowledge.py` ใหม่ (ถ้าลืม `test_index_hash_matches_knowledge_file` ล้ม) · หัวข้อ 5.1 แยกเป็น `###` ละรายการ (แก้โครงสร้าง ไม่ใช่เนื้อหา) เพื่อให้แต่ละรายการอยู่คนละ chunk — ห้ามรวมกลับ |
+| `faiss_tax_index/` | ฐานข้อมูลเวกเตอร์ที่สร้างแล้ว (100 chunk ~260 KB) | เก็บใน git เพราะเล็ก · **ต้องสร้างจาก `tax_knowledge.txt` เสมอ และ commit คู่กับไฟล์นั้นใน commit เดียวกัน** · `tax_knowledge.sha256` คือ hash ของไฟล์ความรู้ที่ใช้สร้าง · สร้างใหม่ทุกครั้ง `index.pkl` จะเปลี่ยนเสมอ (docstore id สุ่มด้วย uuid4) แม้เนื้อหาเหมือนเดิม |
 | `static/reports/` | PDF ที่ระบบสร้าง | ถูก ignore เพราะมีข้อมูลรายได้ของผู้ทดสอบ |
 
 ---
@@ -454,7 +457,18 @@ pytest -v
   - ข้อความใน `tax_knowledge.txt` ที่ไม่มีใน docs ไม่ได้ตรวจกับปี 2569 (ดูขั้น F) และรายการใน docs หัวข้อ 4
     ที่บอทยังไม่รองรับ (เช่น โซลาร์เซลล์ใหม่ปี 2569) ต้องตัดสินใจว่าจะเพิ่มหรือเขียนเป็นข้อจำกัด
   - เล่มข้อ 1.3.2: ตัวอย่างในวงเล็บควรแก้เป็น "ปี 2569 ที่ต้องยื่นต้นปี 2570" (docs หัวข้อ 1) — เจ้าของโปรเจกต์แก้ในเล่ม
-  - กัน index กับ `tax_knowledge.txt` ไม่ตรงกัน (hash + test) — ดู "จะทำต่อไป"
+  - ✅ **กัน index กับ `tax_knowledge.txt` ไม่ตรงกัน** (5de5a7f, e2558e5)
+    > เหตุผล: ขั้น F พบ index ที่ไม่ได้สร้างจากไฟล์ใดใน git และไม่มีอะไรเตือน
+    - `knowledge_sha256` อ่านไฟล์แบบ text mode (แปลง CRLF เป็น LF แบบเดียวกับที่ `build_vector_store` อ่าน)
+      เพราะ `core.autocrlf=true` ทำให้ไฟล์ในเครื่องเป็น CRLF แต่ใน git เป็น LF — hash ที่บันทึกตรงกับ sha256 ของไฟล์ใน git (LF) แล้ว
+      ไม่เพิ่ม `.gitattributes` เพราะ hash ไม่ขึ้นกับ line ending อยู่แล้ว
+    - hash ทั้งไฟล์ก่อนล้าง `[cite:]` — แก้ส่วนที่ถูกล้างทิ้งก็ต้องสร้างใหม่ (ปลอดภัยกว่ากรณีกลับกัน)
+    - ลองให้เทสล้มแล้วทั้งสองตัว: import langchain ที่หัวไฟล์ → `test_create_knowledge_import_is_light` ล้ม ·
+      เติมช่องว่างท้าย `tax_knowledge.txt` → `test_index_hash_matches_knowledge_file` ล้มพร้อมข้อความให้รัน `create_knowledge.py`
+    - index ที่สร้างใหม่ใน e2558e5 เทียบกับของ 6d25a06 แล้วเหมือนเดิม: 100 chunk เนื้อหาและ metadata ตรงทุกตำแหน่ง
+      เวกเตอร์เท่ากันทุกค่า (`index.faiss` ไบต์เดิม) คำถาม 15 ข้อ (ข้อจำกัด, หลักฐาน threshold, ทดสอบ LINE ขั้น F)
+      ได้ chunk และ score เดิมทุกข้อด้วย k=2 — ตัวเลข distance ที่บันทึกไว้ใน "ค้างอยู่" จึงยังใช้ได้
+    - เทส hash ไม่ได้ตรวจว่า index โหลดได้ ถ้าย้าย FAISS ไป package ใหม่ต้องเทียบผลค้นแบบเดียวกันอีกรอบ
   - ✅ **ขั้น C** (85df929): `tax_rules.py` ใช้ค่าของปีภาษี 2569 แล้ว
     `social_security_cap` 10,500 · `rmf_cap` 500,000 (parameter `ssf_rmf` ถือเป็น RMF อย่างเดียว
     เพราะ SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567) · ThaiESG (`thai_esg_income_rate`, `thai_esg_cap`) แยกจาก `retirement_group_cap`
@@ -517,8 +531,6 @@ pytest -v
     (ถ้าขั้นสุดท้ายไม่ใช่ `None` เงินได้ส่วนที่เกินเพดานสุดท้ายจะไม่ถูกคิดภาษี)
 - OCR อ่านเอกสาร (OpenCV + Tesseract) โดยให้ผู้ใช้ยืนยันตัวเลขก่อนนำไปคำนวณเสมอ
 - ย้าย FAISS ออกจาก `langchain-community` ไป package ใหม่ (ดูหมายเหตุ `1 warning` ในหัวข้อ "รันชุด test")
-- กัน index กับ `tax_knowledge.txt` ไม่ตรงกัน (แบบที่เจอในขั้น F): ให้ `create_knowledge.py` เขียน hash ของ `tax_knowledge.txt`
-  ลง `faiss_tax_index/` แล้วเพิ่ม test เทียบ hash โดยไม่โหลด FAISS — commit แยก เสนอแผนก่อนทำ
 
 ---
 
