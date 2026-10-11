@@ -52,6 +52,18 @@ def liff_channel_id():
     liff_id = os.environ.get('LIFF_ID', '').strip()
     return liff_id.split('-')[0] if liff_id else ''
 
+def liff_donation_link():
+    # ต่อท้ายคำถามค่าลดหย่อน — อ่าน LIFF_ID ตอนถูกเรียก (CLAUDE.md กับดักข้อ 9) ไม่ได้ตั้ง → ไม่แสดงลิงก์
+    # หน้า LIFF ส่งข้อความเดียวแล้วสาขา 04 คำนวณทันที ค่าลดหย่อนอื่นที่ไม่ได้อยู่ในข้อความนั้นจะไม่ถูกนับ
+    liff_id = os.environ.get('LIFF_ID', '').strip()
+    if not liff_id:
+        return ""
+    return (
+        "\n\n📷 ถ้ามีเฉพาะเงินบริจาค ถ่ายรูปใบเสร็จให้ระบบอ่านยอดได้ที่ลิงก์นี้ครับ\n"
+        f"https://liff.line.me/{liff_id}\n"
+        "(ถ้ามีค่าลดหย่อนอื่นด้วย กรุณาพิมพ์ทั้งหมดในแชตครับ)"
+    )
+
 @app.route('/liff/ocr', methods=['POST'])
 def liff_ocr():
     # รับรูปจากหน้า LIFF คืนยอดเงินบริจาค — ไม่บันทึกรูปลงดิสก์
@@ -232,6 +244,7 @@ def handle_salary(merged_params, user_query, session_id):
         next_ctx = "awaiting_online"
     else:
         reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        reply_text += liff_donation_link()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -265,6 +278,7 @@ def handle_rental(merged_params, session_id):
         next_ctx = "awaiting_online"
     else:
         reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        reply_text += liff_donation_link()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -297,6 +311,7 @@ def handle_online(merged_params, user_query, session_id):
         f"- หักค่าใช้จ่ายเหมา ({online_rate*100:.0f}%): {online_expense:,.2f} บาท\n\n"
         f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
     )
+    reply_text += liff_donation_link()
     out_contexts = [
         {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
         {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},

@@ -102,6 +102,8 @@ def mocks(monkeypatch, tmp_path):
     monkeypatch.setattr(knowledge_search, "get_db", _forbidden("get_db"))
     monkeypatch.setattr(knowledge_search, "ask_llm", _forbidden("ask_llm"))
     monkeypatch.chdir(tmp_path)
+    # ไม่ให้ผลเทสขึ้นกับ LIFF_ID ที่ตั้งไว้ใน PowerShell ตอนรัน app.py — เทสลิงก์ LIFF ตั้งเอง
+    monkeypatch.delenv("LIFF_ID", raising=False)
     return m
 
 
@@ -344,6 +346,84 @@ def test_deduction_question_lists_rmf_and_thai_esg(post, payload):
     assert "RMF" in question
     assert "ThaiESG" in question
     assert "SSF" not in question.upper()
+
+
+TEST_LIFF_ID = "1234567890-TestLiff"
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",   # เงินเดือน → ค่าลดหย่อน
+    _rental_without_online(),        # ค่าเช่า → ค่าลดหย่อน
+    "009_Default_Fallback_Intent",   # ขายออนไลน์ → ค่าลดหย่อน
+], ids=["salary", "rental", "online"])
+def test_deduction_question_has_liff_link(post, payload, monkeypatch):
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    question = post(payload)["fulfillmentText"].split("'ค่าลดหย่อน'", 1)[1]
+    assert f"https://liff.line.me/{TEST_LIFF_ID}" in question
+    # ข้อความเดิมของคำถามยังอยู่ครบ (#19, #3)
+    assert "ทั้งปี" in question
+    assert "RMF" in question and "ThaiESG" in question
+    assert "SSF" not in question.upper()
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",
+    _rental_without_online(),
+    "009_Default_Fallback_Intent",
+], ids=["salary", "rental", "online"])
+def test_deduction_question_without_liff_id_has_no_link(post, payload):
+    # fixture mocks ลบ LIFF_ID ออกแล้ว
+    assert "liff.line.me" not in post(payload)["fulfillmentText"]
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",
+    _rental_without_online(),
+    "009_Default_Fallback_Intent",
+], ids=["salary", "rental", "online"])
+@pytest.mark.parametrize("blank", ["", " "], ids=["empty", "space"])
+def test_blank_liff_id_changes_nothing(post, payload, blank, monkeypatch):
+    # LIFF_ID ว่างหรือมีแต่ช่องว่าง ต้องเหมือนไม่ได้ตั้งทุกตัวอักษร
+    without = post(payload)  # fixture mocks ลบ LIFF_ID ออกแล้ว
+    # ไม่มีบรรทัดว่างค้างท้ายคำถาม — ถ้า "\n\n" หลุดออกนอก if ทั้งสองกรณีจะได้ "\n\n" เหมือนกันจนเทียบกันเองไม่เจอ
+    assert without["fulfillmentText"] == without["fulfillmentText"].rstrip()
+    monkeypatch.setenv("LIFF_ID", blank)
+    body = post(payload)
+    assert body["fulfillmentText"] == without["fulfillmentText"]
+    assert body["outputContexts"] == without["outputContexts"]
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",
+    _rental_without_online(),
+    "009_Default_Fallback_Intent",
+], ids=["salary", "rental", "online"])
+def test_liff_link_appended_on_own_line(post, payload, monkeypatch):
+    # ลิงก์ต่อท้ายคำถามเดิมโดยไม่แก้ข้อความเดิมหรือ outputContexts
+    # เทียบกับตอนไม่ได้ตั้ง LIFF_ID ไม่ใช่กับ liff_donation_link() เพราะจะเท่ากับให้ฟังก์ชันตรวจตัวเอง
+    without = post(payload)
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    body = post(payload)
+    without_text, with_text = without["fulfillmentText"], body["fulfillmentText"]
+    assert with_text.startswith(without_text)
+    added = with_text[len(without_text):]
+    assert added.startswith("\n\n")
+    assert "\n\n\n" not in with_text
+    # URL อยู่บรรทัดของตัวเอง ไม่งั้น LINE อาจลากอักษรไทยที่ติดกันเข้าไปในลิงก์
+    assert f"https://liff.line.me/{TEST_LIFF_ID}" in added.split("\n")
+    assert body["outputContexts"] == without["outputContexts"]
+
+
+@pytest.mark.parametrize("name, next_prompt", [
+    ("007_02_Tax_Interview_Salary", "'ค่าเช่า'"),        # เงินเดือนแล้วถามค่าเช่าต่อ
+    ("008_03_Tax_Interview_Rental", "'ขายของออนไลน์'"),  # ค่าเช่าแล้วถามขายออนไลน์ต่อ
+])
+def test_liff_link_only_on_deduction_question(post, name, next_prompt, monkeypatch):
+    # ยังไม่ถึงคำถามค่าลดหย่อน จึงไม่มีลิงก์
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    text = post(name)["fulfillmentText"]
+    assert next_prompt in text
+    assert "liff.line.me" not in text
 
 
 def test_summary_salary_with_child_and_home_loan(post, mocks):
