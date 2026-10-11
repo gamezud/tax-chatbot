@@ -14,7 +14,14 @@ from utils import liff_auth, ocr
 LIFF_ID = "1234567890-TestLiff"
 CHANNEL_ID = "1234567890"
 TOKEN = "eyJTEST.secret-token-value"
-RECEIPT_TEXT = "มูลนิธิทดสอบ นายลับเฉพาะ ระบบ\nจำนวนเงิน 5,000 บาท"
+RECEIPT_TEXT = "ใบอนุโมทนาบัตร\nมูลนิธิทดสอบ นายลับเฉพาะ ระบบ\nจำนวนเงิน 5,000 บาท"
+# ใบเสร็จที่ไม่ใช่การบริจาค: parser หายอดเจอ (35,000) แต่ต้องไม่ถูกส่งกลับไปเติม "บริจาค 35000"
+INSURANCE_TEXT = (
+    "บริษัท ประกันชีวิตตัวอย่าง จำกัด\n"
+    "ใบเสร็จรับเงิน\n"
+    "เบี้ยประกันชีวิต\n"
+    "จำนวนเงินที่ได้รับ 35,000.00 บาท"
+)
 
 
 @pytest.fixture(autouse=True)
@@ -70,17 +77,36 @@ def test_ok(upload, fakes):
 
 
 def test_decimal_amount(upload, fakes):
-    fakes.text = "จำนวนเงิน 1,250.50 บาท"
+    fakes.text = "ใบอนุโมทนาบัตร\nจำนวนเงิน 1,250.50 บาท"
     assert upload() == (200, {"status": "ok", "amount": "1250.50"})
 
 
 @pytest.mark.parametrize("text, status", [
-    ("จำนวนเงิน 1,500 บาท\nจำนวนเงิน 2,000 บาท", "ambiguous"),
+    ("ใบอนุโมทนาบัตร\nจำนวนเงิน 1,500 บาท\nจำนวนเงิน 2,000 บาท", "ambiguous"),
     ("ใบอนุโมทนาบัตร", "not_found"),
 ])
 def test_no_amount_when_parser_unsure(upload, fakes, text, status):
     fakes.text = text
     assert upload() == (200, {"status": status, "amount": None})
+
+
+# ---------------------------------------------------------------------------
+# ไม่ใช่หลักฐานการบริจาค
+# ---------------------------------------------------------------------------
+def test_not_donation(upload, fakes):
+    # รูปใบเสร็จเบี้ยประกันชีวิตเคยได้ ok 35000 แล้วหน้า LIFF เติม "บริจาค 35000" ให้ (กฎเหล็กข้อ 2)
+    fakes.text = INSURANCE_TEXT
+    assert upload() == (200, {"status": "not_donation", "amount": None})
+
+
+@pytest.mark.parametrize("text", [
+    "จำนวนเงิน 1,500 บาท\nจำนวนเงิน 2,000 บาท",  # ไม่มีคำบริจาค + ยอดกำกวม
+    "ใบเสร็จรับเงิน",                              # ไม่มีคำบริจาค + หายอดไม่เจอ
+], ids=["ambiguous", "not_found"])
+def test_not_donation_wins_over_amount_status(upload, fakes, text):
+    # ข้อความของ ambiguous / not_found ชวนให้พิมพ์ยอดต่อจาก "บริจาค" ซึ่งผิดถ้ารูปไม่ใช่การบริจาค
+    fakes.text = text
+    assert upload() == (200, {"status": "not_donation", "amount": None})
 
 
 # ---------------------------------------------------------------------------
@@ -174,6 +200,15 @@ def test_log_has_no_text_amount_or_token(upload, capsys):
     out = capsys.readouterr().out
     assert "[LIFF-OCR] ok" in out
     for secret in ["ลับเฉพาะ", "มูลนิธิทดสอบ", "5,000", "5000", TOKEN]:
+        assert secret not in out
+
+
+def test_log_for_not_donation_has_no_text_or_amount(upload, fakes, capsys):
+    fakes.text = INSURANCE_TEXT
+    upload()
+    out = capsys.readouterr().out
+    assert "[LIFF-OCR] not_donation" in out
+    for secret in ["ประกันชีวิตตัวอย่าง", "35,000", "35000", TOKEN]:
         assert secret not in out
 
 

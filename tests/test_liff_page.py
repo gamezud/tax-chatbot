@@ -46,7 +46,26 @@ def test_photo_input_allows_camera_and_gallery(get_page):
     assert "capture=" not in html
 
 
-@pytest.mark.parametrize("unsafe", ["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"])
+def test_not_donation_message(get_page):
+    html = get_page()
+    assert ('not_donation: "รูปนี้ไม่พบคำว่าบริจาค ระบบอ่านได้เฉพาะหลักฐานการบริจาค '
+            'กรุณาพิมพ์ยอดเองในแชตครับ"') in html
+
+
+def test_not_donation_clears_message_and_disables_send(get_page):
+    # ไม่มี JS test — เช็กว่าโค้ดอยู่ถูกที่แบบ substring
+    html = get_page()
+    branch = html.split('if (status === "not_donation") {', 1)[1].split("}", 1)[0]
+    assert 'message.value = "";' in branch
+    assert "sendBtn.disabled = true;" in branch
+    # เลือกรูปใหม่แล้วปุ่มกลับมากดได้ — ต้องเปิดก่อนอ่านรูป ไม่งั้นผลของรูปใหม่ไปเปิดปุ่มที่ not_donation เพิ่งปิด
+    on_photo = html.split('photo.addEventListener("change"', 1)[1].split("await readAmount", 1)[0]
+    assert "sendBtn.disabled = false;" in on_photo
+    # ปิดปุ่มแค่สองที่: not_donation และระหว่างกำลังส่ง — ok / not_found / ambiguous ยังกดได้ตามเดิม
+    assert html.count("sendBtn.disabled = true;") == 2
+
+
+@pytest.mark.parametrize("unsafe",["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"])
 def test_no_html_injection_apis(get_page, unsafe):
     # ข้อความจากเซิร์ฟเวอร์หรือผู้ใช้ใส่ลงหน้าด้วย textContent เท่านั้น
     assert unsafe not in get_page()

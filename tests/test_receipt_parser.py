@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from utils.receipt_parser import extract_donation_amount, format_amount
+from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
 
 
 def ok(amount):
@@ -140,6 +140,52 @@ def test_receipt_like_text():
         "โทร ๐๒-๑๒๓-๔๕๖๗\n"
     )
     assert extract_donation_amount(text) == ok("5000")
+
+
+# ---------------------------------------------------------------------------
+# หลักฐานการบริจาค
+# ---------------------------------------------------------------------------
+INSURANCE_RECEIPT = (
+    "บริษัท ประกันชีวิตตัวอย่าง จำกัด\n"
+    "ใบเสร็จรับเงิน\n"
+    "เบี้ยประกันชีวิต\n"
+    "จำนวนเงินที่ได้รับ 35,000.00 บาท"
+)
+
+
+def test_insurance_receipt_is_not_donation():
+    # parser หายอดเจอ คำบริจาคจึงเป็นตัวกันเพียงอย่างเดียวไม่ให้เบี้ยประกันกลายเป็นเงินบริจาค (กฎเหล็กข้อ 2)
+    assert extract_donation_amount(INSURANCE_RECEIPT) == ok("35000")
+    assert has_donation_keyword(INSURANCE_RECEIPT) is False
+
+
+@pytest.mark.parametrize("text", [
+    "ใบอนุโมทนาบัตร",
+    "ยอดบริจาค 5,000 บาท",
+    "e-Donation",
+    "DONATION RECEIPT",
+    # OCR แทรกช่องว่างกลางคำ
+    "บริ จาค",
+    "อนุ โมท นา",
+    "e- Donation",
+    "e-Dona tion",
+    # คำบริจาคอยู่ใกล้เลขที่เอกสาร — ต้องไม่ใช้ขั้นลบเลขที่เอกสารของ extract_donation_amount
+    "ใบรับเงิน e-Donation เลขที่ ED-2569/001 จำนวน 5,000 บาท",
+    "เลขที่ใบรับ DONATION-2569-001 จำนวน 5,000 บาท",  # ขั้นลบเลขที่เอกสารลบ "DONATION-2569-001" ทั้งก้อน
+])
+def test_donation_keywords(text):
+    assert has_donation_keyword(text) is True
+
+
+@pytest.mark.parametrize("text", [
+    "",
+    None,
+    INSURANCE_RECEIPT,
+    "เงินสมทบกองทุนประกันสังคม 750 บาท",    # "สมทบ" ไม่นับ
+    "มูลนิธิตัวอย่าง จำนวนเงิน 5,000 บาท",   # ชื่อผู้รับไม่ได้บอกว่าเป็นการบริจาค
+])
+def test_not_donation_keywords(text):
+    assert has_donation_keyword(text) is False
 
 
 # ---------------------------------------------------------------------------

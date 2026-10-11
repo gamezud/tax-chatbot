@@ -74,6 +74,7 @@
     const STATUS_MESSAGES = {
       not_found: "หายอดเงินในรูปไม่เจอ กรุณาพิมพ์ยอดเองต่อจากคำว่า \"บริจาค\" แล้วกดส่ง",
       ambiguous: "เจอตัวเลขหลายค่าหรือตัวเลขไม่ชัด ระบบไม่เดาให้ กรุณาพิมพ์ยอดเองแล้วกดส่ง",
+      not_donation: "รูปนี้ไม่พบคำว่าบริจาค ระบบอ่านได้เฉพาะหลักฐานการบริจาค กรุณาพิมพ์ยอดเองในแชตครับ",
       invalid_token: "สิทธิ์ใช้งานหน้านี้หมดอายุ กรุณาปิดหน้านี้แล้วกดลิงก์ใหม่จากห้องแชต หรือพิมพ์ยอดในแชตเอง",
       line_unavailable: "ตรวจสอบสิทธิ์กับ LINE ไม่ได้ชั่วคราว กรุณาพิมพ์ยอดเองแล้วกดส่ง",
       too_large: "รูปใหญ่เกินไป ลองเลือกรูปอื่น หรือพิมพ์ยอดเองแล้วกดส่ง",
@@ -174,6 +175,8 @@
       const file = photo.files && photo.files[0];
       if (!file) return;
       photo.disabled = true;
+      // รูปใหม่ — เปิดปุ่มส่งกลับ (รูปก่อนหน้าอาจเป็น not_donation ที่ปิดปุ่มไว้)
+      sendBtn.disabled = false;
       setText("status", "กำลังเตรียมรูป...");
       try {
         const blob = await resizeImage(file);
@@ -324,6 +327,12 @@
       }
       if (status === "not_found" || status === "ambiguous") {
         if (isPlainDonation(message.value)) message.value = DONATION_PREFIX;
+      }
+      if (status === "not_donation") {
+        // รูปไม่ใช่หลักฐานการบริจาค: ล้างช่อง (อาจมียอดจากรูปก่อนหน้าค้างอยู่) และปิดปุ่มส่ง
+        // ให้ผู้ใช้พิมพ์ในแชตเอง — เลือกรูปใหม่แล้วปุ่มกลับมากดได้
+        message.value = "";
+        sendBtn.disabled = true;
       }
       setText("status", STATUS_MESSAGES[status] || UNKNOWN_MESSAGE);
     }

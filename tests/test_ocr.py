@@ -11,7 +11,7 @@ import pytest
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from utils import ocr
-from utils.receipt_parser import extract_donation_amount
+from utils.receipt_parser import extract_donation_amount, has_donation_keyword
 
 FONT = Path(__file__).resolve().parents[1] / "static" / "fonts" / "THSarabunNew.ttf"
 
@@ -145,6 +145,18 @@ def test_read_text_real(fmt):
 def test_read_text_then_extract_amount():
     data = image_bytes(size=(900, 110), lines=["จำนวนเงิน 5,000 บาท"])
     assert extract_donation_amount(ocr.read_text(data)) == {"status": "ok", "amount": 5000}
+
+
+@requires_tesseract
+@pytest.mark.parametrize("line", [
+    "ใบอนุโมทนาบัตร",
+    "ยอดบริจาค 5,000 บาท",
+    "e-Donation 5,000 THB",
+])
+def test_read_text_finds_donation_keyword(line):
+    # คำบริจาคต้องอ่านได้จากรูปจริง ไม่งั้นหลักฐานการบริจาคจะได้ not_donation ทุกใบ
+    data = image_bytes(size=(900, 110), lines=[line])
+    assert has_donation_keyword(ocr.read_text(data)) is True
 
 
 def test_phone_style_jpeg_fixture_is_rotated():

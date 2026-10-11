@@ -21,7 +21,7 @@ from utils import tax_rules
 from utils.pdf_generator import generate_tax_pdf
 # import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
 from utils import ocr, liff_auth
-from utils.receipt_parser import extract_donation_amount, format_amount
+from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
 
 app = Flask(__name__)
 PUBLIC_URL = ""
@@ -119,6 +119,10 @@ def read_donation_amount():
     finally:
         _ocr_slot.release()
 
+    # ตรวจก่อนหายอด: รูปที่ไม่ใช่การบริจาค (เช่น ใบเสร็จเบี้ยประกัน) ต้องไม่ได้ยอดไปเติม "บริจาค N"
+    # และไม่ได้ not_found / ambiguous ซึ่งชวนให้พิมพ์ยอดต่อจาก "บริจาค"
+    if not has_donation_keyword(text):
+        return {"status": "not_donation", "amount": None}, 200
     result = extract_donation_amount(text)
     amount = format_amount(result["amount"]) if result["amount"] is not None else None
     return {"status": result["status"], "amount": amount}, 200
