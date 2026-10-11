@@ -1,7 +1,7 @@
 """ดึงยอดเงินบริจาคจากข้อความที่ OCR อ่านได้ และตรวจว่าข้อความเป็นหลักฐานการบริจาคหรือไม่ (has_donation_keyword)
 
 แยกจากการอ่านรูป (utils/ocr.py) เพื่อให้ test ได้ด้วยข้อความล้วนโดยไม่ต้องมีรูปหรือ Tesseract
-import แค่ re กับ decimal — รักษาคุณสมบัตินี้ไว้
+import แค่ re, decimal และ utils.thai_text — รักษาคุณสมบัตินี้ไว้
 
 หลักการ: ไม่เดา ถ้าไม่เจอยอดหรือเจอหลายยอดที่ต่างกัน คืน amount เป็น None ให้ผู้ใช้พิมพ์เอง
 ไม่ใช้ clean_number ใน tax_calculator เพราะมันเลือกตัวเลขที่ยาวที่สุด ซึ่งคือการเดา
@@ -25,13 +25,7 @@ import แค่ re กับ decimal — รักษาคุณสมบั�
 import re
 from decimal import Decimal
 
-# เลขไทย ๐-๙ → 0-9
-_THAI_DIGITS = str.maketrans("๐๑๒๓๔๕๖๗๘๙", "0123456789")
-
-# Tesseract เขียน ำ (U+0E33) เป็นสองตัว ํ + า (U+0E4D U+0E32) ซึ่งตาเปล่าแยกไม่ออก
-# ถ้าไม่รวมกลับ คำสำคัญอย่าง "จำนวนเงิน" จะไม่ตรงกับข้อความที่ OCR อ่านได้
-_SPLIT_SARA_AM = "\N{THAI CHARACTER NIKHAHIT}\N{THAI CHARACTER SARA AA}"
-_SARA_AM = "\N{THAI CHARACTER SARA AM}"
+from utils.thai_text import normalize_thai_text
 
 _THAI_MONTHS = (
     "มกราคม|กุมภาพันธ์|มีนาคม|เมษายน|พฤษภาคม|มิถุนายน|"
@@ -99,11 +93,6 @@ _DONATION_KEYWORDS = re.compile(r"บริจาค|อนุโมทนา|do
 _WHITESPACE = re.compile(r"\s+")
 
 
-def _normalize(text):
-    """แปลงเลขไทยเป็นอารบิก และรวม ํ + า ที่ Tesseract แยกกลับเป็น ำ — None ได้ข้อความว่าง"""
-    return (text or "").translate(_THAI_DIGITS).replace(_SPLIT_SARA_AM, _SARA_AM)
-
-
 def has_donation_keyword(text):
     """True ถ้าข้อความมีคำที่บอกว่าเป็นหลักฐานการบริจาค
 
@@ -111,7 +100,7 @@ def has_donation_keyword(text):
     ไม่ใช้ขั้นลบตัวเลขที่ไม่ใช่ยอดของ extract_donation_amount ซึ่งลบคำที่อยู่ในเลขที่เอกสารทิ้งได้
     ("เลขที่ใบรับ DONATION-2569-001")
     """
-    return bool(_DONATION_KEYWORDS.search(_WHITESPACE.sub("", _normalize(text))))
+    return bool(_DONATION_KEYWORDS.search(_WHITESPACE.sub("", normalize_thai_text(text))))
 
 
 def extract_donation_amount(text):
@@ -122,7 +111,7 @@ def extract_donation_amount(text):
     - "not_found" ไม่เจอตัวเลขที่ดูเป็นยอดเงิน
     - "ambiguous" เจอหลายยอดที่ต่างกัน หรือมีตัวเลขในบรรทัดเงินที่ไม่จบสะอาด ไม่เดาว่ายอดไหน
     """
-    text = _normalize(text)
+    text = normalize_thai_text(text)
     for pattern in _NOT_AMOUNT_PATTERNS:
         text = pattern.sub(" ", text)
 
