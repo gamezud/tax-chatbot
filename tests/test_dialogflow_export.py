@@ -17,13 +17,13 @@ DIALOGFLOW_DIR = Path(__file__).resolve().parent.parent / 'dialogflow'
 DEDUCTION_KEYWORDS = {
     'ประกันชีวิต': 'life_insurance', 'ประกัน': 'life_insurance',  # "ซื้อประกัน 15000 บาท"
     'ประกันสุขภาพ': 'health_insurance',
-    'ดอกเบี้ยบ้าน': 'home_loan_interest',
+    'ดอกเบี้ยบ้าน': 'home_loan_interest', 'ดอกเบี้ยเงินกู้': 'home_loan_interest',
     'บริจาค': 'donation',
     'rmf': 'ssf_rmf',
     'thaiesg': 'thai_esg', 'thai esg': 'thai_esg', 'tesg': 'thai_esg',
     'ไทยอีเอสจี': 'thai_esg', 'กองทุนไทยเพื่อความยั่งยืน': 'thai_esg',
     'ลูก': 'num_children', 'บุตร': 'num_children',
-    'พ่อแม่': 'num_parents',
+    'พ่อแม่': 'num_parents', 'บิดามารดา': 'num_parents',
     'ssf': None, 'เอสเอสเอฟ': None, 'กองทุน esg': None,
 }
 
@@ -120,6 +120,54 @@ def test_donation_paired_with_each_deduction_both_orders(other):
         if 'donation' in aliases and other in aliases:
             orders.add(aliases.index('donation') < aliases.index(other))
     assert orders == {True, False}
+
+
+def solo_phrases(name):
+    # ประโยคเดี่ยวแท้: annotate parameter นี้ตัวเดียว และไม่มีตัวเลขอื่นที่ไม่ได้ annotate
+    # ("ประกันสุขภาพ 25000 ซื้อ SSF 250000" annotate ตัวเดียวแต่ไม่นับ เพราะมียอด SSF ปน)
+    result = []
+    for phrase in load_usersays('04_Tax_Interview_Deductions'):
+        aliases = {part['alias'] for part in phrase['data'] if part.get('alias')}
+        other_digits = any(re.search(r'\d', part['text']) for part in phrase['data'] if not part.get('alias'))
+        if aliases == {name} and not other_digits:
+            result.append(phrase_text(phrase))
+    return result
+
+
+XFAIL_24 = pytest.mark.xfail(
+    strict=True, reason="#24 ไม่มีประโยคเดี่ยวที่ใช้คำนี้ — ถอดใน commit เดียวกับ export ใหม่")
+
+
+# ไม่นับ "ผ่อนบ้าน" เพราะยอดผ่อนรวมเงินต้น ไม่ใช่แค่ดอกเบี้ย
+# ไม่นับ "ทำบุญ" เพราะทำบุญหลายแบบไม่มีหลักฐานที่นำไปลดหย่อนได้
+@pytest.mark.parametrize('name, term', [
+    ('num_children', 'ลูก'),
+    ('life_insurance', 'ประกันชีวิต'),
+    ('ssf_rmf', 'RMF'),
+    ('num_parents', 'พ่อแม่'),
+    pytest.param('num_parents', 'บิดามารดา', marks=XFAIL_24),
+    pytest.param('health_insurance', 'ประกันสุขภาพ', marks=XFAIL_24),
+    ('home_loan_interest', 'ดอกเบี้ยบ้าน'),
+    pytest.param('home_loan_interest', 'ดอกเบี้ยเงินกู้', marks=XFAIL_24),
+    ('donation', 'บริจาค'),
+    ('thai_esg', 'ThaiESG'),
+])
+def test_each_deduction_term_has_solo_phrase(name, term):
+    # #24: ระหว่างรอค่าลดหย่อน "ประกันสุขภาพ 8000", "บิดามารดา 2 คน", "ดอกเบี้ยเงินกู้บ้าน 35000"
+    # ได้ Default Fallback Intent แล้วตกไปสาขาความรู้ ผู้ใช้ไม่รู้ว่ายอดไม่ถูกบันทึก
+    # ปัญหาคือคำ ไม่ใช่จำนวนประโยค: "ดอกเบี้ยบ้าน 40000" ผ่านเพราะมีประโยคเดี่ยวที่ใช้คำเดียวกัน
+    # คู่ที่ไม่มี xfail กันไม่ให้ประโยคที่ใช้งานได้อยู่หายไปตอนแก้ Console
+    assert any(term.lower() in phrase.lower() for phrase in solo_phrases(name)), (name, term)
+
+
+def test_home_loan_phrases_say_home():
+    # ดอกเบี้ยที่ลดหย่อนได้ต้องเป็นเงินกู้เพื่อที่อยู่อาศัย "ดอกเบี้ยเงินกู้" เฉย ๆ อาจเป็นกู้รถหรือสินเชื่อส่วนบุคคล
+    # ถ้าสอนด้วยประโยคที่ไม่บอกว่าเป็นบ้าน ดอกเบี้ยอื่นจะถูกนับเป็นค่าลดหย่อน (กฎเหล็กข้อ 2)
+    phrases = [phrase_text(phrase) for phrase in load_usersays('04_Tax_Interview_Deductions')
+               if any(part.get('alias') == 'home_loan_interest' for part in phrase['data'])]
+    assert phrases
+    for text in phrases:
+        assert 'บ้าน' in text or 'ที่อยู่อาศัย' in text, text
 
 
 def test_annotation_follows_nearest_keyword():
