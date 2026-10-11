@@ -33,8 +33,8 @@ def download_file(filename):
 
 @app.route('/liff/donation')
 def liff_donation():
-    # งานทดลอง spike/liff: อ่าน LIFF ID ตอนถูกเรียก ไม่ hardcode
-    # ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
+    # หน้า LIFF อ่านยอดเงินบริจาคจากรูป แล้วส่งข้อความเข้าแชตแทนผู้ใช้
+    # อ่าน LIFF ID ตอนถูกเรียก ไม่ hardcode — ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
     liff_id = os.environ.get('LIFF_ID', '').strip() or None
     return render_template('liff_donation.html', liff_id=liff_id)
 
