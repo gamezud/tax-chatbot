@@ -3,7 +3,7 @@ import uuid
 import traceback
 import time
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
 
 from utils.firebase_db import firebase_client
 from utils.knowledge_search import query_tax_knowledge, get_db
@@ -25,6 +25,13 @@ PUBLIC_URL = ""
 def download_file(filename):
     print(f"\n📥 [DEBUG-PDF] มีคำขอไฟล์: {filename}")
     return send_from_directory('static/reports', filename, as_attachment=True)
+
+@app.route('/liff/donation')
+def liff_donation():
+    # งานทดลอง spike/liff: อ่าน LIFF ID ตอนถูกเรียก ไม่ hardcode
+    # ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
+    liff_id = os.environ.get('LIFF_ID', '').strip() or None
+    return render_template('liff_donation.html', liff_id=liff_id)
 
 # -------------------------------------------------------------
 # Handler ของแต่ละสาขาใน webhook()

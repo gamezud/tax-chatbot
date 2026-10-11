@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ทดลอง LIFF</title>
+  <style>
+    body { font-family: sans-serif; margin: 16px; line-height: 1.5; }
+    #errors { color: #b00020; white-space: pre-wrap; }
+    button { font-size: 1.1em; padding: 12px 20px; margin-top: 12px; }
+  </style>
+  <!-- โหลด SDK ก่อนสคริปต์หลัก ถ้าโหลดไม่สำเร็จ liff จะเป็น undefined แล้ว main() แจ้งบนหน้าจอ -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" charset="utf-8"></script>
+</head>
+<body>
+  <h1>ทดลอง LIFF ส่งข้อความ</h1>
+  <p>liff.isInClient(): <strong id="in-client">-</strong></p>
+  <p>liff.getContext().type: <strong id="context-type">-</strong> (ต้องเป็น utou)</p>
+  <p>สถานะ: <span id="status">กำลังเริ่ม...</span></p>
+  <button id="send-btn" disabled>ส่ง "บริจาค 5000"</button>
+  <div id="errors"></div>
+
+  <script>
+    // tojson ให้สตริง JS ที่ escape แล้ว หรือ null ถ้าไม่ได้ตั้ง LIFF_ID
+    const LIFF_ID = {{ liff_id|tojson }};
+    const MESSAGE = "บริจาค 5000";
+    const btn = document.getElementById("send-btn");
+
+    function setText(id, text) {
+      document.getElementById(id).textContent = text;
+    }
+
+    // ในแอป LINE เปิด console ไม่ได้ ทุก error จึงต้องขึ้นเป็นตัวหนังสือบนหน้า
+    function showError(step, err) {
+      let detail;
+      if (err && typeof err === "object") {
+        detail = (err.code ? err.code + " " : "") + (err.message || String(err));
+      } else {
+        detail = String(err);
+      }
+      const line = document.createElement("p");
+      line.textContent = "❌ " + step + ": " + detail;
+      document.getElementById("errors").appendChild(line);
+      setText("status", "ล้ม (ดูข้อความสีแดง)");
+    }
+
+    window.addEventListener("error", (e) => showError("JavaScript error", e.error || e.message));
+    window.addEventListener("unhandledrejection", (e) => showError("Promise error", e.reason));
+
+    async function main() {
+      if (!LIFF_ID) {
+        showError("ตั้งค่า", "ไม่มี LIFF ID: ยังไม่ได้ตั้ง environment variable LIFF_ID ก่อนรัน python app.py");
+        return;
+      }
+      if (typeof liff === "undefined") {
+        showError("โหลด LIFF SDK", "โหลด sdk.js จาก static.line-scdn.net ไม่สำเร็จ");
+        return;
+      }
+
+      try {
+        await liff.init({ liffId: LIFF_ID });
+      } catch (err) {
+        showError("liff.init", err);
+        return;
+      }
+
+      const inClient = liff.isInClient();
+      setText("in-client", inClient ? "จริง" : "เท็จ");
+      const ctx = liff.getContext();
+      const ctxType = ctx ? ctx.type : null;
+      setText("context-type", ctxType === null ? "(null)" : ctxType);
+
+      if (!inClient) {
+        showError("ตรวจสภาพแวดล้อม",
+          "ไม่ได้เปิดในแอป LINE — liff.sendMessages ใช้ไม่ได้ ให้เปิดลิงก์ https://liff.line.me/"
+          + LIFF_ID + " จากห้องแชตกับบอท");
+        return;
+      }
+      if (ctxType !== "utou") {
+        showError("ตรวจ context", "context type เป็น " + ctxType
+          + " ไม่ใช่ utou — ต้องเปิดลิงก์จากห้องแชตหนึ่งต่อหนึ่งกับบอท");
+        return;
+      }
+
+      setText("status", "พร้อมส่ง");
+      btn.disabled = false;
+    }
+
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      setText("status", "กำลังส่ง...");
+      try {
+        await liff.sendMessages([{ type: "text", text: MESSAGE }]);
+      } catch (err) {
+        showError("liff.sendMessages", err);
+        btn.disabled = false;
+        return;
+      }
+      setText("status", "ส่งแล้ว กำลังปิดหน้าต่าง");
+      liff.closeWindow();
+    });
+
+    main();
+  </script>
+</body>
+</html>
