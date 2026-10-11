@@ -1,5 +1,361 @@
 [
   {
+    "id": "a07a4d6b-c065-4bc1-bfc8-db0acba5499d",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "20,000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท กับเงินบริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "2,500",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4b3f1f36-5203-4c95-b268-5d9cf0fecec5",
+    "data": [
+      {
+        "text": "เงินบริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "5,000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " บาท และประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "30,000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "1b2535c2-d356-4fe4-95a1-5bd9f6490e01",
+    "data": [
+      {
+        "text": "ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "90000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "1500",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "72a389ac-f4aa-4ea3-9d5b-144c55edb3ac",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "8000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "e58a2c3a-9d9c-48cc-8716-cdb34bf50987",
+    "data": [
+      {
+        "text": "ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "7000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "99a8607e-6b86-4db9-9113-a72c8e23a106",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "2000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f97a3957-1c4f-467b-9730-0f1e5b17216b",
+    "data": [
+      {
+        "text": "RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "80000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "4000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "83ea0da9-4807-4ab2-99d9-fff5eb4c1ddf",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "10000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7609a69a-a519-4cc7-9ae5-b640ddef7047",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "15000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "2500",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5934b85b-2bb8-4519-b3c7-628030eb19a7",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "6000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "12000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4b32554a-3212-468d-bde8-b9cecc53710f",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "3000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0b285517-2e26-4107-950a-b79ac19a4f82",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "5000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "25000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
     "id": "a774bf2e-0990-47d0-9ec4-f402f93c5132",
     "data": [
       {

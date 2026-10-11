@@ -108,7 +108,6 @@ def test_phrase_separates_rmf_and_thai_esg():
     assert any({'ssf_rmf', 'thai_esg'} <= a for a in aliases)
 
 
-@pytest.mark.xfail(strict=True, reason="#23 ยังไม่มีประโยคที่มีบริจาคคู่กับค่าลดหย่อนอื่น — ถอดใน commit เดียวกับ export ใหม่")
 @pytest.mark.parametrize('other', [
     'life_insurance', 'health_insurance', 'ssf_rmf', 'thai_esg', 'home_loan_interest',
 ])
