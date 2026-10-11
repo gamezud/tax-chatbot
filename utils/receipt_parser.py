@@ -92,6 +92,11 @@ _CLEAN_AFTER = re.compile(
 _LATIN_BEFORE = re.compile(r"[A-Za-z]$")
 
 
+def _normalize(text):
+    """แปลงเลขไทยเป็นอารบิก และรวม ํ + า ที่ Tesseract แยกกลับเป็น ำ — None ได้ข้อความว่าง"""
+    return (text or "").translate(_THAI_DIGITS).replace(_SPLIT_SARA_AM, _SARA_AM)
+
+
 def extract_donation_amount(text):
     """คืน {"status": ..., "amount": Decimal หรือ None}
 
@@ -100,7 +105,7 @@ def extract_donation_amount(text):
     - "not_found" ไม่เจอตัวเลขที่ดูเป็นยอดเงิน
     - "ambiguous" เจอหลายยอดที่ต่างกัน หรือมีตัวเลขในบรรทัดเงินที่ไม่จบสะอาด ไม่เดาว่ายอดไหน
     """
-    text = (text or "").translate(_THAI_DIGITS).replace(_SPLIT_SARA_AM, _SARA_AM)
+    text = _normalize(text)
     for pattern in _NOT_AMOUNT_PATTERNS:
         text = pattern.sub(" ", text)
 
