@@ -2,9 +2,23 @@ import subprocess
 import sys
 from pathlib import Path
 
-from utils.create_knowledge import knowledge_sha256
+from utils.create_knowledge import HASH_FILENAME, knowledge_sha256
 
 ROOT = Path(__file__).resolve().parent.parent
+
+REBUILD_HINT = (
+    "faiss_tax_index/ ไม่ตรงกับ tax_knowledge.txt — รัน python utils\\create_knowledge.py "
+    "จาก root ของโปรเจกต์ แล้ว commit faiss_tax_index/ คู่กับ tax_knowledge.txt ใน commit เดียวกัน"
+)
+
+
+def test_index_hash_matches_knowledge_file():
+    # ขั้น F พบ index ที่ไม่ได้สร้างจากไฟล์ใดใน git เทสนี้จับกรณีแก้ tax_knowledge.txt แล้วไม่สร้าง index ใหม่
+    # เทียบแค่ hash ไม่โหลด FAISS หรือ embedding (กับดักข้อ 4)
+    hash_path = ROOT / "faiss_tax_index" / HASH_FILENAME
+    assert hash_path.exists(), f"ไม่พบ {hash_path.name} — {REBUILD_HINT}"
+    recorded = hash_path.read_text(encoding="utf-8").strip()
+    assert recorded == knowledge_sha256(ROOT / "tax_knowledge.txt"), REBUILD_HINT
 
 
 def test_knowledge_hash_ignores_line_endings(tmp_path):
