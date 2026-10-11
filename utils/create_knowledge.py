@@ -1,11 +1,24 @@
 import os
 import re
-from langchain_core.documents import Document
-from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+import hashlib
+
+# ชื่อไฟล์ใน faiss_tax_index/ ที่เก็บ hash ของไฟล์ความรู้ที่ใช้สร้าง index ชุดนั้น
+HASH_FILENAME = "tax_knowledge.sha256"
+
+def knowledge_sha256(path):
+    # อ่านแบบ text mode แบบเดียวกับ build_vector_store ซึ่งแปลง CRLF เป็น LF ให้
+    # hash จึงเท่ากันทั้งในเครื่อง Windows (git แปลงเป็น CRLF) และเครื่องที่ clone ไปได้ LF
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 def build_vector_store():
+    # import ไลบรารีหนักในฟังก์ชัน เพื่อให้เทส import knowledge_sha256 ได้โดยไม่โหลด langchain/FAISS
+    from langchain_core.documents import Document
+    from langchain_text_splitters import MarkdownHeaderTextSplitter, RecursiveCharacterTextSplitter
+    from langchain_huggingface import HuggingFaceEmbeddings
+    from langchain_community.vectorstores import FAISS
+
     candidate_paths = [
         "tax_knowledge.txt",
         os.path.join("utils", "tax_knowledge.txt"),
@@ -81,6 +94,12 @@ def build_vector_store():
     save_path = "faiss_tax_index"
     db.save_local(save_path)
     print(f"✅ สร้างและบันทึก Index สำเร็จที่: '{save_path}'")
+
+    # เขียน hash หลัง save_local สำเร็จเท่านั้น ถ้าสร้าง index ล้มกลางทาง จะไม่มี hash ใหม่ไปรับรอง index เก่า
+    hash_path = os.path.join(save_path, HASH_FILENAME)
+    with open(hash_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(knowledge_sha256(file_path) + "\n")
+    print(f"🔒 บันทึก hash ของ '{file_path}' ที่: '{hash_path}'")
 
 if __name__ == "__main__":
     build_vector_store()
