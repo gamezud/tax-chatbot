@@ -134,10 +134,6 @@ def solo_phrases(name):
     return result
 
 
-XFAIL_24 = pytest.mark.xfail(
-    strict=True, reason="#24 ไม่มีประโยคเดี่ยวที่ใช้คำนี้ — ถอดใน commit เดียวกับ export ใหม่")
-
-
 # ไม่นับ "ผ่อนบ้าน" เพราะยอดผ่อนรวมเงินต้น ไม่ใช่แค่ดอกเบี้ย
 # ไม่นับ "ทำบุญ" เพราะทำบุญหลายแบบไม่มีหลักฐานที่นำไปลดหย่อนได้
 @pytest.mark.parametrize('name, term', [
@@ -145,10 +141,10 @@ XFAIL_24 = pytest.mark.xfail(
     ('life_insurance', 'ประกันชีวิต'),
     ('ssf_rmf', 'RMF'),
     ('num_parents', 'พ่อแม่'),
-    pytest.param('num_parents', 'บิดามารดา', marks=XFAIL_24),
-    pytest.param('health_insurance', 'ประกันสุขภาพ', marks=XFAIL_24),
+    ('num_parents', 'บิดามารดา'),
+    ('health_insurance', 'ประกันสุขภาพ'),
     ('home_loan_interest', 'ดอกเบี้ยบ้าน'),
-    pytest.param('home_loan_interest', 'ดอกเบี้ยเงินกู้', marks=XFAIL_24),
+    ('home_loan_interest', 'ดอกเบี้ยเงินกู้'),
     ('donation', 'บริจาค'),
     ('thai_esg', 'ThaiESG'),
 ])

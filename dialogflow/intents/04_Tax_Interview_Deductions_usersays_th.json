@@ -1,5 +1,418 @@
 [
   {
+    "id": "31dbbfce-69e5-4efb-bf8e-37b9a2612bc8",
+    "data": [
+      {
+        "text": "จ่ายดอกเบี้ยเงินกู้ซื้อบ้านไป ",
+        "userDefined": false
+      },
+      {
+        "text": "52,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "174621b8-6c37-42c7-bf3f-1d9123947773",
+    "data": [
+      {
+        "text": "ดอกเบี้ยเงินกู้ยืมเพื่อที่อยู่อาศัย ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "fa683e5e-3b0c-4213-9f7b-b73e635acdc5",
+    "data": [
+      {
+        "text": "ดอกเบี้ยเงินกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "28,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "c3fb39a8-7029-4595-8fdb-bfbca9dafde2",
+    "data": [
+      {
+        "text": "ดอกเบี้ยเงินกู้ที่อยู่อาศัย ",
+        "userDefined": false
+      },
+      {
+        "text": "45000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "da9b8075-3c63-4ef3-ba43-f5dea2f137fd",
+    "data": [
+      {
+        "text": "อุปการะบิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f912fdc9-c485-460a-87cc-782f2927a6b0",
+    "data": [
+      {
+        "text": "ค่าอุปการะเลี้ยงดูบิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "4",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "62232c03-f5c0-4d5f-9699-44a3aad267bc",
+    "data": [
+      {
+        "text": "เลี้ยงดูบิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "dfb20cdd-f29a-4f8d-b0bb-708e1d4d5ac2",
+    "data": [
+      {
+        "text": "บิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "cf8a9442-d981-4d68-a0e2-af52ba8214e7",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "11000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5933edc7-f0bf-4ec2-857b-a49ddeadea7e",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "16000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "79917fa0-ef40-4ac6-9fde-efc82912af62",
+    "data": [
+      {
+        "text": "ลดหย่อน ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "5000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a2643b1b-e888-4ad9-b097-3fd8091be18e",
+    "data": [
+      {
+        "text": "จ่ายประกันสุขภาพไป ",
+        "userDefined": false
+      },
+      {
+        "text": "7,500",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "fbfa7146-7f50-42c4-8e62-9a9363a19c2f",
+    "data": [
+      {
+        "text": "ซื้อประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "22000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f971aefd-23d5-42d3-b529-dceec18cace0",
+    "data": [
+      {
+        "text": "มีประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "10000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d97d9351-2137-401c-82c8-8308a0ec3162",
+    "data": [
+      {
+        "text": "ค่าเบี้ยประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "15000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0639ffb4-9677-4b01-b66c-99a672c99ffb",
+    "data": [
+      {
+        "text": "เบี้ยประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "6,000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "41edf4e3-2dd7-49d2-8c7d-1bfafa948dd3",
+    "data": [
+      {
+        "text": "เบี้ยประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "18000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "9ebc9774-08cb-4b90-ab6d-16796d04414f",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "9,500",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "bb6a59f0-d9e3-4bad-a4e7-806c33896bd9",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
     "id": "a07a4d6b-c065-4bc1-bfc8-db0acba5499d",
     "data": [
       {
