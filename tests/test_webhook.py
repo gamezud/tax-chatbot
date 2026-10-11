@@ -8,12 +8,8 @@
 
 การกันไม่ให้เทสออกไปนอกเครื่อง (Firestore, Ollama, ไฟล์ PDF) มีสองชั้น
 
-ชั้นที่ 1 — ใส่โมดูลปลอมแทน utils.firebase_db ลง sys.modules ก่อน import app
-  ไฟล์จริงสร้าง firebase_client = FirebaseManager() ทันทีที่ถูก import ซึ่งอ่าน firebase_key.json
-  และสร้าง client ที่เขียน Firestore จริงได้ โมดูลปลอมทำให้ FirebaseManager() ไม่ถูกสร้างเลย
-  ** โมดูลปลอมนี้อยู่ใน sys.modules ตลอดการรัน pytest ทั้งชุด ไม่ได้หายไปเมื่อจบไฟล์นี้ **
-  ถ้าวันหน้ามีไฟล์ test อื่นต้อง import app ให้ย้ายการใส่โมดูลปลอมไป tests/conftest.py
-  (ไม่งั้นลำดับการเก็บไฟล์ของ pytest จะเป็นตัวตัดสินว่าใคร import ก่อน)
+ชั้นที่ 1 — โมดูลปลอมแทน utils.firebase_db อยู่ใน tests/conftest.py (ดูเหตุผลที่นั่น)
+  เช็กข้างล่างว่าโมดูลปลอมถูกใส่ไว้จริงก่อน import app
 
 ชั้นที่ 2 — fixture mocks (autouse) แทนของที่ออกนอกระบบด้วย MagicMock ใหม่ทุกเทส
   ต้อง patch ที่ app_module.xxx ไม่ใช่ utils.xxx เพราะ app.py ใช้ from ... import
@@ -30,13 +26,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# ---- ชั้นที่ 1: โมดูลปลอมต้องอยู่ก่อน import app ----
-# ถ้ามีใคร import ของจริงไปก่อน FirebaseManager() ได้ทำงานไปแล้ว โมดูลปลอมจะสายเกินไป
-assert "app" not in sys.modules, "app ถูก import ไปก่อนแล้ว — ย้ายโมดูลปลอมไป conftest.py"
-assert "utils.firebase_db" not in sys.modules, "utils.firebase_db ตัวจริงถูก import ไปก่อนแล้ว"
-_fake_firebase_db = types.ModuleType("utils.firebase_db")
-_fake_firebase_db.firebase_client = MagicMock(name="fake_module_firebase_client")
-sys.modules["utils.firebase_db"] = _fake_firebase_db
+# ---- ชั้นที่ 1: โมดูลปลอมจาก conftest.py ต้องอยู่ก่อน import app ----
+assert isinstance(sys.modules["utils.firebase_db"].firebase_client, MagicMock), \
+    "utils.firebase_db ไม่ใช่โมดูลปลอม — conftest.py ไม่ได้ทำงานหรือมีคน import ของจริงไปก่อน"
 
 import app as app_module  # noqa: E402
 import utils.knowledge_search as knowledge_search  # noqa: E402
