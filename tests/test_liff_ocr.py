@@ -212,6 +212,16 @@ def test_log_for_not_donation_has_no_text_or_amount(upload, fakes, capsys):
         assert secret not in out
 
 
+def test_thai_digit_amount_is_not_sent(upload, fakes, capsys):
+    # ยอดเลขไทยที่ OCR อ่านได้เชื่อไม่ได้ (อ่านเป็นเลขไทยตัวอื่นแล้วยังดูเป็นตัวเลขปกติ) — ห้ามส่งยอดออกไปเติมให้
+    fakes.text = "ใบอนุโมทนาบัตร\nจำนวนเงิน ๙,๓๖๙ บาท"
+    assert upload() == (200, {"status": "thai_digits", "amount": None})
+    out = capsys.readouterr().out
+    assert "[LIFF-OCR] thai_digits" in out
+    for secret in ["๙,๓๖๙", "๙๓๖๙", "9,369", "9369", TOKEN]:
+        assert secret not in out
+
+
 def test_get_not_allowed(upload):
     resp = app_module.app.test_client().get("/liff/ocr")
     assert resp.status_code == 405

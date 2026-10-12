@@ -208,6 +208,10 @@ TEMPLATES = [
 # แม่แบบที่ใช้เนื้อหาและสภาพรูปชุดเดียวกับอีกแม่แบบ (rng เดียวกัน) ต่างกันแค่ฟอนต์ — เทียบฟอนต์แบบคู่ต่อคู่
 SAME_CONTENT_AS = {"D4b_thai_digits_sarabun": "D4_thai_digits"}
 
+# แม่แบบที่ parser ออกแบบให้ตอบต่างจากยอดจริงของใบ: ยอดเลขไทย → thai_digits (ไม่เชื่อเลขไทย ให้ผู้ใช้พิมพ์เอง)
+# expected_status ยังเป็น ok ตามยอดจริง ส่วนขั้นตรวจตัวเองเทียบกับ parser_expected_status
+PARSER_EXPECTED_OVERRIDE = {"D4_thai_digits": "thai_digits"}
+
 
 # ---------------------------------------------------------------------------
 # วาดรูป
@@ -343,9 +347,11 @@ def main():
             lines, status, amount, keyword = build_receipt(source, TEMPLATES.index(source), a_index, rng)
             font = second if (second and template in SECOND_FONT_TEMPLATES) else PRIMARY_FONT
             source_lines = [BANNER_TEXT] + [text for text, _ in lines] + [BANNER_TEXT]
+            parser_status = PARSER_EXPECTED_OVERRIDE.get(source, status)
+            parser_amount = amount if parser_status == "ok" else None
             got_status, got_amount = parser_result(source_lines)
-            if got_status != status or got_amount != amount:
-                mismatches.append(f"{receipt_id}: คาด {status} {amount} ได้ {got_status} {got_amount}")
+            if got_status != parser_status or got_amount != parser_amount:
+                mismatches.append(f"{receipt_id}: คาด {parser_status} {parser_amount} ได้ {got_status} {got_amount}")
             receipts[receipt_id] = {
                 "template": template,
                 "amount_index": a_index,
@@ -353,6 +359,7 @@ def main():
                 "title": keyword,
                 "expected_status": status,
                 "expected_amount": canonical(amount) if amount is not None else None,
+                "parser_expected_status": parser_status,
                 "same_content_as": content_id if content_id != receipt_id else None,
                 "source_lines": source_lines,
                 "_content_id": content_id,

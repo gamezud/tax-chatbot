@@ -65,6 +65,21 @@ def test_not_donation_clears_message_and_disables_send(get_page):
     assert html.count("sendBtn.disabled = true;") == 2
 
 
+def test_thai_digits_message(get_page):
+    html = get_page()
+    assert ('thai_digits: "ยอดในรูปเป็นเลขไทย ซึ่งระบบอ่านได้ไม่แม่นยำ '
+            'กรุณาพิมพ์ยอดเองต่อจากคำว่า \\"บริจาค\\" แล้วกดส่งครับ"') in html
+
+
+def test_thai_digits_resets_like_not_found(get_page):
+    # รูปมีคำบริจาคแล้ว จึงรีเซ็ตช่องเป็น "บริจาค " แบบ not_found ไม่ปิดปุ่มแบบ not_donation
+    html = get_page()
+    reset = html.split('if (status === "not_found"', 1)[1].split("{", 1)[0]
+    assert 'status === "thai_digits"' in reset
+    not_donation = html.split('if (status === "not_donation") {', 1)[1].split("}", 1)[0]
+    assert "thai_digits" not in not_donation
+
+
 @pytest.mark.parametrize("unsafe",["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"])
 def test_no_html_injection_apis(get_page, unsafe):
     # ข้อความจากเซิร์ฟเวอร์หรือผู้ใช้ใส่ลงหน้าด้วย textContent เท่านั้น

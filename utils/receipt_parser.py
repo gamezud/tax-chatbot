@@ -12,6 +12,11 @@ import แค่ re, decimal และ utils.thai_text — รักษาคุ
 3. ในบรรทัดเงิน ตัวเลขที่ตามด้วยหน่วยนับ (รายการ, เท่า …) หรือ % ข้ามไป ไม่ใช่ยอด
 4. ตัวเลขที่เหลือต้อง "จบสะอาด" ถ้ามีตัวไหนไม่สะอาด คืน ambiguous ทั้งผล
 5. ตัวเลขสะอาดนับเป็นยอดเมื่อมีสกุลเงินติดอยู่หรืออยู่บรรทัดเดียวกับคำสำคัญ
+6. ได้ยอดเดียวแต่ค่าเท่ากับตัวเลขที่เขียนด้วยเลขไทยในข้อความเดิม คืน thai_digits
+   เหตุผล: Tesseract อ่านเลขไทยเป็นเลขไทยตัวอื่น (๙→๓, ๘→๕ ...) และผลยังจบสะอาด
+   ผลวัดใบเสร็จจำลอง (scripts/measure_ocr.py) อ่านยอดเลขไทยถูก 0/42 รูป ทั้ง Tahoma และ TH Sarabun
+   เทียบด้วยค่า ไม่ใช่ตำแหน่ง เพราะ normalize_thai_text รวม ํ + า เป็นตัวเดียว ตำแหน่งตัวอักษรจึงเลื่อน
+   และใบที่มีเลขไทยแค่ในวันที่หรือเลขที่เอกสารยังได้ยอดอารบิกตามปกติ
 
 กติกา "จบสะอาด"
 - ด้านหลังต้องเป็นอย่างใดอย่างหนึ่ง: จบบรรทัด · สกุลเงิน (บาท, ฿, THB, baht, .-) · วงเล็บ
@@ -23,7 +28,7 @@ import แค่ re, decimal และ utils.thai_text — รักษาคุ
   แล้วถูกนับเป็นยอดผิดโดยมี status ok ห้ามแก้ O เป็น 0 เอง เพราะนั่นคือการเดา
 """
 import re
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from utils.thai_text import normalize_thai_text
 
@@ -92,6 +97,23 @@ _LATIN_BEFORE = re.compile(r"[A-Za-z]$")
 _DONATION_KEYWORDS = re.compile(r"บริจาค|อนุโมทนา|donation", re.IGNORECASE)
 _WHITESPACE = re.compile(r"\s+")
 
+# ตัวเลขในข้อความเดิม (ก่อนแปลงเลขไทย) ที่มีเลขไทยอย่างน้อยหนึ่งตัว — รวมแบบที่ OCR อ่านปนอารบิก ("๕,000")
+_DIGIT_RUN = re.compile(r"[0-9๐-๙](?:[0-9๐-๙,.]*[0-9๐-๙])?")
+_THAI_DIGIT = re.compile(r"[๐-๙]")
+
+
+def _thai_digit_values(raw_text):
+    """ค่าของตัวเลขที่เขียนด้วยเลขไทยในข้อความเดิม"""
+    values = set()
+    for run in _DIGIT_RUN.findall(raw_text):
+        if not _THAI_DIGIT.search(run):
+            continue
+        try:
+            values.add(Decimal(normalize_thai_text(run).replace(",", "")))
+        except InvalidOperation:   # เช่น "๕.๐๐๐.๐๐" ซึ่งไม่ใช่ตัวเลขเดียว
+            continue
+    return values
+
 
 def has_donation_keyword(text):
     """True ถ้าข้อความมีคำที่บอกว่าเป็นหลักฐานการบริจาค
@@ -110,8 +132,10 @@ def extract_donation_amount(text):
     - "ok"        เจอยอดเดียว (ยอดเดียวกันซ้ำหลายที่ เช่น 5,000 กับ 5,000.00 นับเป็นยอดเดียว)
     - "not_found" ไม่เจอตัวเลขที่ดูเป็นยอดเงิน
     - "ambiguous" เจอหลายยอดที่ต่างกัน หรือมีตัวเลขในบรรทัดเงินที่ไม่จบสะอาด ไม่เดาว่ายอดไหน
+    - "thai_digits" เจอยอดเดียวแต่ยอดนั้นเขียนด้วยเลขไทย ซึ่ง OCR อ่านผิดบ่อย (ขั้นที่ 6 ใน docstring ของโมดูล)
     """
-    text = normalize_thai_text(text)
+    raw_text = text or ""
+    text = normalize_thai_text(raw_text)
     for pattern in _NOT_AMOUNT_PATTERNS:
         text = pattern.sub(" ", text)
 
@@ -135,7 +159,10 @@ def extract_donation_amount(text):
                 amounts.add(amount)
 
     if len(amounts) == 1:
-        return {"status": "ok", "amount": amounts.pop()}
+        amount = amounts.pop()
+        if amount in _thai_digit_values(raw_text):
+            return {"status": "thai_digits", "amount": None}
+        return {"status": "ok", "amount": amount}
     if not amounts:
         return {"status": "not_found", "amount": None}
     return {"status": "ambiguous", "amount": None}

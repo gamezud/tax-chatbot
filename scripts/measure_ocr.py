@@ -35,7 +35,7 @@ from utils.receipt_parser import extract_donation_amount, has_donation_keyword  
 from make_sample_receipts import liff_step  # noqa: E402  (อยู่ใน scripts/ โฟลเดอร์เดียวกัน)
 
 EXPECTED_STATUSES = ["ok", "ambiguous", "not_donation"]
-GOT_STATUSES = ["ok", "not_found", "ambiguous", "not_donation", "error"]
+GOT_STATUSES = ["ok", "not_found", "ambiguous", "thai_digits", "not_donation", "error"]
 OUTCOMES = ["correct", "confident_wrong", "safe_miss", "false_not_donation", "error"]
 OUTCOME_LABELS = {
     "correct": "ถูก",
@@ -208,7 +208,7 @@ def write_report(path, rows, header):
             f"{fmt_ratio(sum(r['got_status'] == 'not_donation' for r in expect_nd), len(expect_nd))}",
             f"- ใบบริจาคที่ถูกตีเป็น not_donation (OCR อ่านคำบริจาคไม่ได้): "
             f"{fmt_ratio(sum(r['outcome'] == 'false_not_donation' for r in donation), len(donation))}",
-            f"- ไม่ได้ยอด ผู้ใช้ต้องพิมพ์เอง (not_found / ambiguous ที่ไม่ควรได้): {fmt_ratio(counts['safe_miss'], n)}",
+            f"- ไม่ได้ยอด ผู้ใช้ต้องพิมพ์เอง (not_found / ambiguous / thai_digits ที่ไม่ควรได้): {fmt_ratio(counts['safe_miss'], n)}",
             f"- error: {fmt_ratio(counts['error'], n)}",
             ""]
 
@@ -234,8 +234,11 @@ def write_report(path, rows, header):
     # 6. baseline
     out += ["## baseline: parser บนข้อความต้นฉบับ", "",
             "make_sample_receipts.py รัน parser บนข้อความที่วาดลงรูป (source_lines) ก่อนเขียนรูปทุกครั้ง "
-            "และหยุด (exit 1) ถ้าผลไม่ตรงกับ answer key — ทุกใบในชุดนี้จึงได้ผลถูกเมื่ออ่านข้อความได้ครบ "
-            "ผลที่ผิดในรายงานนี้จึงมาจากการอ่านรูป (OCR) ไม่ใช่จากแม่แบบ", ""]
+            "และหยุด (exit 1) ถ้าผลไม่ตรงกับ parser_expected_status ใน answer key — ทุกใบในชุดนี้จึงได้ผลตามที่ออกแบบเมื่ออ่านข้อความได้ครบ "
+            "ผลที่ผิดในรายงานนี้จึงมาจากการอ่านรูป (OCR) ไม่ใช่จากแม่แบบ",
+            "",
+            "ใบยอดเลขไทย (D4, D4b) expected_status เป็น ok ตามยอดจริงของใบ แต่ parser ออกแบบให้ตอบ thai_digits "
+            "(ไม่เชื่อเลขไทย ให้ผู้ใช้พิมพ์เอง) ผล thai_digits ของใบเหล่านี้จึงนับเป็น \"ไม่ได้ยอด (พิมพ์เอง)\" ไม่ใช่ \"ถูก\"", ""]
 
     # 7. ข้อจำกัด
     out += ["## ข้อจำกัด", "",
