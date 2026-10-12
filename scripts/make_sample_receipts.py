@@ -201,7 +201,12 @@ TEMPLATES = [
     "D1_comma", "D2_decimal", "D3_nocomma", "D4_thai_digits", "D5_words",
     "D6_distractors", "D7_same_twice", "D8_edonation",
     "A1_two_amounts", "N1_insurance", "N2_service_fee",
+    # แม่แบบที่เพิ่มทีหลังต่อท้ายเสมอ — ลำดับใน list กำหนดหัวเรื่องของใบ ถ้าแทรกกลาง ใบเดิมจะเปลี่ยน
+    "D4b_thai_digits_sarabun",
 ]
+
+# แม่แบบที่ใช้เนื้อหาและสภาพรูปชุดเดียวกับอีกแม่แบบ (rng เดียวกัน) ต่างกันแค่ฟอนต์ — เทียบฟอนต์แบบคู่ต่อคู่
+SAME_CONTENT_AS = {"D4b_thai_digits_sarabun": "D4_thai_digits"}
 
 
 # ---------------------------------------------------------------------------
@@ -329,11 +334,13 @@ def main():
     # 1. สร้างเนื้อหาทุกใบ + ตรวจตัวเองก่อนเขียนรูป
     receipts = {}
     mismatches = []
-    for t_index, template in enumerate(TEMPLATES):
+    for template in TEMPLATES:
+        source = SAME_CONTENT_AS.get(template, template)
         for a_index in range(len(AMOUNT_RANGES)):
             receipt_id = f"{template}_{a_index + 1}"
-            rng = random.Random(f"{args.seed}:{receipt_id}")
-            lines, status, amount, keyword = build_receipt(template, t_index, a_index, rng)
+            content_id = f"{source}_{a_index + 1}"
+            rng = random.Random(f"{args.seed}:{content_id}")
+            lines, status, amount, keyword = build_receipt(source, TEMPLATES.index(source), a_index, rng)
             font = second if (second and template in SECOND_FONT_TEMPLATES) else PRIMARY_FONT
             source_lines = [BANNER_TEXT] + [text for text, _ in lines] + [BANNER_TEXT]
             got_status, got_amount = parser_result(source_lines)
@@ -346,7 +353,9 @@ def main():
                 "title": keyword,
                 "expected_status": status,
                 "expected_amount": canonical(amount) if amount is not None else None,
+                "same_content_as": content_id if content_id != receipt_id else None,
                 "source_lines": source_lines,
+                "_content_id": content_id,
                 "_lines": lines,
                 "_font": font,
             }
@@ -370,7 +379,7 @@ def main():
         _, font_path, body_size = receipt["_font"]
         base = render(receipt["_lines"], font_path, body_size)
         for condition, apply in CONDITIONS.items():
-            key = f"{args.seed}:{receipt_id}:{condition}"
+            key = f"{args.seed}:{receipt['_content_id']}:{condition}"
             img = apply(base, random.Random(key), numpy_rng(key))
             data = liff_step(img)
             name = f"{receipt_id}__{condition}.jpg"
@@ -380,7 +389,7 @@ def main():
 
     fonts_used = {receipt["_font"][0]: receipt["_font"][1].name for receipt in receipts.values()}
     for receipt in receipts.values():
-        del receipt["_lines"], receipt["_font"]
+        del receipt["_content_id"], receipt["_lines"], receipt["_font"]
     answer_key = {
         "generator": "scripts/make_sample_receipts.py",
         "seed": args.seed,
