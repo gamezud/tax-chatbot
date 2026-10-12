@@ -477,7 +477,8 @@ def test_ssf_note_and_ssf_not_counted(post, mocks, query_text):
                               "2,050.00", "0.00", "ต้องชำระภาษีเพิ่มเติม: 2,050.00 บาท"):
         assert line in text
     assert SSF_NOTE in text
-    # หมายเหตุอยู่ใน tax_advice จึงไปถึง Firestore และ PDF ด้วย
+    # หมายเหตุอยู่ใน tax_advice ของ dict เดียวกับที่ส่งเข้า PDF จึงไปถึง PDF ด้วย
+    # (save_tax_report รับ dict นี้ แต่ Firestore ไม่ได้เก็บ field tax_advice)
     _, data = mocks.firebase.save_tax_report.call_args.args
     assert SSF_NOTE in data["tax_advice"]
 
@@ -514,6 +515,65 @@ def test_thai_esg_counted_in_summary(post):
 
 def test_no_ssf_note_without_ssf(post):
     assert "SSF" not in post("021_04_Tax_Interview_Deductions")["fulfillmentText"]
+
+
+def salary_40000_payload(query_text, params):
+    """กรณีจาก LINE (test_line_verified_cases.py): เงินเดือน 40,000/เดือน ประกันสังคม 10,500"""
+    payload = deductions_payload(query_text, params)
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["salary_per_month"] = 40000.0
+            ctx["parameters"]["social_security"] = {"value": 10500.0}
+    return payload
+
+
+DONATION_CAP_NOTE = "เงินบริจาคใช้ลดหย่อนได้"
+
+
+def test_donation_over_cap_note(post, mocks):
+    # เงินบริจาคหักได้ไม่เกิน donation_rate ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น (docs ข้อ 2.2)
+    # 1. เงินได้: 40,000 × 12                                          = 480,000
+    # 2. ค่าใช้จ่าย: 50% = 240,000 เกินเพดาน                             = 100,000
+    # 3. ลดหย่อนอื่น: ส่วนตัว 60,000 + ประกันสังคม 10,500                 =  70,500
+    #    เงินได้ก่อนหักบริจาค: 480,000 − 100,000 − 70,500                = 309,500
+    #    บริจาคใช้ได้: min(102,773, 10% × 309,500 = 30,950)              =  30,950
+    #    ลดหย่อนรวม: 70,500 + 30,950                                     = 101,450
+    # 4. เงินได้สุทธิ: 309,500 − 30,950                                    = 278,550
+    # 5. ภาษี: 0–150,000 ยกเว้น / 150,001–278,550: 128,550 × 5%           =   6,427.50
+    # ตัวเลข 1–6 ต้องเท่ากับ test_line_verified_cases.py ("บริจาค 102773" = 6,427.50) — งานนี้เพิ่มข้อความอย่างเดียว
+    body = post(salary_40000_payload("บริจาค 102773", {"donation": 102773.0}))
+    text = body["fulfillmentText"]
+    for line in summary_lines("480,000.00", "100,000.00", "101,450.00", "278,550.00",
+                              "6,427.50", "0.00", "ต้องชำระภาษีเพิ่มเติม: 6,427.50 บาท"):
+        assert line in text
+    note = ("หมายเหตุ: เงินบริจาคใช้ลดหย่อนได้ 30,950.00 จาก 102,773.00 บาท "
+            "เพราะหักได้ไม่เกิน 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นครับ")
+    assert note in text
+    # อยู่ใน tax_advice จึงไปถึง PDF ด้วย
+    _, pdf_data = mocks.pdf.call_args.args
+    assert note in pdf_data["tax_advice"]
+
+
+def test_donation_exactly_at_cap_no_note(post):
+    # บริจาคเท่าเพดานพอดี (30,950 จาก test_donation_over_cap_note) ใช้ได้ทั้งยอด ไม่ถูกตัด
+    # ตัวเลขเท่ากับกรณีเกินเพดานทุกบรรทัด
+    text = post(salary_40000_payload("บริจาค 30950", {"donation": 30950.0}))["fulfillmentText"]
+    for line in summary_lines("480,000.00", "100,000.00", "101,450.00", "278,550.00",
+                              "6,427.50", "0.00", "ต้องชำระภาษีเพิ่มเติม: 6,427.50 บาท"):
+        assert line in text
+    assert DONATION_CAP_NOTE not in text
+
+
+def test_donation_under_cap_no_note(post):
+    text = post(salary_40000_payload("บริจาค 5000", {"donation": 5000.0}))["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 7,950.00 บาท" in text
+    assert DONATION_CAP_NOTE not in text
+
+
+def test_no_donation_no_note(post):
+    text = post(salary_40000_payload("ไม่มี", {}))["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 8,450.00 บาท" in text
+    assert DONATION_CAP_NOTE not in text
 
 
 def test_summary_shows_tax_year(post, mocks):
