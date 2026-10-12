@@ -477,7 +477,8 @@ def test_ssf_note_and_ssf_not_counted(post, mocks, query_text):
                               "2,050.00", "0.00", "ต้องชำระภาษีเพิ่มเติม: 2,050.00 บาท"):
         assert line in text
     assert SSF_NOTE in text
-    # หมายเหตุอยู่ใน tax_advice จึงไปถึง Firestore และ PDF ด้วย
+    # หมายเหตุอยู่ใน tax_advice ของ dict เดียวกับที่ส่งเข้า PDF จึงไปถึง PDF ด้วย
+    # (save_tax_report รับ dict นี้ แต่ Firestore ไม่ได้เก็บ field tax_advice)
     _, data = mocks.firebase.save_tax_report.call_args.args
     assert SSF_NOTE in data["tax_advice"]
 

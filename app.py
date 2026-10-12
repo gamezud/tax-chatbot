@@ -416,7 +416,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
                        f"เพราะหักได้ไม่เกิน {donation_rate*100:g}% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นครับ")
 
     # SSF ลดหย่อนไม่ได้แล้วหลัง ssf_last_tax_year (docs ข้อ 2.2 แถว SSF [5]) Console ไม่ annotate ยอด SSF จึงไม่ถูกนับ
-    # เช็กจากข้อความดิบเพื่อบอกเหตุผล ต่อท้าย tax_advice ให้ไปถึงทั้ง LINE, PDF และ Firestore ในการเขียนครั้งเดิม
+    # เช็กจากข้อความดิบเพื่อบอกเหตุผล ต่อท้าย tax_advice ให้ไปถึงทั้ง LINE และ PDF
+    # (Firestore ไม่ได้เก็บ tax_advice — save_tax_report บันทึกเฉพาะตัวเลขสรุปกับปีภาษี)
     if any(k in user_query.lower() for k in ['ssf', 'เอสเอสเอฟ']):
         ssf_last_tax_year = rules["deduction"]["ssf_last_tax_year"]
         tax_advice += (f"\nหมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี {ssf_last_tax_year + 1} "
