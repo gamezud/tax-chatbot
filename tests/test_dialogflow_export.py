@@ -129,6 +129,12 @@ def solo_phrases(name):
     return result
 
 
+# #26: คำที่ผู้ใช้พิมพ์แล้ว Dialogflow ยังไม่รู้จัก (ทดสอบใน LINE 2026-10-11)
+# "บุตร 1 คน", "อาร์เอ็มเอฟ 25000", "ดอกเบี้ยกู้บ้าน 33000" ได้ Fallback
+# "กองทุนรวมเพื่อการเลี้ยงชีพ 70000" ได้ donation (ตัวกัน #25 ปฏิเสธ แต่ผู้ใช้ก็ยังกรอกยอดนี้ไม่ได้)
+XFAIL_26 = pytest.mark.xfail(strict=True, reason='#26 ยังไม่มีประโยคเดี่ยวที่ใช้คำนี้ใน export')
+
+
 # คำที่ไม่นับ (ผ่อนบ้าน, ทำบุญ ฯลฯ) และเหตุผลอยู่ใน utils/deduction_terms.py
 @pytest.mark.parametrize('name, term', [
     ('num_children', 'ลูก'),
@@ -141,6 +147,10 @@ def solo_phrases(name):
     ('home_loan_interest', 'ดอกเบี้ยเงินกู้บ้าน'),
     ('donation', 'บริจาค'),
     ('thai_esg', 'ThaiESG'),
+    pytest.param('num_children', 'บุตร', marks=XFAIL_26),
+    pytest.param('ssf_rmf', 'กองทุนรวมเพื่อการเลี้ยงชีพ', marks=XFAIL_26),
+    pytest.param('ssf_rmf', 'อาร์เอ็มเอฟ', marks=XFAIL_26),
+    pytest.param('home_loan_interest', 'ดอกเบี้ยกู้บ้าน', marks=XFAIL_26),
 ])
 def test_each_deduction_term_has_solo_phrase(name, term):
     # #24: ระหว่างรอค่าลดหย่อน "ประกันสุขภาพ 8000", "บิดามารดา 2 คน", "ดอกเบี้ยเงินกู้บ้าน 35000"
