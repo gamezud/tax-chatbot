@@ -106,6 +106,9 @@ def test_passes(text, params):
     ('ดอกเบี้ยเงินกู้รถ 20000', {}),
     ('ลูก 2 คน อายุ 5 ปี', {'num_children': 2.0}),
     ('ลูกสองคน', {}),
+    # #26 ประโยคตรวจจาก LINE (2026-10-12): Dialogflow จับผิดช่อง ตัวกันต้องปฏิเสธ
+    ('เอสเอสเอฟ 50000', {'ssf_rmf': 50000.0}),
+    ('กองทุนรวมเพื่อการออม 50000', {'home_loan_interest': 50000.0}),
 ])
 def test_unclear(text, params):
     assert check_deduction_parameters(text, params) == 'unclear'

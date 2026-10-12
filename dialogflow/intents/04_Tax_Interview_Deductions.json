@@ -17,7 +17,7 @@
       ],
       "parameters": [
         {
-          "id": "1d5bd905-09bd-4945-8e14-281992fb0a10",
+          "id": "164747fb-7521-4ba3-ba7d-93b18bf42e30",
           "name": "num_children",
           "required": false,
           "dataType": "@sys.number",
@@ -31,7 +31,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "583fc90e-c26d-496f-a181-7fc7a31f5546",
+          "id": "f7efb832-4876-4c52-b1ac-08d9304599e8",
           "name": "life_insurance",
           "required": false,
           "dataType": "@sys.number",
@@ -45,7 +45,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "c4baaf9f-1030-498c-b65b-92eff1448f06",
+          "id": "5de41691-2eba-4012-b8d8-3575fa5663b3",
           "name": "ssf_rmf",
           "required": false,
           "dataType": "@sys.number",
@@ -59,7 +59,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "666fc8c6-bf28-4bc0-9599-b4dc8404ab9d",
+          "id": "d86eb3b5-63d0-4d34-af65-25220ee33164",
           "name": "spouse",
           "required": false,
           "dataType": "@marital_status",
@@ -73,7 +73,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "25d9a3bb-bb92-48ed-9840-ef912639b90b",
+          "id": "fdab2d95-6b70-4f52-b4d0-bdb5bb6abea1",
           "name": "num_parents",
           "required": false,
           "dataType": "@sys.number",
@@ -87,7 +87,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "860a219b-6e02-43cb-975e-8c0aa997b790",
+          "id": "2e206502-ecf5-4a06-bc3a-49a759f61b6c",
           "name": "health_insurance",
           "required": false,
           "dataType": "@sys.number",
@@ -101,7 +101,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "c35f89e4-1aea-49f5-9ff0-fc9d791d2274",
+          "id": "fb505faf-0577-4af1-b3f2-f32160674d25",
           "name": "home_loan_interest",
           "required": false,
           "dataType": "@sys.number",
@@ -115,7 +115,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "625567d0-f6c1-48c3-8744-1b4f8f555115",
+          "id": "d376f1c2-a93e-4c92-b07b-740d3b340bd7",
           "name": "donation",
           "required": false,
           "dataType": "@sys.number",
@@ -129,7 +129,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "f98d1cfc-0833-447e-9799-5bb7ae31d681",
+          "id": "978203d3-f13f-48f7-a84d-355f2b0078d5",
           "name": "thai_esg",
           "required": false,
           "dataType": "@sys.number",

@@ -1,5 +1,349 @@
 [
   {
+    "id": "40ce9bc3-40e9-49f0-89ea-60b5e6379520",
+    "data": [
+      {
+        "text": "ดอกเบี้ยกู้ซื้อบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "39000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "8f95fa42-70fe-44c2-8863-de58f1ed6d52",
+    "data": [
+      {
+        "text": "มีดอกเบี้ยกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "51,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "1ec499d7-6a30-4638-8979-2ad385dd5c19",
+    "data": [
+      {
+        "text": "จ่ายดอกเบี้ยกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "27,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "e934d985-b77b-4465-b03b-cb592c137245",
+    "data": [
+      {
+        "text": "ดอกเบี้ยกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "48000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "69900ce8-314f-4dc7-8458-c0a85fad74c2",
+    "data": [
+      {
+        "text": "กองทุนอาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "55,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "fe52f5e4-afb1-483a-b97c-303e845ba486",
+    "data": [
+      {
+        "text": "มีอาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "80000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5cbdadc2-8aa4-4179-a159-dbfc0d3e2f55",
+    "data": [
+      {
+        "text": "ซื้ออาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "15,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "41aadae5-26c4-4bda-a3f2-919bd7d791b4",
+    "data": [
+      {
+        "text": "อาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7aabe5ca-7b02-458a-b93e-1b39e3f5a7a2",
+    "data": [
+      {
+        "text": "ลงทุนกองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "35,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "db464c1c-dbde-4567-aacc-e1afcc595080",
+    "data": [
+      {
+        "text": "มีกองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "63213262-76f1-496f-a2f7-ff301201b333",
+    "data": [
+      {
+        "text": "ซื้อกองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "120,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "cdeae1b3-7ad1-476e-816e-4b62c80167a2",
+    "data": [
+      {
+        "text": "กองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "45000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0e3b6c3e-7cf3-4da7-ba9a-cf37a59da1f9",
+    "data": [
+      {
+        "text": "บุตรชอบด้วยกฎหมาย ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "3d4e7c73-f03d-4c46-8d3e-b4cb7e94e35d",
+    "data": [
+      {
+        "text": "ลดหย่อนบุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "78c3d275-b413-4847-837b-d8193a4f55b7",
+    "data": [
+      {
+        "text": "มีบุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "86dcc5fc-2c2b-4cc7-b7ef-602ef858560d",
+    "data": [
+      {
+        "text": "บุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
     "id": "31dbbfce-69e5-4efb-bf8e-37b9a2612bc8",
     "data": [
       {
