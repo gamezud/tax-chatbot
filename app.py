@@ -22,6 +22,7 @@ from utils.pdf_generator import generate_tax_pdf
 # import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
 from utils import ocr, liff_auth
 from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
+from utils.deduction_guard import check_deduction_parameters, has_number
 
 app = Flask(__name__)
 PUBLIC_URL = ""
@@ -458,6 +459,44 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         ]
     }
 
+# ตัวอย่างในข้อความ ก — ทุกตัวต้องผ่านตัวกัน ทั้งทีละตัวและรวมเป็นข้อความเดียว (เทสวนลิสต์นี้)
+UNCLEAR_EXAMPLES = [
+    "ประกันชีวิต 20000", "ประกันสุขภาพ 10000", "ดอกเบี้ยบ้าน 50000", "RMF 30000",
+    "ThaiESG 30000", "บริจาค 5000", "ลูก 1 คน", "พ่อแม่ 2 คน",
+]
+
+def handle_unclear_deductions(reason, merged_params, parameters, session_id):
+    # #25 ไม่คำนวณ ไม่สร้าง PDF ไม่เขียน Firestore — ตอบแล้วรอค่าลดหย่อนต่อ
+    if reason == "parent_health":
+        reply_text = (
+            "ขออภัยครับ ระบบยังไม่รองรับเบี้ยประกันสุขภาพของบิดามารดา ซึ่งเป็นสิทธิแยกจากประกันสุขภาพของตัวเอง "
+            "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
+            "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้ หากไม่มีรายการอื่นพิมพ์ 'ไม่มี' ได้เลยครับ"
+        )
+    else:
+        # ขอให้พิมพ์ "ทั้งหมด" ในข้อความเดียว เพราะค่าทุกตัวของรอบนี้ถูกล้าง ถ้าพิมพ์ใหม่บางรายการ ที่เหลือจะหายเงียบ
+        reply_text = (
+            "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
+            f"กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น {', '.join(UNCLEAR_EXAMPLES)}\n"
+            "หากไม่มีค่าลดหย่อน พิมพ์ 'ไม่มี' ได้เลยครับ"
+        )
+
+    # 04 มี tax_session เป็น affected context ค่าของรอบนี้จึงอยู่ใน tax_session แล้ว
+    # ถ้าไม่ล้าง ผู้ใช้พิมพ์ "ไม่มี" ต่อจะคำนวณด้วยยอดที่เพิ่งปฏิเสธไป
+    session_params = dict(merged_params)
+    for name, value in parameters.items():
+        if value not in ("", None):
+            session_params[name] = ""
+
+    print(f"🚫 [DEDUCTION-GUARD] ปฏิเสธ ({reason}): {parameters}")
+    return {
+        "fulfillmentText": reply_text,
+        "outputContexts": [
+            {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": session_params},
+            {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 2}
+        ]
+    }
+
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
     print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
@@ -556,7 +595,19 @@ def webhook():
         # STEP 4: ลดหย่อนและการคำนวณสรุปผล
         # ==========================================
         elif intent_name == '04_Tax_Interview_Deductions':
+            # ตรวจจาก parameters ของรอบนี้ ไม่ใช่ merged_params ที่มีค่าของรอบก่อนปนอยู่
+            reason = check_deduction_parameters(user_query, parameters)
+            if reason:
+                return jsonify(handle_unclear_deductions(reason, merged_params, parameters, session_id))
             return jsonify(handle_deductions(merged_params, user_query, session_id, line_user_id))
+
+        # ข้อความที่มีตัวเลขระหว่างรอค่าลดหย่อนแต่ Dialogflow จับไม่ได้ (เช่น "บุตร 1 คน" ทดสอบใน LINE 2026-10-11)
+        # เดิมตกไปสาขาความรู้ ผู้ใช้ไม่รู้ว่ายอดไม่ถูกบันทึก — ไม่มีตัวเลขยังเป็นคำถามความรู้ตามเดิม
+        # ตรวจด้วย parameters ว่างเพื่อให้กรณี ง ได้ข้อความของตัวเอง ที่เหลือ (รวมที่ตัวกันปล่อยผ่าน เช่น "SSF 50000") ได้ข้อความ ก
+        elif (intent_name == 'Default Fallback Intent' and 'awaiting_deduction' in active_contexts
+              and has_number(user_query)):
+            reason = check_deduction_parameters(user_query, {}) or "unclear"
+            return jsonify(handle_unclear_deductions(reason, merged_params, parameters, session_id))
 
         # ==========================================
         # FALLBACK / KNOWLEDGE BASE (RAG)
