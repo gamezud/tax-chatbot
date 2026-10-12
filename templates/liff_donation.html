@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>อ่านยอดเงินบริจาค</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 16px; line-height: 1.5; background: #fff; color: #222; }
+    h1 { font-size: 1.25em; margin: 0 0 12px; }
+    .notice { background: #fff8e1; border-left: 4px solid #f2b705; padding: 8px 12px; margin: 0 0 12px; }
+    .row { display: flex; gap: 12px; align-items: flex-start; }
+    .preview-box { flex: 0 0 45%; margin: 0; }
+    .preview-box img { width: 100%; max-height: 50vh; object-fit: contain; border: 1px solid #ccc; cursor: zoom-in; }
+    /* แตะรูปเพื่อขยายเต็มความกว้าง ไว้เทียบตัวเลขกับช่องข้อความ */
+    .row.zoomed { flex-direction: column; }
+    .row.zoomed .preview-box { flex-basis: auto; width: 100%; }
+    .row.zoomed .preview-box img { max-height: none; cursor: zoom-out; }
+    .preview-box figcaption { font-size: 0.85em; color: #666; }
+    .fields { flex: 1; min-width: 0; }
+    .pick { display: block; margin-bottom: 12px; }
+    input[type="text"] { width: 100%; box-sizing: border-box; font-size: 1.1em; padding: 8px; }
+    .hint { font-size: 0.85em; color: #555; }
+    #status { min-height: 1.5em; }
+    button { font-size: 1.1em; padding: 12px 20px; margin-top: 8px; width: 100%; }
+    #errors { color: #b00020; white-space: pre-wrap; }
+    #debug { margin-top: 16px; font-size: 0.8em; color: #555; }
+    #debug pre { white-space: pre-wrap; }
+  </style>
+  <!-- โหลด SDK ก่อนสคริปต์หลัก ถ้าโหลดไม่สำเร็จ liff จะเป็น undefined แล้ว main() แจ้งบนหน้าจอ -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js" charset="utf-8"></script>
+</head>
+<body>
+  <h1>อ่านยอดเงินบริจาคจากรูป</h1>
+  <p id="notice" class="notice" hidden></p>
+
+  <!-- ไม่ใส่ capture เพื่อให้ผู้ใช้เลือกได้ทั้งถ่ายใหม่และเลือกจากคลังรูป -->
+  <label class="pick">📷 ถ่ายหรือเลือกรูปหลักฐานการบริจาค<br>
+    <input type="file" id="photo" accept="image/*" disabled>
+  </label>
+
+  <div class="row" id="row">
+    <figure class="preview-box">
+      <img id="preview" alt="รูปที่เลือก (แตะเพื่อขยาย)" hidden>
+      <figcaption id="preview-hint">ยังไม่ได้เลือกรูป</figcaption>
+    </figure>
+    <div class="fields">
+      <label for="message">ข้อความที่จะส่งเข้าแชต</label>
+      <input type="text" id="message" value="บริจาค " disabled>
+      {# ไม่ชวนให้พิมพ์ค่าลดหย่อนอื่นต่อท้าย: ทดสอบแล้ว "บริจาค 3500 ประกันชีวิต 20000"
+         Dialogflow จับได้แค่ donation ส่วน life_insurance หายเงียบ ๆ (2026-10-11) #}
+      <p class="hint">ตรวจตัวเลขกับรูปทุกครั้ง ระบบอาจอ่านหลักหาย เช่น 15,000 เป็น 5,000 ครับ</p>
+      <p id="status" role="status"></p>
+      <button id="send-btn" disabled>ส่งเข้าแชต</button>
+    </div>
+  </div>
+
+  <div id="errors"></div>
+
+  <details id="debug">
+    <summary>ข้อมูลสำหรับทดสอบ</summary>
+    <pre id="debug-text"></pre>
+  </details>
+
+  <script>
+    // tojson ให้สตริง JS ที่ escape แล้ว หรือ null ถ้าไม่ได้ตั้ง LIFF_ID
+    const LIFF_ID = {{ liff_id|tojson }};
+    const DONATION_PREFIX = "บริจาค ";
+    // ย่อด้านยาวไม่เกินนี้ก่อนส่ง (เซิร์ฟเวอร์ย่อที่ 2500 อีกชั้น) — รูปจากกล้องเล็กลงจากหลาย MB เหลือหลักร้อย KB
+    const MAX_SIDE = 2000;
+    // เซิร์ฟเวอร์ตรวจ token กับ LINE ≤ 3 วินาที + OCR ≤ 20 วินาที
+    const UPLOAD_TIMEOUT_MS = 30000;
+
+    // ข้อความตาม status จาก /liff/ocr — ทุกข้อความบอกว่าผู้ใช้ต้องทำอะไรต่อ
+    const STATUS_MESSAGES = {
+      not_found: "หายอดเงินในรูปไม่เจอ กรุณาพิมพ์ยอดเองต่อจากคำว่า \"บริจาค\" แล้วกดส่งครับ",
+      ambiguous: "เจอตัวเลขหลายค่าหรือตัวเลขไม่ชัด ระบบไม่เดาให้ กรุณาพิมพ์ยอดเองแล้วกดส่งครับ",
+      not_donation: "รูปนี้ไม่พบคำว่าบริจาค ระบบอ่านได้เฉพาะหลักฐานการบริจาค กรุณาพิมพ์ยอดเองในแชตครับ",
+      thai_digits: "ยอดในรูปเป็นเลขไทย ซึ่งระบบอ่านได้ไม่แม่นยำ กรุณาพิมพ์ยอดเองต่อจากคำว่า \"บริจาค\" แล้วกดส่งครับ",
+      invalid_token: "สิทธิ์ใช้งานหน้านี้หมดอายุ กรุณาปิดหน้านี้แล้วกดลิงก์ใหม่จากห้องแชต หรือพิมพ์ยอดในแชตเองครับ",
+      line_unavailable: "ตรวจสอบสิทธิ์กับ LINE ไม่ได้ชั่วคราว กรุณาพิมพ์ยอดเองแล้วกดส่งครับ",
+      too_large: "รูปใหญ่เกินไป ลองเลือกรูปอื่น หรือพิมพ์ยอดเองแล้วกดส่งครับ",
+      invalid_image: "อ่านไฟล์รูปนี้ไม่ได้ ลองถ่ายใหม่หรือเลือกรูปอื่น หรือพิมพ์ยอดเองแล้วกดส่งครับ",
+      busy: "ระบบกำลังอ่านรูปอื่นอยู่ ลองเลือกรูปเดิมอีกครั้งในอีกสักครู่ หรือพิมพ์ยอดเองแล้วกดส่งครับ",
+      ocr_unavailable: "ตอนนี้ระบบอ่านรูปไม่ได้ กรุณาพิมพ์ยอดเองแล้วกดส่งครับ",
+      ocr_failed: "อ่านรูปไม่สำเร็จ ลองถ่ายใหม่ให้ชัดและตรงขึ้น หรือพิมพ์ยอดเองแล้วกดส่งครับ",
+      not_configured: "ระบบยังไม่ได้ตั้งค่าการอ่านรูป กรุณาพิมพ์ยอดเองแล้วกดส่งครับ",
+      no_image: "ระบบไม่ได้รับรูป ลองเลือกรูปใหม่ หรือพิมพ์ยอดเองแล้วกดส่งครับ",
+    };
+    const NETWORK_MESSAGE = "ติดต่อเซิร์ฟเวอร์ไม่ได้ กรุณาพิมพ์ยอดเองแล้วกดส่งครับ";
+    const UNKNOWN_MESSAGE = "อ่านรูปไม่สำเร็จ กรุณาพิมพ์ยอดเองแล้วกดส่งครับ";
+
+    const photo = document.getElementById("photo");
+    const preview = document.getElementById("preview");
+    const message = document.getElementById("message");
+    const sendBtn = document.getElementById("send-btn");
+    let previewUrl = null;
+    const debugInfo = {};
+
+    // ทุกข้อความลงหน้าเว็บด้วย textContent เท่านั้น — ไม่ใช้ HTML กับข้อมูลจากเซิร์ฟเวอร์หรือผู้ใช้
+    function setText(id, text) {
+      document.getElementById(id).textContent = text;
+    }
+
+    // ข้อความแนะนำ (ไม่ใช่ error): เช่น ไม่ได้เปิดใน LINE
+    function showNotice(text) {
+      const el = document.getElementById("notice");
+      el.textContent = text;
+      el.hidden = false;
+    }
+
+    // error ทางเทคนิค สีแดง — ในแอป LINE เปิด console ไม่ได้ จึงต้องขึ้นบนหน้า
+    function showError(step, err) {
+      let detail;
+      if (err && typeof err === "object") {
+        detail = (err.code ? err.code + " " : "") + (err.message || String(err));
+      } else {
+        detail = String(err);
+      }
+      const line = document.createElement("p");
+      line.textContent = "❌ " + step + ": " + detail;
+      document.getElementById("errors").appendChild(line);
+    }
+
+    function setDebug(key, value) {
+      debugInfo[key] = value;
+      setText("debug-text", Object.keys(debugInfo).map((k) => k + ": " + debugInfo[k]).join("\n"));
+    }
+
+    window.addEventListener("error", (e) => showError("JavaScript error", e.error || e.message));
+    window.addEventListener("unhandledrejection", (e) => showError("Promise error", e.reason));
+
+    // ---------------------------------------------------------------
+    // เริ่มต้น
+    // ---------------------------------------------------------------
+    async function main() {
+      if (!LIFF_ID) {
+        showNotice("ระบบยังไม่ได้ตั้งค่า (ไม่มี LIFF ID) กรุณาพิมพ์ยอดเงินบริจาคในแชตเองครับ");
+        return;
+      }
+      if (typeof liff === "undefined") {
+        showNotice("โหลดหน้านี้ไม่สำเร็จ กรุณาปิดแล้วกดลิงก์ใหม่จากห้องแชต หรือพิมพ์ยอดในแชตเองครับ");
+        showError("โหลด LIFF SDK", "โหลด sdk.js จาก static.line-scdn.net ไม่สำเร็จ");
+        return;
+      }
+      try {
+        await liff.init({ liffId: LIFF_ID });
+      } catch (err) {
+        showNotice("เปิดหน้านี้ไม่สำเร็จ กรุณาปิดแล้วกดลิงก์ใหม่จากห้องแชต หรือพิมพ์ยอดในแชตเองครับ");
+        showError("liff.init", err);
+        return;
+      }
+
+      const inClient = liff.isInClient();
+      const ctx = liff.getContext();
+      const ctxType = ctx ? ctx.type : null;
+      setDebug("isInClient", inClient);
+      setDebug("context.type", ctxType);
+      setDebug("OS", liff.getOS());
+      setDebug("LINE version", liff.getLineVersion());
+
+      // ส่งข้อความเข้าแชตได้เฉพาะตอนเปิดในแอป LINE จากห้องแชตกับบอท — นอกนั้นแนะนำทางอื่น ไม่ใช่ error
+      if (!inClient || ctxType !== "utou") {
+        showNotice("กรุณาเปิดหน้านี้ในแอป LINE บนมือถือ โดยกดลิงก์จากห้องแชตกับบอท หรือพิมพ์ยอดเงินบริจาคในแชตเองครับ");
+        return;
+      }
+
+      photo.disabled = false;
+      message.disabled = false;
+      sendBtn.disabled = false;
+    }
+
+    // ---------------------------------------------------------------
+    // เลือกรูป → ย่อ → preview → ส่งให้เซิร์ฟเวอร์อ่าน
+    // ---------------------------------------------------------------
+    photo.addEventListener("change", async () => {
+      const file = photo.files && photo.files[0];
+      if (!file) return;
+      photo.disabled = true;
+      // รูปใหม่ — เปิดปุ่มส่งกลับ (รูปก่อนหน้าอาจเป็น not_donation ที่ปิดปุ่มไว้)
+      sendBtn.disabled = false;
+      setText("status", "กำลังเตรียมรูป...");
+      try {
+        const blob = await resizeImage(file);
+        showPreview(blob);
+        setText("status", "กำลังอ่านยอดเงินจากรูป...");
+        await readAmount(blob);
+      } catch (err) {
+        setText("status", "เปิดรูปนี้ไม่ได้ ลองถ่ายใหม่หรือเลือกรูปอื่น หรือพิมพ์ยอดเองแล้วกดส่งครับ");
+        showError("เตรียมรูป", err);
+      } finally {
+        // เลือกรูปเดิมซ้ำได้ (เช่น ตอน busy)
+        photo.value = "";
+        photo.disabled = false;
+      }
+    });
+
+    preview.addEventListener("click", () => {
+      document.getElementById("row").classList.toggle("zoomed");
+    });
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("เบราว์เซอร์ถอดรหัสรูปนี้ไม่ได้"));
+        img.src = url;
+      });
+    }
+
+    // ย่อด้วย canvas แล้วได้ JPEG ใหม่ที่ไม่มี EXIF — รูปต้องถูกหมุนตาม EXIF ก่อนวาด
+    // เบราว์เซอร์ปัจจุบันหมุนให้เอง (CSS image-orientation: from-image เป็นค่าเริ่มต้น และ drawImage ใช้ค่านี้)
+    // ยังไม่ได้ยืนยันใน LINE บนมือถือจริง → ดู "ข้อมูลสำหรับทดสอบ" และดูว่า preview ตั้งตรงไหม
+    // preview คือรูปที่ถูกส่งจริง ถ้า preview ตั้งตรง เซิร์ฟเวอร์ก็ได้รูปตั้งตรง
+    async function resizeImage(file) {
+      setDebug("file", (file.type || "(ไม่ทราบชนิด)") + ", " + Math.round(file.size / 1024) + " KB");
+      setDebug("EXIF Orientation", describeOrientation(await readExifOrientation(file)));
+
+      const url = URL.createObjectURL(file);
+      try {
+        const img = await loadImage(url);
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        // ถ้าเบราว์เซอร์หมุนตาม EXIF ขนาดตรงนี้จะเป็นขนาดหลังหมุนแล้ว (รูปแนวตั้งจะได้ สูง > กว้าง)
+        setDebug("ขนาดที่เบราว์เซอร์เห็น", w + " x " + h + (h > w ? " (แนวตั้ง)" : " (แนวนอน)"));
+
+        const scale = Math.min(1, MAX_SIDE / Math.max(w, h));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        const ctx2d = canvas.getContext("2d");
+        // พื้นขาว: PNG ที่โปร่งใสจะกลายเป็นพื้นดำเมื่อแปลงเป็น JPEG
+        ctx2d.fillStyle = "#fff";
+        ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+        ctx2d.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const blob = await new Promise((resolve, reject) => {
+          canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("แปลงรูปไม่สำเร็จ"))), "image/jpeg", 0.9);
+        });
+        setDebug("รูปที่ส่ง", canvas.width + " x " + canvas.height + ", " + Math.round(blob.size / 1024) + " KB");
+        return blob;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    function showPreview(blob) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(blob);
+      preview.src = previewUrl;
+      preview.hidden = false;
+      setText("preview-hint", "แตะรูปเพื่อขยาย ถ้ารูปตะแคงหรือกลับหัว กรุณาแจ้งผู้พัฒนาครับ");
+    }
+
+    // อ่านค่า EXIF Orientation จากหัวไฟล์ JPEG — ใช้แสดงในข้อมูลทดสอบเท่านั้น ไม่ใช้หมุนรูป
+    // (ถ้าหมุนเองทั้งที่เบราว์เซอร์หมุนให้แล้ว รูปจะหมุนซ้ำสองรอบ)
+    async function readExifOrientation(file) {
+      try {
+        const view = new DataView(await file.slice(0, 128 * 1024).arrayBuffer());
+        if (view.getUint16(0) !== 0xFFD8) return null;              // ไม่ใช่ JPEG
+        let offset = 2;
+        while (offset + 4 <= view.byteLength) {
+          const marker = view.getUint16(offset);
+          if ((marker & 0xFF00) !== 0xFF00) return null;
+          if (marker === 0xFFE1 && view.getUint32(offset + 4) === 0x45786966) {   // APP1 "Exif"
+            const tiff = offset + 10;
+            const little = view.getUint16(tiff) === 0x4949;                       // "II" = little-endian
+            const ifd = tiff + view.getUint32(tiff + 4, little);
+            const count = view.getUint16(ifd, little);
+            for (let i = 0; i < count; i++) {
+              const entry = ifd + 2 + i * 12;
+              if (view.getUint16(entry, little) === 0x0112) return view.getUint16(entry + 8, little);
+            }
+            return null;
+          }
+          offset += 2 + view.getUint16(offset + 2);
+        }
+      } catch (err) {
+        return null;   // ไฟล์สั้นหรือรูปแบบแปลก — แค่ไม่มีข้อมูลทดสอบ
+      }
+      return null;
+    }
+
+    function describeOrientation(value) {
+      if (value === null) return "ไม่มี (ไม่ใช่ JPEG หรือไม่มี EXIF)";
+      if (value === 1) return "1 (ตั้งตรงอยู่แล้ว — รูปนี้ทดสอบเรื่องหมุนไม่ได้)";
+      if (value === 6 || value === 8) return value + " (ต้องหมุน 90 องศา — preview ต้องตั้งตรง)";
+      return String(value);
+    }
+
+    async function readAmount(blob) {
+      const token = liff.getAccessToken();
+      if (!token) {
+        setText("status", STATUS_MESSAGES.invalid_token);
+        return;
+      }
+      const form = new FormData();
+      form.append("image", blob, "receipt.jpg");
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+      let resp;
+      try {
+        resp = await fetch("/liff/ocr", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + token },
+          body: form,
+          signal: controller.signal,
+        });
+      } catch (err) {
+        setText("status", NETWORK_MESSAGE);
+        setDebug("ผลจากเซิร์ฟเวอร์", "เรียกไม่สำเร็จ: " + (err && err.name));
+        return;
+      } finally {
+        clearTimeout(timer);
+      }
+
+      let data = null;
+      try {
+        data = await resp.json();
+      } catch (err) {
+        // เช่น หน้า error ของ ngrok หรือ Flask ที่ไม่ใช่ JSON
+      }
+      const status = data && typeof data.status === "string" ? data.status : null;
+      setDebug("ผลจากเซิร์ฟเวอร์", resp.status + " " + status);
+
+      if (status === "ok" && typeof data.amount === "string" && /^\d+(\.\d{1,2})?$/.test(data.amount)) {
+        fillAmount(data.amount);
+        return;
+      }
+      // thai_digits: รูปมีคำบริจาคแล้ว จึงรีเซ็ตช่องให้พิมพ์ยอดต่อ ไม่ปิดปุ่มแบบ not_donation
+      if (status === "not_found" || status === "ambiguous" || status === "thai_digits") {
+        if (isPlainDonation(message.value)) message.value = DONATION_PREFIX;
+      }
+      if (status === "not_donation") {
+        // รูปไม่ใช่หลักฐานการบริจาค: ล้างช่อง (อาจมียอดจากรูปก่อนหน้าค้างอยู่) และปิดปุ่มส่ง
+        // ให้ผู้ใช้พิมพ์ในแชตเอง — เลือกรูปใหม่แล้วปุ่มกลับมากดได้
+        message.value = "";
+        sendBtn.disabled = true;
+      }
+      setText("status", STATUS_MESSAGES[status] || UNKNOWN_MESSAGE);
+    }
+
+    // ช่องที่ยังมีแค่ "บริจาค" กับตัวเลข (หรือว่าง) แทนที่ได้ — ถ้าผู้ใช้พิมพ์อย่างอื่นไว้แล้ว ไม่ทับ
+    function isPlainDonation(value) {
+      return /^\s*(บริจาค)?\s*[\d,.]*\s*$/.test(value);
+    }
+
+    function fillAmount(amount) {
+      if (isPlainDonation(message.value)) {
+        message.value = DONATION_PREFIX + amount;
+        setText("status", "อ่านได้ " + amount + " บาท — เทียบกับรูปก่อนกดส่ง ถ้าไม่ตรงแก้ตัวเลขในช่องได้เลยครับ");
+      } else {
+        setText("status", "อ่านได้ " + amount + " บาท — ช่องข้อความมีข้อความอื่นอยู่ จึงไม่ได้เติมให้ กรุณาพิมพ์เองครับ");
+      }
+    }
+
+    // ---------------------------------------------------------------
+    // ส่งเข้าแชต
+    // ---------------------------------------------------------------
+    sendBtn.addEventListener("click", async () => {
+      const text = message.value.trim();
+      if (!/[0-9๐-๙]/.test(text)) {
+        setText("status", "กรุณาพิมพ์ยอดเงินในช่องข้อความก่อนกดส่งครับ");
+        return;
+      }
+      sendBtn.disabled = true;
+      setText("status", "กำลังส่ง...");
+      try {
+        await liff.sendMessages([{ type: "text", text: text }]);
+      } catch (err) {
+        setText("status", "ส่งไม่สำเร็จ กรุณากดส่งอีกครั้ง หรือคัดลอกข้อความไปพิมพ์ในแชตเองครับ");
+        showError("liff.sendMessages", err);
+        sendBtn.disabled = false;
+        return;
+      }
+      liff.closeWindow();
+    });
+
+    main();
+  </script>
+</body>
+</html>

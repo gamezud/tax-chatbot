@@ -2,8 +2,10 @@ import os
 import uuid
 import traceback
 import time
+import threading
 from datetime import datetime
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, render_template
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from utils.firebase_db import firebase_client
 from utils.knowledge_search import query_tax_knowledge, get_db
@@ -17,6 +19,10 @@ from utils.tax_calculator import (
 )
 from utils import tax_rules
 from utils.pdf_generator import generate_tax_pdf
+# import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
+from utils import ocr, liff_auth
+from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
+from utils.deduction_guard import check_deduction_parameters, has_number
 
 app = Flask(__name__)
 PUBLIC_URL = ""
@@ -25,6 +31,109 @@ PUBLIC_URL = ""
 def download_file(filename):
     print(f"\n📥 [DEBUG-PDF] มีคำขอไฟล์: {filename}")
     return send_from_directory('static/reports', filename, as_attachment=True)
+
+@app.route('/liff/donation')
+def liff_donation():
+    # หน้า LIFF อ่านยอดเงินบริจาคจากรูป แล้วส่งข้อความเข้าแชตแทนผู้ใช้
+    # อ่าน LIFF ID ตอนถูกเรียก ไม่ hardcode — ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
+    liff_id = os.environ.get('LIFF_ID', '').strip() or None
+    return render_template('liff_donation.html', liff_id=liff_id)
+
+# ขนาดไฟล์รูปสูงสุดของ /liff/ocr — ตั้งเฉพาะ route นี้ผ่าน request.max_content_length
+# ห้ามตั้ง app.config['MAX_CONTENT_LENGTH'] เพราะจะมีผลกับ /webhook ด้วย
+LIFF_OCR_MAX_BYTES = 10 * 1024 * 1024
+
+# อ่านรูปได้ทีละรูป: OCR ใช้ CPU เครื่องเดียวกับ webhook ถ้าอ่านพร้อมกันหลายรูป
+# คำตอบของ Dialogflow อาจเกินงบ 5 วินาที (CLAUDE.md กฎเหล็กข้อ 1) — รูปที่มาตอนไม่ว่างตอบ busy ทันที ไม่รอคิว
+_ocr_slot = threading.Semaphore(1)
+
+def liff_channel_id():
+    # Channel ID ของ LINE Login channel คือตัวเลขหน้า "-" ของ LIFF ID
+    # (เทียบกับ Channel ID บน LINE Developers Console แล้วว่าตรงกัน 2026-10-11)
+    liff_id = os.environ.get('LIFF_ID', '').strip()
+    return liff_id.split('-')[0] if liff_id else ''
+
+def liff_donation_link():
+    # ต่อท้ายคำถามค่าลดหย่อน — อ่าน LIFF_ID ตอนถูกเรียก (CLAUDE.md กับดักข้อ 9) ไม่ได้ตั้ง → ไม่แสดงลิงก์
+    # หน้า LIFF ส่งข้อความเดียวแล้วสาขา 04 คำนวณทันที ค่าลดหย่อนอื่นที่ไม่ได้อยู่ในข้อความนั้นจะไม่ถูกนับ
+    liff_id = os.environ.get('LIFF_ID', '').strip()
+    if not liff_id:
+        return ""
+    return (
+        "\n\n📷 ถ้ามีเฉพาะเงินบริจาค ถ่ายรูปใบเสร็จให้ระบบอ่านยอดได้ที่ลิงก์นี้ครับ\n"
+        f"https://liff.line.me/{liff_id}\n"
+        "(ถ้ามีค่าลดหย่อนอื่นด้วย กรุณาพิมพ์ทั้งหมดในแชตครับ)"
+    )
+
+def liff_id_status_line():
+    # พิมพ์ตอนเริ่มเซิร์ฟเวอร์ ให้รู้ทันทีถ้าลืมตั้ง LIFF_ID (ลิงก์ในคำถามค่าลดหย่อนจะหายเงียบ ๆ)
+    # บอกแค่ตั้งแล้วหรือไม่ ไม่พิมพ์ค่า — ใช้เงื่อนไขเดียวกับ liff_donation_link (ช่องว่างล้วนถือว่าไม่ได้ตั้ง)
+    if os.environ.get('LIFF_ID', '').strip():
+        return "📱 [LIFF] ตั้ง LIFF_ID แล้ว — คำถามค่าลดหย่อนมีลิงก์อ่านใบเสร็จ"
+    return "⚠️ [LIFF] ยังไม่ได้ตั้ง LIFF_ID — คำถามค่าลดหย่อนไม่มีลิงก์อ่านใบเสร็จ และ /liff/ocr ตอบ not_configured"
+
+@app.route('/liff/ocr', methods=['POST'])
+def liff_ocr():
+    # รับรูปจากหน้า LIFF คืนยอดเงินบริจาค — ไม่บันทึกรูปลงดิสก์
+    started = time.time()
+    body, http_status = read_donation_amount()
+    # log แค่ผลกับเวลา ไม่มีข้อความที่อ่านได้ ยอดเงิน หรือ token (ข้อมูลส่วนตัว)
+    print(f"🧾 [LIFF-OCR] {body['status']} ({time.time() - started:.2f}s)")
+    return jsonify(body), http_status
+
+def read_donation_amount():
+    """คืน (body, http_status) — body["status"] บอกหน้า LIFF ว่าควรแสดงข้อความอะไร"""
+    channel_id = liff_channel_id()
+    if not channel_id:
+        return {"status": "not_configured"}, 503
+
+    # เช็กขนาดจาก header ก่อน จะได้ไม่ต้องเรียก LINE ถ้ารูปใหญ่เกินอยู่แล้ว
+    request.max_content_length = LIFF_OCR_MAX_BYTES
+    if request.content_length is not None and request.content_length > LIFF_OCR_MAX_BYTES:
+        return {"status": "too_large"}, 413
+
+    auth = request.headers.get('Authorization', '')
+    token = auth[len('Bearer '):] if auth.startswith('Bearer ') else ''
+    try:
+        liff_auth.verify_liff_token(token, channel_id)
+    except liff_auth.InvalidTokenError:
+        return {"status": "invalid_token"}, 401
+    except liff_auth.LineUnavailableError:
+        return {"status": "line_unavailable"}, 503
+
+    if not ocr.ocr_available():
+        return {"status": "ocr_unavailable"}, 503
+
+    try:
+        image = request.files.get('image')
+    except RequestEntityTooLarge:
+        # ไม่มี Content-Length (ส่งแบบ chunked) แต่อ่านแล้วเกิน max_content_length
+        return {"status": "too_large"}, 413
+    if image is None:
+        return {"status": "no_image"}, 400
+
+    if not _ocr_slot.acquire(blocking=False):
+        return {"status": "busy"}, 503
+    try:
+        text = ocr.read_text(image.read())
+    except ocr.InvalidImageError:
+        return {"status": "invalid_image"}, 415
+    except ocr.ImageTooLargeError:
+        return {"status": "too_large"}, 413
+    except ocr.OcrUnavailableError:
+        return {"status": "ocr_unavailable"}, 503
+    except ocr.OcrFailedError:
+        return {"status": "ocr_failed"}, 500
+    finally:
+        _ocr_slot.release()
+
+    # ตรวจก่อนหายอด: รูปที่ไม่ใช่การบริจาค (เช่น ใบเสร็จเบี้ยประกัน) ต้องไม่ได้ยอดไปเติม "บริจาค N"
+    # และไม่ได้ not_found / ambiguous ซึ่งชวนให้พิมพ์ยอดต่อจาก "บริจาค"
+    if not has_donation_keyword(text):
+        return {"status": "not_donation", "amount": None}, 200
+    result = extract_donation_amount(text)
+    amount = format_amount(result["amount"]) if result["amount"] is not None else None
+    return {"status": result["status"], "amount": amount}, 200
 
 # -------------------------------------------------------------
 # Handler ของแต่ละสาขาใน webhook()
@@ -147,6 +256,7 @@ def handle_salary(merged_params, user_query, session_id):
         next_ctx = "awaiting_online"
     else:
         reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        reply_text += liff_donation_link()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -180,6 +290,7 @@ def handle_rental(merged_params, session_id):
         next_ctx = "awaiting_online"
     else:
         reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        reply_text += liff_donation_link()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -212,6 +323,7 @@ def handle_online(merged_params, user_query, session_id):
         f"- หักค่าใช้จ่ายเหมา ({online_rate*100:.0f}%): {online_expense:,.2f} บาท\n\n"
         f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
     )
+    reply_text += liff_donation_link()
     out_contexts = [
         {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
         {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
@@ -354,6 +466,44 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         ]
     }
 
+# ตัวอย่างในข้อความ ก — ทุกตัวต้องผ่านตัวกัน ทั้งทีละตัวและรวมเป็นข้อความเดียว (เทสวนลิสต์นี้)
+UNCLEAR_EXAMPLES = [
+    "ประกันชีวิต 20000", "ประกันสุขภาพ 10000", "ดอกเบี้ยบ้าน 50000", "RMF 30000",
+    "ThaiESG 30000", "บริจาค 5000", "ลูก 1 คน", "พ่อแม่ 2 คน",
+]
+
+def handle_unclear_deductions(reason, merged_params, parameters, session_id):
+    # #25 ไม่คำนวณ ไม่สร้าง PDF ไม่เขียน Firestore — ตอบแล้วรอค่าลดหย่อนต่อ
+    if reason == "parent_health":
+        reply_text = (
+            "ขออภัยครับ ระบบยังไม่รองรับเบี้ยประกันสุขภาพของบิดามารดา ซึ่งเป็นสิทธิแยกจากประกันสุขภาพของตัวเอง "
+            "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
+            "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้ หากไม่มีรายการอื่นพิมพ์ 'ไม่มี' ได้เลยครับ"
+        )
+    else:
+        # ขอให้พิมพ์ "ทั้งหมด" ในข้อความเดียว เพราะค่าทุกตัวของรอบนี้ถูกล้าง ถ้าพิมพ์ใหม่บางรายการ ที่เหลือจะหายเงียบ
+        reply_text = (
+            "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
+            f"กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น {', '.join(UNCLEAR_EXAMPLES)}\n"
+            "หากไม่มีค่าลดหย่อน พิมพ์ 'ไม่มี' ได้เลยครับ"
+        )
+
+    # 04 มี tax_session เป็น affected context ค่าของรอบนี้จึงอยู่ใน tax_session แล้ว
+    # ถ้าไม่ล้าง ผู้ใช้พิมพ์ "ไม่มี" ต่อจะคำนวณด้วยยอดที่เพิ่งปฏิเสธไป
+    session_params = dict(merged_params)
+    for name, value in parameters.items():
+        if value not in ("", None):
+            session_params[name] = ""
+
+    print(f"🚫 [DEDUCTION-GUARD] ปฏิเสธ ({reason}): {parameters}")
+    return {
+        "fulfillmentText": reply_text,
+        "outputContexts": [
+            {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": session_params},
+            {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 2}
+        ]
+    }
+
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
     print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
@@ -452,7 +602,19 @@ def webhook():
         # STEP 4: ลดหย่อนและการคำนวณสรุปผล
         # ==========================================
         elif intent_name == '04_Tax_Interview_Deductions':
+            # ตรวจจาก parameters ของรอบนี้ ไม่ใช่ merged_params ที่มีค่าของรอบก่อนปนอยู่
+            reason = check_deduction_parameters(user_query, parameters)
+            if reason:
+                return jsonify(handle_unclear_deductions(reason, merged_params, parameters, session_id))
             return jsonify(handle_deductions(merged_params, user_query, session_id, line_user_id))
+
+        # ข้อความที่มีตัวเลขระหว่างรอค่าลดหย่อนแต่ Dialogflow จับไม่ได้ (เช่น "บุตร 1 คน" ทดสอบใน LINE 2026-10-11)
+        # เดิมตกไปสาขาความรู้ ผู้ใช้ไม่รู้ว่ายอดไม่ถูกบันทึก — ไม่มีตัวเลขยังเป็นคำถามความรู้ตามเดิม
+        # ตรวจด้วย parameters ว่างเพื่อให้กรณี ง ได้ข้อความของตัวเอง ที่เหลือ (รวมที่ตัวกันปล่อยผ่าน เช่น "SSF 50000") ได้ข้อความ ก
+        elif (intent_name == 'Default Fallback Intent' and 'awaiting_deduction' in active_contexts
+              and has_number(user_query)):
+            reason = check_deduction_parameters(user_query, {}) or "unclear"
+            return jsonify(handle_unclear_deductions(reason, merged_params, parameters, session_id))
 
         # ==========================================
         # FALLBACK / KNOWLEDGE BASE (RAG)
@@ -478,4 +640,5 @@ if __name__ == '__main__':
     public_url_obj = ngrok.connect(5000)
     PUBLIC_URL = public_url_obj.public_url
     print(f"\n🔗 อัปเดต URL ใน Dialogflow: {PUBLIC_URL}/webhook\n")
+    print(liff_id_status_line())
     app.run(port=5000, debug=False)

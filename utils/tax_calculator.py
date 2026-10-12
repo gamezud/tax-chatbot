@@ -115,7 +115,7 @@ def calculate_detailed_deductions(total_income, params):
     elif num_children == 1:
         child_deduct = deduction_rules["child_first"]
     else:
-        # สมมติฐานตามแนวปฏิบัติกรมสรรพากร: บุตรคนที่ 2 ขึ้นไปเกิดตั้งแต่ปี 2561
+        # ข้อสมมติของบอท (บอทไม่ถามปีเกิด): ถือว่าบุตรคนที่ 2 ขึ้นไปเกิดตั้งแต่ปี 2561 — ดู docs/known-limitations.md
         child_deduct = deduction_rules["child_first"] + ((num_children - 1) * deduction_rules["child_second_onward"])
 
     # 4. บิดามารดา (คนละ parent_per_person ไม่เกิน parent_max_count คน)

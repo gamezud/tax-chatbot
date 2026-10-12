@@ -1,5 +1,1118 @@
 [
   {
+    "id": "40ce9bc3-40e9-49f0-89ea-60b5e6379520",
+    "data": [
+      {
+        "text": "ดอกเบี้ยกู้ซื้อบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "39000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "8f95fa42-70fe-44c2-8863-de58f1ed6d52",
+    "data": [
+      {
+        "text": "มีดอกเบี้ยกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "51,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "1ec499d7-6a30-4638-8979-2ad385dd5c19",
+    "data": [
+      {
+        "text": "จ่ายดอกเบี้ยกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "27,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "e934d985-b77b-4465-b03b-cb592c137245",
+    "data": [
+      {
+        "text": "ดอกเบี้ยกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "48000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "69900ce8-314f-4dc7-8458-c0a85fad74c2",
+    "data": [
+      {
+        "text": "กองทุนอาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "55,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "fe52f5e4-afb1-483a-b97c-303e845ba486",
+    "data": [
+      {
+        "text": "มีอาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "80000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5cbdadc2-8aa4-4179-a159-dbfc0d3e2f55",
+    "data": [
+      {
+        "text": "ซื้ออาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "15,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "41aadae5-26c4-4bda-a3f2-919bd7d791b4",
+    "data": [
+      {
+        "text": "อาร์เอ็มเอฟ ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7aabe5ca-7b02-458a-b93e-1b39e3f5a7a2",
+    "data": [
+      {
+        "text": "ลงทุนกองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "35,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "db464c1c-dbde-4567-aacc-e1afcc595080",
+    "data": [
+      {
+        "text": "มีกองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "63213262-76f1-496f-a2f7-ff301201b333",
+    "data": [
+      {
+        "text": "ซื้อกองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "120,000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "cdeae1b3-7ad1-476e-816e-4b62c80167a2",
+    "data": [
+      {
+        "text": "กองทุนรวมเพื่อการเลี้ยงชีพ ",
+        "userDefined": false
+      },
+      {
+        "text": "45000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0e3b6c3e-7cf3-4da7-ba9a-cf37a59da1f9",
+    "data": [
+      {
+        "text": "บุตรชอบด้วยกฎหมาย ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "3d4e7c73-f03d-4c46-8d3e-b4cb7e94e35d",
+    "data": [
+      {
+        "text": "ลดหย่อนบุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "78c3d275-b413-4847-837b-d8193a4f55b7",
+    "data": [
+      {
+        "text": "มีบุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "86dcc5fc-2c2b-4cc7-b7ef-602ef858560d",
+    "data": [
+      {
+        "text": "บุตร ",
+        "userDefined": false
+      },
+      {
+        "text": "2",
+        "meta": "@sys.number",
+        "alias": "num_children",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "31dbbfce-69e5-4efb-bf8e-37b9a2612bc8",
+    "data": [
+      {
+        "text": "จ่ายดอกเบี้ยเงินกู้ซื้อบ้านไป ",
+        "userDefined": false
+      },
+      {
+        "text": "52,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "174621b8-6c37-42c7-bf3f-1d9123947773",
+    "data": [
+      {
+        "text": "ดอกเบี้ยเงินกู้ยืมเพื่อที่อยู่อาศัย ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "fa683e5e-3b0c-4213-9f7b-b73e635acdc5",
+    "data": [
+      {
+        "text": "ดอกเบี้ยเงินกู้บ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "28,000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "c3fb39a8-7029-4595-8fdb-bfbca9dafde2",
+    "data": [
+      {
+        "text": "ดอกเบี้ยเงินกู้ที่อยู่อาศัย ",
+        "userDefined": false
+      },
+      {
+        "text": "45000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "da9b8075-3c63-4ef3-ba43-f5dea2f137fd",
+    "data": [
+      {
+        "text": "อุปการะบิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f912fdc9-c485-460a-87cc-782f2927a6b0",
+    "data": [
+      {
+        "text": "ค่าอุปการะเลี้ยงดูบิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "4",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "62232c03-f5c0-4d5f-9699-44a3aad267bc",
+    "data": [
+      {
+        "text": "เลี้ยงดูบิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "3",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "dfb20cdd-f29a-4f8d-b0bb-708e1d4d5ac2",
+    "data": [
+      {
+        "text": "บิดามารดา ",
+        "userDefined": false
+      },
+      {
+        "text": "1",
+        "meta": "@sys.number",
+        "alias": "num_parents",
+        "userDefined": false
+      },
+      {
+        "text": " คน",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "cf8a9442-d981-4d68-a0e2-af52ba8214e7",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "11000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5933edc7-f0bf-4ec2-857b-a49ddeadea7e",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "16000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "79917fa0-ef40-4ac6-9fde-efc82912af62",
+    "data": [
+      {
+        "text": "ลดหย่อน ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "5000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a2643b1b-e888-4ad9-b097-3fd8091be18e",
+    "data": [
+      {
+        "text": "จ่ายประกันสุขภาพไป ",
+        "userDefined": false
+      },
+      {
+        "text": "7,500",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "fbfa7146-7f50-42c4-8e62-9a9363a19c2f",
+    "data": [
+      {
+        "text": "ซื้อประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "22000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f971aefd-23d5-42d3-b529-dceec18cace0",
+    "data": [
+      {
+        "text": "มีประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "10000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "d97d9351-2137-401c-82c8-8308a0ec3162",
+    "data": [
+      {
+        "text": "ค่าเบี้ยประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "15000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0639ffb4-9677-4b01-b66c-99a672c99ffb",
+    "data": [
+      {
+        "text": "เบี้ยประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "6,000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "41edf4e3-2dd7-49d2-8c7d-1bfafa948dd3",
+    "data": [
+      {
+        "text": "เบี้ยประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "18000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "9ebc9774-08cb-4b90-ab6d-16796d04414f",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "9,500",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "bb6a59f0-d9e3-4bad-a4e7-806c33896bd9",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "20000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "a07a4d6b-c065-4bc1-bfc8-db0acba5499d",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "20,000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท กับเงินบริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "2,500",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4b3f1f36-5203-4c95-b268-5d9cf0fecec5",
+    "data": [
+      {
+        "text": "เงินบริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "5,000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " บาท และประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "30,000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บาท",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "1b2535c2-d356-4fe4-95a1-5bd9f6490e01",
+    "data": [
+      {
+        "text": "ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "90000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "1500",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "72a389ac-f4aa-4ea3-9d5b-144c55edb3ac",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "8000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ดอกเบี้ยบ้าน ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "home_loan_interest",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "e58a2c3a-9d9c-48cc-8716-cdb34bf50987",
+    "data": [
+      {
+        "text": "ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "60000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "7000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "99a8607e-6b86-4db9-9113-a72c8e23a106",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "2000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ThaiESG ",
+        "userDefined": false
+      },
+      {
+        "text": "30000",
+        "meta": "@sys.number",
+        "alias": "thai_esg",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "f97a3957-1c4f-467b-9730-0f1e5b17216b",
+    "data": [
+      {
+        "text": "RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "80000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "4000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "83ea0da9-4807-4ab2-99d9-fff5eb4c1ddf",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "10000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " RMF ",
+        "userDefined": false
+      },
+      {
+        "text": "50000",
+        "meta": "@sys.number",
+        "alias": "ssf_rmf",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "7609a69a-a519-4cc7-9ae5-b640ddef7047",
+    "data": [
+      {
+        "text": "ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "15000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "2500",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "5934b85b-2bb8-4519-b3c7-628030eb19a7",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "6000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันสุขภาพ ",
+        "userDefined": false
+      },
+      {
+        "text": "12000",
+        "meta": "@sys.number",
+        "alias": "health_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "4b32554a-3212-468d-bde8-b9cecc53710f",
+    "data": [
+      {
+        "text": "ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "40000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      },
+      {
+        "text": " บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "3000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
+    "id": "0b285517-2e26-4107-950a-b79ac19a4f82",
+    "data": [
+      {
+        "text": "บริจาค ",
+        "userDefined": false
+      },
+      {
+        "text": "5000",
+        "meta": "@sys.number",
+        "alias": "donation",
+        "userDefined": false
+      },
+      {
+        "text": " ประกันชีวิต ",
+        "userDefined": false
+      },
+      {
+        "text": "25000",
+        "meta": "@sys.number",
+        "alias": "life_insurance",
+        "userDefined": false
+      }
+    ],
+    "isTemplate": false,
+    "count": 0,
+    "lang": "th",
+    "updated": 0
+  },
+  {
     "id": "a774bf2e-0990-47d0-9ec4-f402f93c5132",
     "data": [
       {

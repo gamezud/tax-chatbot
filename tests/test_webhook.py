@@ -8,12 +8,8 @@
 
 การกันไม่ให้เทสออกไปนอกเครื่อง (Firestore, Ollama, ไฟล์ PDF) มีสองชั้น
 
-ชั้นที่ 1 — ใส่โมดูลปลอมแทน utils.firebase_db ลง sys.modules ก่อน import app
-  ไฟล์จริงสร้าง firebase_client = FirebaseManager() ทันทีที่ถูก import ซึ่งอ่าน firebase_key.json
-  และสร้าง client ที่เขียน Firestore จริงได้ โมดูลปลอมทำให้ FirebaseManager() ไม่ถูกสร้างเลย
-  ** โมดูลปลอมนี้อยู่ใน sys.modules ตลอดการรัน pytest ทั้งชุด ไม่ได้หายไปเมื่อจบไฟล์นี้ **
-  ถ้าวันหน้ามีไฟล์ test อื่นต้อง import app ให้ย้ายการใส่โมดูลปลอมไป tests/conftest.py
-  (ไม่งั้นลำดับการเก็บไฟล์ของ pytest จะเป็นตัวตัดสินว่าใคร import ก่อน)
+ชั้นที่ 1 — โมดูลปลอมแทน utils.firebase_db อยู่ใน tests/conftest.py (ดูเหตุผลที่นั่น)
+  เช็กข้างล่างว่าโมดูลปลอมถูกใส่ไว้จริงก่อน import app
 
 ชั้นที่ 2 — fixture mocks (autouse) แทนของที่ออกนอกระบบด้วย MagicMock ใหม่ทุกเทส
   ต้อง patch ที่ app_module.xxx ไม่ใช่ utils.xxx เพราะ app.py ใช้ from ... import
@@ -30,13 +26,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# ---- ชั้นที่ 1: โมดูลปลอมต้องอยู่ก่อน import app ----
-# ถ้ามีใคร import ของจริงไปก่อน FirebaseManager() ได้ทำงานไปแล้ว โมดูลปลอมจะสายเกินไป
-assert "app" not in sys.modules, "app ถูก import ไปก่อนแล้ว — ย้ายโมดูลปลอมไป conftest.py"
-assert "utils.firebase_db" not in sys.modules, "utils.firebase_db ตัวจริงถูก import ไปก่อนแล้ว"
-_fake_firebase_db = types.ModuleType("utils.firebase_db")
-_fake_firebase_db.firebase_client = MagicMock(name="fake_module_firebase_client")
-sys.modules["utils.firebase_db"] = _fake_firebase_db
+# ---- ชั้นที่ 1: โมดูลปลอมจาก conftest.py ต้องอยู่ก่อน import app ----
+assert isinstance(sys.modules["utils.firebase_db"].firebase_client, MagicMock), \
+    "utils.firebase_db ไม่ใช่โมดูลปลอม — conftest.py ไม่ได้ทำงานหรือมีคน import ของจริงไปก่อน"
 
 import app as app_module  # noqa: E402
 import utils.knowledge_search as knowledge_search  # noqa: E402
@@ -110,6 +102,8 @@ def mocks(monkeypatch, tmp_path):
     monkeypatch.setattr(knowledge_search, "get_db", _forbidden("get_db"))
     monkeypatch.setattr(knowledge_search, "ask_llm", _forbidden("ask_llm"))
     monkeypatch.chdir(tmp_path)
+    # ไม่ให้ผลเทสขึ้นกับ LIFF_ID ที่ตั้งไว้ใน PowerShell ตอนรัน app.py — เทสลิงก์ LIFF ตั้งเอง
+    monkeypatch.delenv("LIFF_ID", raising=False)
     return m
 
 
@@ -352,6 +346,84 @@ def test_deduction_question_lists_rmf_and_thai_esg(post, payload):
     assert "RMF" in question
     assert "ThaiESG" in question
     assert "SSF" not in question.upper()
+
+
+TEST_LIFF_ID = "1234567890-TestLiff"
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",   # เงินเดือน → ค่าลดหย่อน
+    _rental_without_online(),        # ค่าเช่า → ค่าลดหย่อน
+    "009_Default_Fallback_Intent",   # ขายออนไลน์ → ค่าลดหย่อน
+], ids=["salary", "rental", "online"])
+def test_deduction_question_has_liff_link(post, payload, monkeypatch):
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    question = post(payload)["fulfillmentText"].split("'ค่าลดหย่อน'", 1)[1]
+    assert f"https://liff.line.me/{TEST_LIFF_ID}" in question
+    # ข้อความเดิมของคำถามยังอยู่ครบ (#19, #3)
+    assert "ทั้งปี" in question
+    assert "RMF" in question and "ThaiESG" in question
+    assert "SSF" not in question.upper()
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",
+    _rental_without_online(),
+    "009_Default_Fallback_Intent",
+], ids=["salary", "rental", "online"])
+def test_deduction_question_without_liff_id_has_no_link(post, payload):
+    # fixture mocks ลบ LIFF_ID ออกแล้ว
+    assert "liff.line.me" not in post(payload)["fulfillmentText"]
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",
+    _rental_without_online(),
+    "009_Default_Fallback_Intent",
+], ids=["salary", "rental", "online"])
+@pytest.mark.parametrize("blank", ["", " "], ids=["empty", "space"])
+def test_blank_liff_id_changes_nothing(post, payload, blank, monkeypatch):
+    # LIFF_ID ว่างหรือมีแต่ช่องว่าง ต้องเหมือนไม่ได้ตั้งทุกตัวอักษร
+    without = post(payload)  # fixture mocks ลบ LIFF_ID ออกแล้ว
+    # ไม่มีบรรทัดว่างค้างท้ายคำถาม — ถ้า "\n\n" หลุดออกนอก if ทั้งสองกรณีจะได้ "\n\n" เหมือนกันจนเทียบกันเองไม่เจอ
+    assert without["fulfillmentText"] == without["fulfillmentText"].rstrip()
+    monkeypatch.setenv("LIFF_ID", blank)
+    body = post(payload)
+    assert body["fulfillmentText"] == without["fulfillmentText"]
+    assert body["outputContexts"] == without["outputContexts"]
+
+
+@pytest.mark.parametrize("payload", [
+    "004_02_Tax_Interview_Salary",
+    _rental_without_online(),
+    "009_Default_Fallback_Intent",
+], ids=["salary", "rental", "online"])
+def test_liff_link_appended_on_own_line(post, payload, monkeypatch):
+    # ลิงก์ต่อท้ายคำถามเดิมโดยไม่แก้ข้อความเดิมหรือ outputContexts
+    # เทียบกับตอนไม่ได้ตั้ง LIFF_ID ไม่ใช่กับ liff_donation_link() เพราะจะเท่ากับให้ฟังก์ชันตรวจตัวเอง
+    without = post(payload)
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    body = post(payload)
+    without_text, with_text = without["fulfillmentText"], body["fulfillmentText"]
+    assert with_text.startswith(without_text)
+    added = with_text[len(without_text):]
+    assert added.startswith("\n\n")
+    assert "\n\n\n" not in with_text
+    # URL อยู่บรรทัดของตัวเอง ไม่งั้น LINE อาจลากอักษรไทยที่ติดกันเข้าไปในลิงก์
+    assert f"https://liff.line.me/{TEST_LIFF_ID}" in added.split("\n")
+    assert body["outputContexts"] == without["outputContexts"]
+
+
+@pytest.mark.parametrize("name, next_prompt", [
+    ("007_02_Tax_Interview_Salary", "'ค่าเช่า'"),        # เงินเดือนแล้วถามค่าเช่าต่อ
+    ("008_03_Tax_Interview_Rental", "'ขายของออนไลน์'"),  # ค่าเช่าแล้วถามขายออนไลน์ต่อ
+])
+def test_liff_link_only_on_deduction_question(post, name, next_prompt, monkeypatch):
+    # ยังไม่ถึงคำถามค่าลดหย่อน จึงไม่มีลิงก์
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    text = post(name)["fulfillmentText"]
+    assert next_prompt in text
+    assert "liff.line.me" not in text
 
 
 def test_summary_salary_with_child_and_home_loan(post, mocks):
@@ -675,3 +747,127 @@ def test_current_behavior_pdf_failure_returns_error_text(post, mocks):
     mocks.pdf.side_effect = RuntimeError("disk full")
     post("021_04_Tax_Interview_Deductions", expect_error=True)
     mocks.firebase.save_tax_report.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# D. ตัวกันค่าลดหย่อน (#25) — Dialogflow จับ 04 ได้แต่ใส่ตัวเลขผิดช่อง
+# ---------------------------------------------------------------------------
+UNCLEAR = (
+    "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
+    "กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น "
+    "ประกันชีวิต 20000, ประกันสุขภาพ 10000, ดอกเบี้ยบ้าน 50000, RMF 30000, ThaiESG 30000, "
+    "บริจาค 5000, ลูก 1 คน, พ่อแม่ 2 คน\n"
+    "หากไม่มีค่าลดหย่อน พิมพ์ 'ไม่มี' ได้เลยครับ"
+)
+PARENT_HEALTH = (
+    "ขออภัยครับ ระบบยังไม่รองรับเบี้ยประกันสุขภาพของบิดามารดา ซึ่งเป็นสิทธิแยกจากประกันสุขภาพของตัวเอง "
+    "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
+    "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้ หากไม่มีรายการอื่นพิมพ์ 'ไม่มี' ได้เลยครับ"
+)
+
+# parameters ที่ Dialogflow ควรส่งสำหรับตัวอย่างแต่ละตัวในข้อความ ก
+UNCLEAR_EXAMPLE_PARAMETERS = {
+    "ประกันชีวิต 20000": {"life_insurance": 20000.0},
+    "ประกันสุขภาพ 10000": {"health_insurance": 10000.0},
+    "ดอกเบี้ยบ้าน 50000": {"home_loan_interest": 50000.0},
+    "RMF 30000": {"ssf_rmf": 30000.0},
+    "ThaiESG 30000": {"thai_esg": 30000.0},
+    "บริจาค 5000": {"donation": 5000.0},
+    "ลูก 1 คน": {"num_children": 1.0},
+    "พ่อแม่ 2 คน": {"num_parents": 2.0},
+}
+
+
+def deductions_payload(query_text, params):
+    """021 (เงินเดือน 30,000 ตอบ "ไม่มี") แทนข้อความและค่าลดหย่อนของรอบนี้
+    04 มี tax_session เป็น affected context ค่าของรอบนี้จึงถูก merge เข้า tax_session ใน request ด้วย (fixture 005)"""
+    payload = load("021_04_Tax_Interview_Deductions")
+    payload["queryResult"]["queryText"] = query_text
+    payload["queryResult"]["parameters"].update(params)
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"].update(params)
+    return payload
+
+
+def fallback_payload(query_text):
+    """ข้อความที่ Dialogflow จับเป็น Fallback ระหว่างรอค่าลดหย่อน (010 มี awaiting_deduction ค้าง)"""
+    payload = load("010_04_Tax_Interview_Deductions")
+    payload["queryResult"]["intent"]["displayName"] = "Default Fallback Intent"
+    payload["queryResult"]["queryText"] = query_text
+    payload["queryResult"]["parameters"] = {}
+    return payload
+
+
+def assert_rejected(body, mocks, text):
+    # ไม่คำนวณ ไม่สร้าง PDF ไม่เขียน Firestore และยังรอค่าลดหย่อนต่อ
+    assert body["fulfillmentText"] == text
+    assert ctx_list(body) == [("tax_session", 20), ("awaiting_deduction", 2)]
+    mocks.pdf.assert_not_called()
+    mocks.firebase.save_tax_report.assert_not_called()
+    mocks.rag.assert_not_called()
+
+
+@pytest.mark.parametrize("query_text, params, text", [
+    # ค่าจาก LINE (2026-10-11)
+    ("ดอกเบี้ยเงินกู้รถ 20000", {"donation": 20000.0}, UNCLEAR),
+    ("ประกันสุขภาพพ่อแม่ 10000", {"donation": 10000.0}, PARENT_HEALTH),
+    ("กองทุนรวมเพื่อการเลี้ยงชีพ 70000", {"donation": 70000.0}, UNCLEAR),
+])
+def test_deductions_rejected(post, mocks, query_text, params, text):
+    body = post(deductions_payload(query_text, params))
+    assert_rejected(body, mocks, text)
+    # ค่าที่ปฏิเสธต้องไม่ค้างใน tax_session ไม่งั้นพิมพ์ "ไม่มี" ต่อแล้วจะคำนวณด้วยยอดผิด
+    session = ctx_params(body, "tax_session")
+    assert session["donation"] == ""
+    assert session["salary_per_month"] == 30000.0
+
+
+def test_rejected_then_none_uses_cleared_session(post, mocks):
+    # รอบถัดไป Dialogflow ส่ง tax_session ที่เราตอบกลับไป แล้วผู้ใช้พิมพ์ "ไม่มี"
+    # ภาษีต้องเท่ากับ test_summary_salary_only_no_deductions (2,050) ไม่ใช่ภาษีที่หักบริจาค 20,000
+    rejected = post(deductions_payload("ดอกเบี้ยเงินกู้รถ 20000", {"donation": 20000.0}))
+    assert rejected["fulfillmentText"] == UNCLEAR
+    payload = load("021_04_Tax_Interview_Deductions")
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"] = ctx_params(rejected, "tax_session")
+    text = post(payload)["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 2,050.00 บาท" in text
+
+
+def test_fallback_number_while_awaiting_deduction(post, mocks):
+    # "บุตร 1 คน" ได้ Fallback (ทดสอบใน LINE 2026-10-11) เคยตกไปสาขาความรู้ ผู้ใช้ไม่รู้ว่ายอดไม่ถูกบันทึก
+    body = post(fallback_payload("บุตร 1 คน"))
+    assert_rejected(body, mocks, UNCLEAR)
+
+
+def test_fallback_parent_health_while_awaiting_deduction(post, mocks):
+    # Fallback ไม่มี parameters แต่ยังต้องบอกเหตุผลกรณี ง ไม่ใช่ข้อความ ก
+    body = post(fallback_payload("ประกันสุขภาพพ่อแม่ 10000"))
+    assert_rejected(body, mocks, PARENT_HEALTH)
+
+
+def test_fallback_question_while_awaiting_deduction_goes_to_knowledge(post, mocks):
+    # ไม่มีตัวเลข → ยังเป็นคำถามความรู้ตามเดิม
+    body = post(fallback_payload("ยื่นภาษีได้ถึงวันไหน"))
+    assert body["fulfillmentText"] == RAG_ANSWER
+    mocks.rag.assert_called_once()
+
+
+def test_unclear_examples_match_message_list():
+    # ข้อความ ก ประกอบจาก UNCLEAR_EXAMPLES — เพิ่มตัวอย่างแล้วต้องบอก parameters ที่ควรได้ไว้ที่นี่
+    assert list(UNCLEAR_EXAMPLE_PARAMETERS) == app_module.UNCLEAR_EXAMPLES
+
+
+@pytest.mark.parametrize("example, params", UNCLEAR_EXAMPLE_PARAMETERS.items())
+def test_unclear_example_passes_guard(example, params):
+    # ตัวอย่างที่บอกให้ผู้ใช้พิมพ์ต้องไม่ถูกตัวกันปฏิเสธเอง
+    assert app_module.check_deduction_parameters(example, params) is None
+
+
+def test_unclear_examples_together_pass_guard():
+    # ข้อความ ก บอกให้พิมพ์ทั้งหมดในข้อความเดียว — ตัวอย่างทุกตัวรวมกันก็ต้องผ่าน
+    text = ", ".join(UNCLEAR_EXAMPLE_PARAMETERS)
+    params = {k: v for p in UNCLEAR_EXAMPLE_PARAMETERS.values() for k, v in p.items()}
+    assert app_module.check_deduction_parameters(text, params) is None
