@@ -10,22 +10,9 @@ from pathlib import Path
 
 import pytest
 
-DIALOGFLOW_DIR = Path(__file__).resolve().parent.parent / 'dialogflow'
+from utils.deduction_terms import find_terms, normalize
 
-# คำสำคัญหน้าตัวเลขใน training phrase ของ 04 → parameter ที่ตัวเลขนั้นต้องถูก annotate
-# None = คงประโยคไว้ให้ match 04 แต่ห้าม annotate (SSF ตาม #3, "กองทุน ESG" ตามขั้น E)
-DEDUCTION_KEYWORDS = {
-    'ประกันชีวิต': 'life_insurance', 'ประกัน': 'life_insurance',  # "ซื้อประกัน 15000 บาท"
-    'ประกันสุขภาพ': 'health_insurance',
-    'ดอกเบี้ยบ้าน': 'home_loan_interest', 'ดอกเบี้ยเงินกู้': 'home_loan_interest',
-    'บริจาค': 'donation',
-    'rmf': 'ssf_rmf',
-    'thaiesg': 'thai_esg', 'thai esg': 'thai_esg', 'tesg': 'thai_esg',
-    'ไทยอีเอสจี': 'thai_esg', 'กองทุนไทยเพื่อความยั่งยืน': 'thai_esg',
-    'ลูก': 'num_children', 'บุตร': 'num_children',
-    'พ่อแม่': 'num_parents', 'บิดามารดา': 'num_parents',
-    'ssf': None, 'เอสเอสเอฟ': None, 'กองทุน esg': None,
-}
+DIALOGFLOW_DIR = Path(__file__).resolve().parent.parent / 'dialogflow'
 
 
 def load_intent_parameters(intent_name):
@@ -43,12 +30,20 @@ def phrase_text(phrase):
     return ''.join(part['text'] for part in phrase['data'])
 
 
-def nearest_keyword(text):
-    # คำสำคัญที่อยู่ท้ายสุดของ text (ใกล้ตัวเลขที่ตามมาที่สุด) ไม่เจอคืน None
-    # ตำแหน่งเท่ากันเลือกคำที่ยาวกว่า: "ประกันสุขภาพ" ต้องชนะ "ประกัน" ที่ขึ้นต้นตำแหน่งเดียวกัน
-    lower = text.lower()
-    found = [(lower.rfind(k), len(k), k) for k in DEDUCTION_KEYWORDS if k in lower]
-    return max(found)[2] if found else None
+def numbers_with_segment(phrase, numbers):
+    # ตัวเลขทุกตัวในประโยค คู่กับข้อความตั้งแต่ตัวเลขก่อนหน้าถึงตัวเลขนี้ และ alias (ตัวเลขที่ไม่ได้ annotate ได้ None)
+    # ตัดช่วงที่ตัวเลขก่อนหน้า เพราะคำที่อยู่หน้าตัวเลขก่อนหน้าเป็นของตัวเลขนั้น ไม่ใช่ของตัวเลขนี้
+    segment = ''
+    for part in phrase['data']:
+        if part.get('alias') in numbers:
+            yield segment, part['alias']
+            segment = ''
+            continue
+        text, start = part['text'], 0
+        for match in re.finditer(r'\d[\d,]*', text):
+            yield segment + text[start:match.start()], None
+            segment, start = '', match.end()
+        segment += text[start:]
 
 
 def test_spouse_is_not_list():
@@ -134,8 +129,7 @@ def solo_phrases(name):
     return result
 
 
-# ไม่นับ "ผ่อนบ้าน" เพราะยอดผ่อนรวมเงินต้น ไม่ใช่แค่ดอกเบี้ย
-# ไม่นับ "ทำบุญ" เพราะทำบุญหลายแบบไม่มีหลักฐานที่นำไปลดหย่อนได้
+# คำที่ไม่นับ (ผ่อนบ้าน, ทำบุญ ฯลฯ) และเหตุผลอยู่ใน utils/deduction_terms.py
 @pytest.mark.parametrize('name, term', [
     ('num_children', 'ลูก'),
     ('life_insurance', 'ประกันชีวิต'),
@@ -144,7 +138,7 @@ def solo_phrases(name):
     ('num_parents', 'บิดามารดา'),
     ('health_insurance', 'ประกันสุขภาพ'),
     ('home_loan_interest', 'ดอกเบี้ยบ้าน'),
-    ('home_loan_interest', 'ดอกเบี้ยเงินกู้'),
+    ('home_loan_interest', 'ดอกเบี้ยเงินกู้บ้าน'),
     ('donation', 'บริจาค'),
     ('thai_esg', 'ThaiESG'),
 ])
@@ -153,7 +147,9 @@ def test_each_deduction_term_has_solo_phrase(name, term):
     # ได้ Default Fallback Intent แล้วตกไปสาขาความรู้ ผู้ใช้ไม่รู้ว่ายอดไม่ถูกบันทึก
     # ปัญหาคือคำ ไม่ใช่จำนวนประโยค: "ดอกเบี้ยบ้าน 40000" ผ่านเพราะมีประโยคเดี่ยวที่ใช้คำเดียวกัน
     # คู่ที่ไม่มี xfail กันไม่ให้ประโยคที่ใช้งานได้อยู่หายไปตอนแก้ Console
-    assert any(term.lower() in phrase.lower() for phrase in solo_phrases(name)), (name, term)
+    # บรรทัดแรกกันไม่ให้รายการคู่ในเทสนี้กับรายการคำใน utils/deduction_terms.py ไม่ตรงกัน
+    assert [param for _, param in find_terms(term)] == [name], term
+    assert any(normalize(term) in normalize(phrase) for phrase in solo_phrases(name)), (name, term)
 
 
 def test_home_loan_phrases_say_home():
@@ -163,33 +159,31 @@ def test_home_loan_phrases_say_home():
                if any(part.get('alias') == 'home_loan_interest' for part in phrase['data'])]
     assert phrases
     for text in phrases:
-        assert 'บ้าน' in text or 'ที่อยู่อาศัย' in text, text
+        assert 'home_loan_interest' in [param for _, param in find_terms(text)], text
 
 
-def test_annotation_follows_nearest_keyword():
+def test_annotation_follows_term_since_previous_number():
     # ตัวเลขที่ annotate ผิดตัว (เช่น ยอดประกันชีวิตไปเป็น donation) Dialogflow จะเรียนแบบผิด ๆ
-    # แล้วยอดเข้าเพดานผิดรายการโดยไม่มี error — ดูคำสำคัญที่ใกล้ตัวเลขที่สุด ไม่ใช่ทั้งประโยค
+    # แล้วยอดเข้าเพดานผิดรายการโดยไม่มี error — คำต้องอยู่ระหว่างตัวเลขก่อนหน้ากับตัวเลขนี้
+    # ถ้าค้นทั้งข้อความก่อนหน้า "บริจาค 3000 ดอกเบี้ยเงินกู้รถ 20000" จะเจอ "บริจาค" แล้วผ่าน ทั้งที่ 20000 ไม่ใช่เงินบริจาค
     params = load_intent_parameters('04_Tax_Interview_Deductions')
     numbers = {name for name, p in params.items() if p['dataType'] == '@sys.number'}
     for phrase in load_usersays('04_Tax_Interview_Deductions'):
-        before = ''
-        for part in phrase['data']:
-            if part.get('alias') in numbers:
-                keyword = nearest_keyword(before)
-                assert keyword is not None, phrase_text(phrase)
-                assert DEDUCTION_KEYWORDS[keyword] == part['alias'], phrase_text(phrase)
-            before += part['text']
+        for segment, alias in numbers_with_segment(phrase, numbers):
+            if alias:
+                terms = [param for _, param in find_terms(segment)]
+                assert terms, phrase_text(phrase)
+                assert terms[-1] == alias, phrase_text(phrase)
 
 
 def test_numbers_after_keywords_are_annotated():
     # ตัวเลขที่ลืม annotate สอน Dialogflow ว่าไม่ต้องเก็บยอดนั้น (แบบเดียวกับ #23)
     # ยกเว้นตัวเลขหลังคำที่ตั้งใจไม่ annotate (SSF, "กองทุน ESG")
+    params = load_intent_parameters('04_Tax_Interview_Deductions')
+    numbers = {name for name, p in params.items() if p['dataType'] == '@sys.number'}
     for phrase in load_usersays('04_Tax_Interview_Deductions'):
-        before = ''
-        for part in phrase['data']:
-            if not part.get('alias'):
-                for match in re.finditer(r'\d[\d,]*', part['text']):
-                    keyword = nearest_keyword(before + part['text'][:match.start()])
-                    assert keyword is not None, phrase_text(phrase)
-                    assert DEDUCTION_KEYWORDS[keyword] is None, phrase_text(phrase)
-            before += part['text']
+        for segment, alias in numbers_with_segment(phrase, numbers):
+            if not alias:
+                terms = [param for _, param in find_terms(segment)]
+                assert terms, phrase_text(phrase)
+                assert terms[-1] is None, phrase_text(phrase)
