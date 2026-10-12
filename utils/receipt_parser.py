@@ -17,6 +17,11 @@ import แค่ re, decimal และ utils.thai_text — รักษาคุ
    ผลวัดใบเสร็จจำลอง (scripts/measure_ocr.py) อ่านยอดเลขไทยถูก 0/42 รูป ทั้ง Tahoma และ TH Sarabun
    เทียบด้วยค่า ไม่ใช่ตำแหน่ง เพราะ normalize_thai_text รวม ํ + า เป็นตัวเดียว ตำแหน่งตัวอักษรจึงเลื่อน
    และใบที่มีเลขไทยแค่ในวันที่หรือเลขที่เอกสารยังได้ยอดอารบิกตามปกติ
+7. ได้ยอดเดียวแต่มีตัวเลข "รูปแบบเงิน" (จุลภาคคั่นหลักพัน หรือทศนิยม 2 ตำแหน่ง) อยู่นอกบรรทัดเงิน
+   และค่าไม่เท่ากับยอด คืน ambiguous
+   เหตุผล: OCR อาจทำคำเงินและสกุลเงินของบรรทัดหนึ่งหาย บรรทัดนั้นจึงไม่ถูกนับ แล้วยอดจากบรรทัดอื่นได้ ok
+   (ผลวัดใบเสร็จจำลอง: ใบที่มี "จำนวนเงิน" กับ "รวม" ต่างกัน ได้ ok ด้วยยอดรวม)
+   ตัวเลขที่ไม่มีจุลภาคหรือทศนิยม (บ้านเลขที่ รหัสไปรษณีย์) และตัวเลขที่ตามด้วยหน่วยนับหรือ % ไม่นับ
 
 กติกา "จบสะอาด"
 - ด้านหลังต้องเป็นอย่างใดอย่างหนึ่ง: จบบรรทัด · สกุลเงิน (บาท, ฿, THB, baht, .-) · วงเล็บ
@@ -72,6 +77,9 @@ _COUNT_UNIT_AFTER = re.compile(r"\s*(?:รายการ|ชิ้น|ฉบั
 
 # ร้อยละ: "10%" ไม่ใช่ยอด
 _PERCENT_AFTER = re.compile(r"\s*%")
+
+# ตัวเลข "รูปแบบเงิน" นอกบรรทัดเงิน (ขั้นที่ 7): จุลภาคคั่นหลักพัน หรือทศนิยม 2 ตำแหน่ง
+_MONEY_SHAPED = re.compile(r"\d{1,3}(?:,\d{3})+(?:\.\d{2})?|\d+\.\d{2}")
 
 # สกุลเงิน: "5,000 บาท", "5,000.-", "฿5,000"
 _CURRENCY = r"(?:บาท|฿|THB|baht|\.-)"
@@ -131,7 +139,8 @@ def extract_donation_amount(text):
     status:
     - "ok"        เจอยอดเดียว (ยอดเดียวกันซ้ำหลายที่ เช่น 5,000 กับ 5,000.00 นับเป็นยอดเดียว)
     - "not_found" ไม่เจอตัวเลขที่ดูเป็นยอดเงิน
-    - "ambiguous" เจอหลายยอดที่ต่างกัน หรือมีตัวเลขในบรรทัดเงินที่ไม่จบสะอาด ไม่เดาว่ายอดไหน
+    - "ambiguous" เจอหลายยอดที่ต่างกัน หรือมีตัวเลขในบรรทัดเงินที่ไม่จบสะอาด
+                  หรือมีตัวเลขรูปแบบเงินนอกบรรทัดเงินที่ค่าไม่เท่ากับยอด (ขั้นที่ 7) ไม่เดาว่ายอดไหน
     - "thai_digits" เจอยอดเดียวแต่ยอดนั้นเขียนด้วยเลขไทย ซึ่ง OCR อ่านผิดบ่อย (ขั้นที่ 6 ใน docstring ของโมดูล)
     """
     raw_text = text or ""
@@ -140,9 +149,16 @@ def extract_donation_amount(text):
         text = pattern.sub(" ", text)
 
     amounts = set()
+    outside = set()   # ตัวเลขรูปแบบเงินนอกบรรทัดเงิน (ขั้นที่ 7)
     for line in text.splitlines():
         line_has_keyword = bool(_MONEY_KEYWORDS.search(line))
         if not (line_has_keyword or _CURRENCY_ANYWHERE.search(line)):
+            for match in _NUMBER.finditer(line):
+                after = line[match.end():]
+                if _COUNT_UNIT_AFTER.match(after) or _PERCENT_AFTER.match(after):
+                    continue
+                if _MONEY_SHAPED.fullmatch(match.group()):
+                    outside.add(Decimal(match.group().replace(",", "")))
             continue
         for match in _NUMBER.finditer(line):
             after = line[match.end():]
@@ -162,6 +178,8 @@ def extract_donation_amount(text):
         amount = amounts.pop()
         if amount in _thai_digit_values(raw_text):
             return {"status": "thai_digits", "amount": None}
+        if outside - {amount}:
+            return {"status": "ambiguous", "amount": None}
         return {"status": "ok", "amount": amount}
     if not amounts:
         return {"status": "not_found", "amount": None}
