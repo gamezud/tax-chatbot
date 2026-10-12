@@ -65,6 +65,13 @@ def liff_donation_link():
         "(ถ้ามีค่าลดหย่อนอื่นด้วย กรุณาพิมพ์ทั้งหมดในแชตครับ)"
     )
 
+def liff_id_status_line():
+    # พิมพ์ตอนเริ่มเซิร์ฟเวอร์ ให้รู้ทันทีถ้าลืมตั้ง LIFF_ID (ลิงก์ในคำถามค่าลดหย่อนจะหายเงียบ ๆ)
+    # บอกแค่ตั้งแล้วหรือไม่ ไม่พิมพ์ค่า — ใช้เงื่อนไขเดียวกับ liff_donation_link (ช่องว่างล้วนถือว่าไม่ได้ตั้ง)
+    if os.environ.get('LIFF_ID', '').strip():
+        return "📱 [LIFF] ตั้ง LIFF_ID แล้ว — คำถามค่าลดหย่อนมีลิงก์อ่านใบเสร็จ"
+    return "⚠️ [LIFF] ยังไม่ได้ตั้ง LIFF_ID — คำถามค่าลดหย่อนไม่มีลิงก์อ่านใบเสร็จ และ /liff/ocr ตอบ not_configured"
+
 @app.route('/liff/ocr', methods=['POST'])
 def liff_ocr():
     # รับรูปจากหน้า LIFF คืนยอดเงินบริจาค — ไม่บันทึกรูปลงดิสก์
@@ -633,4 +640,5 @@ if __name__ == '__main__':
     public_url_obj = ngrok.connect(5000)
     PUBLIC_URL = public_url_obj.public_url
     print(f"\n🔗 อัปเดต URL ใน Dialogflow: {PUBLIC_URL}/webhook\n")
+    print(liff_id_status_line())
     app.run(port=5000, debug=False)

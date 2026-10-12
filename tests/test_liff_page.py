@@ -80,6 +80,32 @@ def test_thai_digits_resets_like_not_found(get_page):
     assert "thai_digits" not in not_donation
 
 
+def test_liff_id_status_line_when_set(monkeypatch):
+    # บอกแค่ว่าตั้งแล้ว ไม่พิมพ์ค่า LIFF ID หรือ Channel ID (ตัวเลขหน้า "-")
+    monkeypatch.setenv("LIFF_ID", "1234567890-TestLiff")
+    line = app_module.liff_id_status_line()
+    assert "ตั้ง LIFF_ID แล้ว" in line
+    for secret in ["1234567890", "TestLiff"]:
+        assert secret not in line
+
+
+@pytest.mark.parametrize("value", [None, "", "   "], ids=["unset", "empty", "spaces"])
+def test_liff_id_status_line_when_not_set(monkeypatch, value):
+    # ช่องว่างล้วนถือว่าไม่ได้ตั้ง เหมือน liff_donation_link
+    if value is None:
+        monkeypatch.delenv("LIFF_ID", raising=False)
+    else:
+        monkeypatch.setenv("LIFF_ID", value)
+    assert "ยังไม่ได้ตั้ง LIFF_ID" in app_module.liff_id_status_line()
+
+
+def test_liff_id_status_printed_at_startup():
+    # บล็อก __main__ ไม่ถูกรันในเทส — เช็กว่าเรียกพิมพ์ไว้ก่อน app.run แบบ substring
+    source = open(app_module.__file__, encoding="utf-8").read()
+    main_block = source.split("if __name__ == '__main__':", 1)[1]
+    assert "print(liff_id_status_line())" in main_block.split("app.run(", 1)[0]
+
+
 @pytest.mark.parametrize("unsafe",["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"])
 def test_no_html_injection_apis(get_page, unsafe):
     # ข้อความจากเซิร์ฟเวอร์หรือผู้ใช้ใส่ลงหน้าด้วย textContent เท่านั้น
