@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — ตัวเลขภาษี</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 40rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+    table { border-collapse: collapse; width: 100%; background: #FFFFFF; }
+    th, td { text-align: left; padding: .5rem .75rem; border: 1px solid #CBD5E1; vertical-align: top; }
+    th { width: 14rem; background: #F1F5F9; font-weight: normal; }
+    .note { color: #64748B; font-size: .9rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>สถานะตัวเลขภาษีที่เซิร์ฟเวอร์ใช้อยู่</h1>
+  <table>
+    <tr><th>ปีภาษี</th><td>{{ tax_year }}</td></tr>
+    <tr>
+      <th>ที่มาของตัวเลข</th>
+      <td id="source">
+        {% if info.source == "firestore" %}ค่าที่แก้ไว้ใน Firestore{% else %}ค่าตั้งต้นในโค้ด (utils/tax_rules.py){% endif %}
+      </td>
+    </tr>
+    <tr><th>เวอร์ชัน</th><td id="version">{{ info.version if info.version is not none else "—" }}</td></tr>
+    <tr>
+      <th>รายการที่ต่างจากค่าตั้งต้น</th>
+      <td id="changed-keys">
+        {% if info.changed_keys %}
+        <ul>{% for key in info.changed_keys %}<li><code>{{ key }}</code></li>{% endfor %}</ul>
+        {% else %}ไม่มี{% endif %}
+      </td>
+    </tr>
+  </table>
+  <p class="note">หน้านี้อ่านอย่างเดียว ค่าที่แก้มีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
+</main>
+</body>
+</html>

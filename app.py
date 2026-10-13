@@ -23,8 +23,11 @@ from utils.pdf_generator import generate_tax_pdf
 from utils import ocr, liff_auth
 from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
 from utils.deduction_guard import check_deduction_parameters, has_number
+# หน้า /admin อยู่ในไฟล์แยก — ตัวกันในไฟล์นั้นทำงานเฉพาะ path /admin ไม่กระทบ /webhook ที่มาทาง ngrok
+from admin_routes import admin_bp, admin_status_line
 
 app = Flask(__name__)
+app.register_blueprint(admin_bp)
 PUBLIC_URL = ""
 
 @app.route('/download/<filename>')
@@ -675,4 +678,5 @@ if __name__ == '__main__':
     PUBLIC_URL = public_url_obj.public_url
     print(f"\n🔗 อัปเดต URL ใน Dialogflow: {PUBLIC_URL}/webhook\n")
     print(liff_id_status_line())
+    print(admin_status_line())
     app.run(port=5000, debug=False)
