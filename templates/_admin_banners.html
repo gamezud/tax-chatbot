@@ -1,0 +1,7 @@
+{# แถบเตือนที่ใช้ร่วมกันใน /admin และ /admin/edit — ต้องมีตัวแปร saved และ pending_restart #}
+{% if pending_restart %}
+<p class="banner warn" id="pending-restart">มีค่าที่บันทึกแล้วแต่ยังไม่มีผล ต้องรีสตาร์ตเซิร์ฟเวอร์</p>
+{% endif %}
+{% if saved and saved.problem %}
+<p class="banner error" id="saved-problem">{{ saved.problem }}</p>
+{% endif %}

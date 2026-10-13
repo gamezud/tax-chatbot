@@ -11,11 +11,12 @@ from pathlib import Path
 
 import pytest
 
+import admin_routes
 import app as app_module
 from admin_routes import admin_status_line, is_admin_path, is_local_request, strip_port
 from utils import tax_rules
-# fixture mocks แทน Firestore/PDF/RAG (ใช้กับเทส /webhook สาขาสรุปผล)
-from test_rules_loading import mocks  # noqa: F401
+# fixture mocks แทน Firestore/PDF/RAG (ใช้กับเทส /webhook สาขาสรุปผล) และ db ปลอม
+from test_rules_loading import fake_db, mocks  # noqa: F401
 from test_line_verified_cases import line_payload
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +33,12 @@ LOCAL_HEADER_NAMES = ["Host", "User-Agent", "Accept"]
 @pytest.fixture(autouse=True)
 def no_admin_env(monkeypatch):
     monkeypatch.delenv("ADMIN_PASSWORD_HASH", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def no_saved_rules(monkeypatch):
+    # หน้า /admin อ่านค่าที่บันทึกใน Firestore — เทสไฟล์นี้ใช้ db ปลอมที่ยังไม่มี doc
+    monkeypatch.setattr(admin_routes, "_config_db", lambda: fake_db(None))
 
 
 @pytest.fixture

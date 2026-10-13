@@ -21,7 +21,8 @@ import time
 from flask import Blueprint, abort, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash
 
-from utils import tax_rules
+import admin_form
+from utils import firebase_db, rules_store, tax_rules
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -200,9 +201,126 @@ def logout():
 @admin_bp.route("")
 def index():
     # อ่านค่าตอนถูกเรียกผ่านชื่อ module (ค่าถูกแทนที่ตอนเปิดเซิร์ฟเวอร์ใน apply_effective_rules)
+    try:
+        saved = saved_state()
+    except SavedRulesUnavailable:
+        saved = None
     return render_template(
         "admin_index.html",
         info=tax_rules.RULES_INFO,
         tax_year=tax_rules.TAX_RULES["tax_year"],
+        csrf_token=csrf_token(),
+        saved=saved,
+        pending_restart=pending_restart(saved),
+    )
+
+
+# ---------------------------------------------------------------------------
+# ค่าที่บันทึกล่าสุดใน Firestore (tax_rules_config/active)
+# ---------------------------------------------------------------------------
+class SavedRulesUnavailable(Exception):
+    """อ่านค่าที่บันทึกไม่ได้ (ไม่ได้เชื่อม Firestore / อ่านล้ม / เกินเวลา)"""
+
+
+def _config_db():
+    # อ่าน firebase_client ตอนถูกเรียก (CLAUDE.md กับดักข้อ 9) — เทสแทนฟังก์ชันนี้ด้วย db ปลอม
+    return getattr(firebase_db.firebase_client, "db", None)
+
+
+def saved_state():
+    """ค่าที่บันทึกล่าสุด: {"exists", "version" (0 ถ้ายังไม่มี doc), "override" (ใช้เติมฟอร์มและเทียบ), "problem"}
+    อ่านไม่ได้โยน SavedRulesUnavailable — ผู้เรียกห้ามเปิดฟอร์มด้วยค่าตั้งต้นแทน
+    เพราะถ้าบันทึกจากฟอร์มนั้น ค่าที่แก้ไว้ใน Firestore จะถูกทับด้วยค่าตั้งต้นโดยไม่มีใครตั้งใจ
+    อ่านด้วย read_config_doc ตัวเดียวกับตัวโหลด (timeout เดียวกัน) — หน้า admin ไม่อยู่ในงบ 5 วินาทีของ webhook"""
+    db = _config_db()
+    if db is None:
+        print("⚠️ [ADMIN] อ่านค่าที่บันทึกไม่ได้ (ไม่ได้เชื่อม Firestore)")
+        raise SavedRulesUnavailable()
+    try:
+        doc = rules_store.read_config_doc(db)
+    except Exception as e:
+        print(f"⚠️ [ADMIN] อ่านค่าที่บันทึกไม่ได้ ({type(e).__name__})")
+        raise SavedRulesUnavailable() from e
+
+    defaults = rules_store.to_override(rules_store.DEFAULT_TAX_RULES)
+    if doc is None:
+        return {"exists": False, "version": 0, "override": defaults, "problem": None}
+
+    version = doc.get("version") if isinstance(doc, dict) else None
+    version = version if isinstance(version, int) and not isinstance(version, bool) and version >= 1 else 0
+    rules, errors = rules_store.rules_from_doc(doc)
+    if errors:
+        # ตัวโหลดก็ปฏิเสธ doc นี้ (เซิร์ฟเวอร์ใช้ค่าตั้งต้นอยู่) — เติมค่าตั้งต้นให้แก้ใหม่ได้ base_version ยังเป็นของ doc นี้
+        return {"exists": True, "version": version, "override": defaults,
+                "problem": "ค่าที่บันทึกใน Firestore ผิด ระบบจึงใช้ค่าตั้งต้นอยู่ ฟอร์มนี้เติมค่าตั้งต้นไว้ให้"}
+    return {"exists": True, "version": version, "override": rules_store.to_override(rules), "problem": None}
+
+
+def pending_restart(saved):
+    """มีค่าที่บันทึกแล้วแต่เซิร์ฟเวอร์ยังไม่ได้โหลด (version ไม่ตรงกับ RULES_INFO ที่ใช้อยู่)"""
+    return bool(saved and saved["exists"] and saved["version"] != tax_rules.RULES_INFO["version"])
+
+
+# ---------------------------------------------------------------------------
+# ฟอร์มแก้ค่า + หน้ายืนยัน (5A: ยังไม่บันทึก)
+# ---------------------------------------------------------------------------
+@admin_bp.route("/edit", methods=["GET", "POST"])
+def edit():
+    try:
+        saved = saved_state()
+    except SavedRulesUnavailable:
+        return render_template("admin_unavailable.html"), 503
+
+    if request.method == "GET":
+        return _render_form(saved, admin_form.values_from_override(saved["override"]), saved["version"])
+
+    if request.form.get("action") == "back":
+        # "กลับไปแก้" จากหน้ายืนยัน: เติมค่าที่ส่งมาคืนโดยไม่ตรวจ base_version เป็นของฟอร์มเดิม
+        values = {name: request.form.get(name, "") for name, _, _ in admin_form.all_fields()}
+        return _render_form(saved, values, request.form.get("base_version", ""),
+                            reference=request.form.get("source_reference", ""), note=request.form.get("note", ""))
+
+    result = admin_form.parse_form(request.form)
+    if result["override"] is None:
+        # ผิด: แสดงค่าที่ผู้ใช้กรอกคืน (ไม่ล้าง) พร้อมข้อผิดพลาดข้างช่อง
+        return _render_form(saved, result["raw"], request.form.get("base_version", ""),
+                            reference=request.form.get("source_reference", ""), note=request.form.get("note", ""),
+                            field_errors=result["field_errors"], general_errors=result["general_errors"])
+
+    # เทียบกับค่าที่บันทึกล่าสุด ไม่คำนวณภาษีตัวอย่าง — การสลับ tax_rules.TAX_RULES ชั่วคราวจะทำให้
+    # webhook ที่เข้ามาพร้อมกัน (Flask รับหลาย request พร้อมกัน) คิดภาษีด้วยค่าที่ยังไม่ได้ยืนยัน
+    rows = admin_form.changes(saved["override"], result["override"])
+    if not rows:
+        return _render_form(saved, result["raw"], result["base_version"],
+                            reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน")
+    return render_template(
+        "admin_confirm.html",
+        rows=rows,
+        values=admin_form.values_from_override(result["override"]),
+        reference=result["reference"],
+        note=result["note"],
+        base_version=result["base_version"],
+        csrf_token=csrf_token(),
+        ratio=admin_form.CHANGE_WARNING_RATIO,
+    )
+
+
+def _render_form(saved, values, base_version, reference="", note="", field_errors=None, general_errors=None,
+                 notice=None):
+    return render_template(
+        "admin_edit.html",
+        groups=admin_form.form_fields(),
+        values=values,
+        base_version=base_version,
+        reference=reference,
+        note=note,
+        field_errors=field_errors or {},
+        general_errors=general_errors or [],
+        notice=notice,
+        saved=saved,
+        pending_restart=pending_restart(saved),
+        reference_min=admin_form.REFERENCE_MIN_LENGTH,
+        reference_max=admin_form.REFERENCE_MAX_LENGTH,
+        note_max=admin_form.NOTE_MAX_LENGTH,
         csrf_token=csrf_token(),
     )

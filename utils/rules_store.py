@@ -83,6 +83,21 @@ CROSS_KEY_LIMITS = [
 ]
 
 
+class RuleError(str):
+    """ข้อความข้อผิดพลาด — ยังเป็น str ข้อความเดิมทุกตัวอักษร (ใช้ใน log และเทสเดิมได้)
+    แต่บอกเพิ่มว่าผิดที่ช่องไหน ให้หน้าฟอร์มแสดงข้อผิดพลาดข้างช่องนั้นได้โดยไม่ต้องแยกข้อความเอง
+    field:   ชื่อช่อง เช่น "deduction.personal", "tax_brackets.3.upper" — None ถ้าไม่ได้ผิดที่ช่องเดียว
+    detail:  ข้อความส่วนที่ไม่มีชื่อ key
+    related: key อีกตัวของข้อผิดพลาดข้าม key (เช่น เพดานรวม)"""
+
+    def __new__(cls, text, field=None, detail=None, related=None):
+        error = super().__new__(cls, text)
+        error.field = field
+        error.detail = detail if detail is not None else text
+        error.related = related
+        return error
+
+
 def build_rules(override):
     """
     รวม override เข้ากับค่าตั้งต้นแล้วตรวจ
@@ -159,7 +174,8 @@ def validate_rules(rules):
         cap = _get(rules, cap_path)
         if small > cap:
             # ไม่ใส่ตัวเลขในข้อความ — ข้อความนี้ลง log ตอนเปิดเซิร์ฟเวอร์ด้วย (log บอกได้แค่ชื่อ key)
-            errors.append(f"{_name(small_path)} ต้องไม่เกิน {_name(cap_path)}")
+            errors.append(RuleError(f"{_name(small_path)} ต้องไม่เกิน {_name(cap_path)}",
+                                    field=_name(small_path), detail="ต้องไม่เกิน", related=_name(cap_path)))
     return errors
 
 
@@ -199,7 +215,7 @@ def load_effective_rules(db):
     if db is None:
         return _use_defaults(f"❌ [TAX-RULES] ไม่ได้เชื่อม Firestore — ใช้ค่าตั้งต้นในโค้ด{_elapsed(started)}")
     try:
-        doc = _read_config_doc(db)
+        doc = read_config_doc(db)
     except Exception as e:
         return _use_defaults(f"❌ [TAX-RULES] อ่านค่าที่แก้จาก Firestore ไม่ได้ ({type(e).__name__}) "
                              f"— ใช้ค่าตั้งต้นในโค้ด{_elapsed(started)}")
@@ -208,7 +224,7 @@ def load_effective_rules(db):
         return _use_defaults(f"ℹ️ [TAX-RULES] ไม่มีค่าที่แก้ใน Firestore — ใช้ค่าตั้งต้นในโค้ด "
                              f"(ปีภาษี {DEFAULT_TAX_RULES['tax_year']}){_elapsed(started)}")
 
-    rules, errors = _rules_from_doc(doc)
+    rules, errors = rules_from_doc(doc)
     if errors:
         return _use_defaults(f"❌ [TAX-RULES] ค่าที่แก้ใน Firestore ผิด — ใช้ค่าตั้งต้นในโค้ดแทน: "
                              f"{' / '.join(errors)}{_elapsed(started)}")
@@ -219,8 +235,9 @@ def load_effective_rules(db):
     return rules, {"source": "firestore", "version": doc["version"], "changed_keys": changed}
 
 
-def _read_config_doc(db):
-    """คืน dict ของ doc หรือ None ถ้าไม่มี doc — อ่านไม่ได้หรือเกินเวลาโยน exception"""
+def read_config_doc(db):
+    """คืน dict ของ doc หรือ None ถ้าไม่มี doc — อ่านไม่ได้หรือเกินเวลาโยน exception
+    ใช้ทั้งตัวโหลดตอนเปิดเซิร์ฟเวอร์และหน้าแก้ค่าของ admin (timeout เดียวกัน) — ห้ามเรียกใน webhook"""
     timeout = READ_TIMEOUT_SECONDS
     result = {}
 
@@ -244,7 +261,7 @@ def _read_config_doc(db):
     return result["doc"]
 
 
-def _rules_from_doc(doc):
+def rules_from_doc(doc):
     """คืน (rules, errors) ตรวจทุก field แล้วรายงานข้อผิดพลาดทุกข้อพร้อมกัน"""
     if not isinstance(doc, dict):
         return None, ["doc ต้องเป็น map"]
@@ -297,7 +314,7 @@ def _validate_node(node, schema, path, errors):
     for key, kind in schema.items():
         key_path = path + (key,)
         if not isinstance(node, dict) or key not in node:
-            errors.append(f"ไม่มี {_name(key_path)}")
+            errors.append(RuleError(f"ไม่มี {_name(key_path)}", field=_name(key_path), detail="ไม่มีค่า"))
             continue
         value = node[key]
         if isinstance(kind, dict):
@@ -307,7 +324,7 @@ def _validate_node(node, schema, path, errors):
         else:
             message = _check_value(value, kind)
             if message:
-                errors.append(f"{_name(key_path)} {message}")
+                errors.append(RuleError(f"{_name(key_path)} {message}", field=_name(key_path), detail=message))
 
 
 def _check_value(value, kind):
@@ -338,6 +355,10 @@ def _validate_brackets(brackets, errors):
         errors.append("tax_brackets แต่ละขั้นต้องมีเพดานบนและอัตรา")
         return
 
+    def step_error(i, part, detail):
+        # ข้อความเดิม "tax_brackets ขั้นที่ i <detail>" + ช่องของขั้นนั้น เช่น "tax_brackets.3.upper"
+        return RuleError(f"tax_brackets ขั้นที่ {i} {detail}", field=f"tax_brackets.{i}.{part}", detail=detail)
+
     before = len(errors)
     prev_upper = 0
     for i, (upper, rate) in enumerate(brackets, start=1):
@@ -345,26 +366,30 @@ def _validate_brackets(brackets, errors):
         if is_last:
             # ขั้นสุดท้ายไม่มีเพดาน ถ้ามี เงินได้ส่วนที่เกินเพดานจะไม่ถูกคิดภาษี
             if upper is not None:
-                errors.append(f"tax_brackets ขั้นที่ {i} (ขั้นสุดท้าย) ต้องไม่มีเพดานบน")
+                errors.append(step_error(i, "upper", "(ขั้นสุดท้าย) ต้องไม่มีเพดานบน"))
         elif upper is None:
-            errors.append(f"tax_brackets ขั้นที่ {i} ต้องมีเพดานบน (เฉพาะขั้นสุดท้ายที่ไม่มี)")
+            errors.append(step_error(i, "upper", "ต้องมีเพดานบน (เฉพาะขั้นสุดท้ายที่ไม่มี)"))
         else:
             message = _check_value(upper, MONEY)
             if message:
-                errors.append(f"tax_brackets ขั้นที่ {i} เพดานบน{message}")
+                errors.append(step_error(i, "upper", f"เพดานบน{message}"))
             elif upper <= prev_upper:
-                errors.append(f"tax_brackets ขั้นที่ {i} เพดานบนต้องมากกว่าขั้นก่อนหน้า (ขั้นแรกต้องมากกว่า 0)")
+                errors.append(step_error(i, "upper", "เพดานบนต้องมากกว่าขั้นก่อนหน้า (ขั้นแรกต้องมากกว่า 0)"))
             else:
                 prev_upper = upper
 
         message = _check_value(rate, WHOLE_PERCENT)
         if message:
-            errors.append(f"tax_brackets ขั้นที่ {i} อัตรา{message}")
+            errors.append(step_error(i, "rate", f"อัตรา{message}"))
 
     if len(errors) == before:
         rates = [rate for _, rate in brackets]
-        if any(later < earlier for earlier, later in zip(rates, rates[1:])):
-            errors.append("tax_brackets อัตราต้องไม่ลดลงเมื่อขั้นสูงขึ้น")
+        for i, (earlier, later) in enumerate(zip(rates, rates[1:]), start=2):
+            if later < earlier:
+                # ชี้ขั้นแรกที่อัตราลดลง ข้อความยังเป็นข้อความเดิม
+                errors.append(RuleError("tax_brackets อัตราต้องไม่ลดลงเมื่อขั้นสูงขึ้น", field=f"tax_brackets.{i}.rate",
+                                        detail="อัตราต้องไม่ต่ำกว่าขั้นก่อนหน้า"))
+                break
 
 
 def _extract(node, schema):

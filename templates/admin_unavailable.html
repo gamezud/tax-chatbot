@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — แก้ไม่ได้ตอนนี้</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 34rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>แก้ตัวเลขภาษีไม่ได้ตอนนี้</h1>
+  <p id="message">อ่านค่าที่บันทึกไว้ใน Firestore ไม่ได้ (ไม่ได้เชื่อมต่อ หรืออ่านไม่สำเร็จ)
+    ระบบจึงไม่เปิดฟอร์ม เพราะถ้าเติมค่าตั้งต้นแทนแล้วบันทึก ค่าที่แก้ไว้เดิมจะถูกทับ
+    กรุณาตรวจการเชื่อมต่อแล้วลองใหม่</p>
+  <p><a href="{{ url_for('admin.index') }}">กลับหน้าผู้ดูแล</a></p>
+</main>
+</body>
+</html>

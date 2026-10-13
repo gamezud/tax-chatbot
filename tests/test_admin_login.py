@@ -19,6 +19,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import admin_routes
 import app as app_module
+from test_rules_loading import fake_db
 
 ROOT = Path(__file__).resolve().parents[1]
 TEST_PASSWORD = "Ultra-Secret-Test-Password-123!"
@@ -31,6 +32,8 @@ EXPIRED_MESSAGE = "หน้านี้หมดอายุแล้ว (อ�
 def admin_setup(monkeypatch):
     monkeypatch.setenv("ADMIN_PASSWORD_HASH", TEST_HASH)
     monkeypatch.setattr(admin_routes, "_throttle", admin_routes.LoginThrottle())
+    # หน้า /admin อ่านค่าที่บันทึกใน Firestore — ใช้ db ปลอมที่ยังไม่มี doc
+    monkeypatch.setattr(admin_routes, "_config_db", lambda: fake_db(None))
 
 
 @pytest.fixture(autouse=True)

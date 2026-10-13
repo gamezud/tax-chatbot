@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — แก้ตัวเลขภาษี</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 48rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+    h2 { font-size: 1.1rem; color: #1E3A8A; margin-top: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; background: #FFFFFF; }
+    th, td { text-align: left; padding: .4rem .6rem; border: 1px solid #CBD5E1; vertical-align: top; }
+    th { width: 55%; background: #F1F5F9; font-weight: normal; }
+    input[type=text] { width: 9rem; padding: .3rem; text-align: right; }
+    textarea { width: 100%; box-sizing: border-box; }
+    .field-error { color: #B91C1C; display: block; font-size: .9rem; }
+    .banner { padding: .6rem .8rem; border-radius: .25rem; }
+    .warn { background: #FEF3C7; }
+    .error { background: #FEE2E2; }
+    .notice { background: #E0F2FE; padding: .6rem .8rem; }
+    .hint { color: #64748B; font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>แก้ตัวเลขภาษี</h1>
+  <p><a href="{{ url_for('admin.index') }}">กลับหน้าผู้ดูแล</a></p>
+  {% include "_admin_banners.html" %}
+  {% if notice %}<p class="notice" id="notice">{{ notice }}</p>{% endif %}
+  {% if general_errors %}
+  <ul class="banner error" id="general-errors">{% for e in general_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+  {% endif %}
+
+  <form method="post" action="{{ url_for('admin.edit') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="base_version" value="{{ base_version }}">
+    {% for title, fields in groups %}
+    <h2>{{ title }}</h2>
+    <table>
+      {% for name, label, kind in fields %}
+      <tr>
+        <th><label for="{{ name }}">{{ label }}</label></th>
+        <td>
+          <input type="text" inputmode="decimal" id="{{ name }}" name="{{ name }}" value="{{ values.get(name, '') }}">
+          {{ "บาท" if kind == "money" else "%" }}
+          {% if name in field_errors %}<span class="field-error" id="error-{{ name }}">{{ field_errors[name] }}</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+    {% if loop.first %}<p class="hint">ขั้นสุดท้ายไม่มีเพดาน (แก้ไม่ได้) · อัตราของขั้นบันไดต้องเป็นจำนวนเต็ม %</p>{% endif %}
+    {% endfor %}
+
+    <h2>ที่มาของการแก้ไข</h2>
+    <p>
+      <label for="source_reference">แหล่งอ้างอิง (บังคับ {{ reference_min }}–{{ reference_max }} ตัวอักษร)</label>
+      <textarea id="source_reference" name="source_reference" rows="2">{{ reference }}</textarea>
+      {% if "source_reference" in field_errors %}<span class="field-error" id="error-source_reference">{{ field_errors["source_reference"] }}</span>{% endif %}
+    </p>
+    <p>
+      <label for="note">หมายเหตุ (ไม่บังคับ ไม่เกิน {{ note_max }} ตัวอักษร)</label>
+      <textarea id="note" name="note" rows="2">{{ note }}</textarea>
+      {% if "note" in field_errors %}<span class="field-error" id="error-note">{{ field_errors["note"] }}</span>{% endif %}
+    </p>
+    <button type="submit">ตรวจสอบค่า</button>
+  </form>
+</main>
+</body>
+</html>

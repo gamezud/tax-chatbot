@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — ยืนยันการแก้ไข</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 48rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+    table { border-collapse: collapse; width: 100%; background: #FFFFFF; }
+    th, td { text-align: left; padding: .4rem .6rem; border: 1px solid #CBD5E1; vertical-align: top; }
+    th { background: #F1F5F9; font-weight: normal; }
+    td.num { text-align: right; white-space: nowrap; }
+    tr.big-change { background: #FEF3C7; }
+    .big-change-note { color: #B45309; display: block; font-size: .9rem; }
+    .hint { color: #64748B; font-size: .9rem; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>ยืนยันการแก้ไข</h1>
+  <p>รายการที่เปลี่ยนจากค่าที่บันทึกล่าสุด ({{ rows|length }} รายการ)</p>
+  <table id="changes">
+    <tr><th>รายการ</th><th>ค่าเดิม</th><th>ค่าใหม่</th></tr>
+    {% for row in rows %}
+    <tr class="change{% if row.warn %} big-change{% endif %}" data-name="{{ row.name }}">
+      <td>{{ row.label }}
+        {% if row.warn %}<span class="big-change-note">ตรวจอีกครั้ง: เปลี่ยนมากกว่า {{ ratio }} เท่า</span>{% endif %}
+      </td>
+      <td class="num">{{ row.old }} {{ row.unit }}</td>
+      <td class="num">{{ row.new }} {{ row.unit }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <p><b>แหล่งอ้างอิง:</b> <span id="reference">{{ reference }}</span></p>
+  <p><b>หมายเหตุ:</b> <span id="note">{{ note or "—" }}</span></p>
+
+  <form method="post" action="{{ url_for('admin.edit') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="base_version" value="{{ base_version }}">
+    {% for name, value in values.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">
+    {% endfor %}
+    <input type="hidden" name="source_reference" value="{{ reference }}">
+    <input type="hidden" name="note" value="{{ note }}">
+    <button type="submit" name="action" value="back">กลับไปแก้</button>
+    <button type="button" id="confirm-save" disabled>ยืนยันบันทึก</button>
+  </form>
+  <p class="hint">ปุ่มยืนยันบันทึกยังไม่เปิดใช้ · ค่าที่บันทึกแล้วมีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
+</main>
+</body>
+</html>
