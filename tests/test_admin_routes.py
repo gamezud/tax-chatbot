@@ -1,9 +1,10 @@
 """
 เทสหน้า /admin ขั้น 4A: ตัวกันให้เข้าได้จากเครื่องนี้เท่านั้น + หน้าแสดง RULES_INFO แบบอ่านอย่างเดียว
+(login, CSRF และการล็อกอยู่ใน test_admin_login.py)
 
 สำคัญที่สุด: ตัวกันต้องไม่กระทบ /webhook ที่ Dialogflow ส่งมาทาง ngrok (มี X-Forwarded-* และ Host เป็นโดเมน ngrok)
 ทุกเทสเริ่มจาก "ไม่ได้ตั้ง ADMIN_PASSWORD_HASH" (fixture no_admin_env) ไม่ขึ้นกับค่าจริงในเครื่อง
-ค่าที่ตั้งในเทสเป็นข้อความทดแทน ไม่ใช่ hash จริง (4A ยังไม่ตรวจรหัส)
+ค่าที่ตั้งในเทสไฟล์นี้เป็นข้อความทดแทน ไม่ใช่ hash จริง — เทสไฟล์นี้ไม่ได้ login ด้วยรหัส
 """
 import json
 from pathlib import Path
@@ -41,6 +42,14 @@ def admin_on(monkeypatch):
 @pytest.fixture
 def client():
     return app_module.app.test_client()
+
+
+@pytest.fixture
+def logged_in(client):
+    # ข้ามหน้า login (เทส login อยู่ใน test_admin_login.py) — ตั้ง session ตรง ๆ
+    with client.session_transaction() as sess:
+        sess["admin"] = True
+    return client
 
 
 # ---------------------------------------------------------------------------
@@ -102,8 +111,8 @@ def test_is_admin_path(path, expected):
 # ---------------------------------------------------------------------------
 # B. หน้า /admin ผ่าน Flask test client (REMOTE_ADDR 127.0.0.1, Host localhost)
 # ---------------------------------------------------------------------------
-def test_admin_page_local_shows_default_rules_info(admin_on, client):
-    resp = client.get("/admin")
+def test_admin_page_local_shows_default_rules_info(admin_on, logged_in):
+    resp = logged_in.get("/admin")
     assert resp.status_code == 200
     html = resp.get_data(as_text=True)
     assert "ค่าตั้งต้นในโค้ด" in html
@@ -112,18 +121,20 @@ def test_admin_page_local_shows_default_rules_info(admin_on, client):
     assert "ไม่มี" in html
 
 
-def test_admin_page_shows_firestore_rules_info(admin_on, client, monkeypatch):
+def test_admin_page_shows_firestore_rules_info(admin_on, logged_in, monkeypatch):
     monkeypatch.setattr(tax_rules, "RULES_INFO", {"source": "firestore", "version": 7,
                                                   "changed_keys": ["deduction.personal", "tax_brackets"]})
-    html = client.get("/admin").get_data(as_text=True)
+    html = logged_in.get("/admin").get_data(as_text=True)
     assert "ค่าที่แก้ไว้ใน Firestore" in html
     assert '<td id="version">7</td>' in html
     assert "<code>deduction.personal</code>" in html and "<code>tax_brackets</code>" in html
 
 
 def test_admin_page_accepts_ipv6_loopback_with_port(admin_on, client):
+    # ผ่านตัวกันในเครื่องแล้วไปถึงขั้นต้อง login (ไม่ใช่ 404)
     resp = client.get("/admin", base_url="http://[::1]:5000", environ_base={"REMOTE_ADDR": "::1"})
-    assert resp.status_code == 200
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/admin/login")
 
 
 def not_found_body(client):
@@ -167,10 +178,10 @@ def test_admin_percent_encoded_path_not_local_is_plain_404(admin_on, client):
 
 
 @pytest.mark.parametrize("method", ["HEAD", "OPTIONS"])
-def test_admin_head_and_options(admin_on, client, method):
+def test_admin_head_and_options(admin_on, logged_in, method):
     # ในเครื่อง: Flask ตอบ HEAD/OPTIONS ให้ route GET เอง — ผ่าน ngrok: 404 ไม่บอกว่ามี route (ไม่มี header Allow)
-    assert client.open("/admin", method=method).status_code == 200
-    resp = client.open("/admin", method=method, headers=NGROK_HEADERS, base_url=NGROK_BASE_URL)
+    assert logged_in.open("/admin", method=method).status_code == 200
+    resp = logged_in.open("/admin", method=method, headers=NGROK_HEADERS, base_url=NGROK_BASE_URL)
     assert resp.status_code == 404
     assert "Allow" not in resp.headers
 

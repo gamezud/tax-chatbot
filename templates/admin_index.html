@@ -36,6 +36,10 @@
     </tr>
   </table>
   <p class="note">หน้านี้อ่านอย่างเดียว ค่าที่แก้มีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
+  <form method="post" action="{{ url_for('admin.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">ออกจากระบบ</button>
+  </form>
 </main>
 </body>
 </html>

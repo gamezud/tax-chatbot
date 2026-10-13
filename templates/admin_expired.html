@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — หน้าหมดอายุ</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 30rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>หน้านี้หมดอายุ</h1>
+  <p id="message">หน้านี้หมดอายุแล้ว (อาจเพราะเซิร์ฟเวอร์เพิ่งเริ่มใหม่) กรุณาเข้าสู่ระบบอีกครั้งครับ</p>
+  <p><a href="{{ url_for('admin.login') }}">ไปหน้าเข้าสู่ระบบ</a></p>
+</main>
+</body>
+</html>

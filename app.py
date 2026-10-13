@@ -3,7 +3,7 @@ import uuid
 import traceback
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -27,6 +27,14 @@ from utils.deduction_guard import check_deduction_parameters, has_number
 from admin_routes import admin_bp, admin_status_line
 
 app = Flask(__name__)
+# session ใช้เฉพาะหน้า admin — สุ่ม secret_key ใหม่ทุกครั้งที่เปิด ไม่ต้องเก็บ secret ไว้ที่ไหน (รีสตาร์ตแล้วต้อง login ใหม่)
+app.secret_key = os.urandom(32)
+# Secure ยังไม่ตั้ง: หน้า admin เปิดผ่าน http://127.0.0.1 รอผลทดลองว่าเบราว์เซอร์เก็บ cookie ที่ตั้ง Secure ไหม
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Strict",
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
+)
 app.register_blueprint(admin_bp)
 PUBLIC_URL = ""
 
