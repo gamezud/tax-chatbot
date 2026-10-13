@@ -271,7 +271,12 @@ def test_apply_with_no_database_keeps_defaults(apply_doc, capsys):
 
 
 # รันบล็อก __main__ ของ app.py ใน process ใหม่: firebase ต่อไม่ได้ (db = None), ngrok และ app.run เป็นของปลอม
-MAIN_BLOCK_CODE = (
+# GET_DB_LINE แทน get_db ตัวจริง (ไม่โหลดโมเดลจริง)
+GET_DB_OK = "knowledge_search.get_db = lambda: None\n"
+GET_DB_FAILS = ("def _get_db_fails():\n"
+                "    raise OSError('model load failed')\n"
+                "knowledge_search.get_db = _get_db_fails\n")
+MAIN_BLOCK_TEMPLATE = (
     "import runpy, sys, types\n"
     "from unittest.mock import MagicMock\n"
     "fake_fb = types.ModuleType('utils.firebase_db')\n"
@@ -286,21 +291,36 @@ MAIN_BLOCK_CODE = (
     "import flask\n"
     "flask.Flask.run = lambda self, *args, **kwargs: print('REACHED app.run')\n"
     "import utils.knowledge_search as knowledge_search\n"
-    "knowledge_search.get_db = lambda: None\n"  # ไม่โหลดโมเดลจริง
+    "GET_DB_LINE"
     "runpy.run_path('app.py', run_name='__main__')\n"
 )
 
 
-def test_main_block_without_firestore_logs_and_reaches_app_run():
+def run_main_block(get_db_line):
+    code = MAIN_BLOCK_TEMPLATE.replace("GET_DB_LINE", get_db_line)
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
-    result = subprocess.run([sys.executable, "-c", MAIN_BLOCK_CODE], cwd=ROOT, capture_output=True,
-                            text=True, encoding="utf-8", env=env)
+    return subprocess.run([sys.executable, "-c", code], cwd=ROOT, capture_output=True,
+                          text=True, encoding="utf-8", env=env)
+
+
+def test_main_block_without_firestore_logs_and_reaches_app_run():
+    result = run_main_block(GET_DB_OK)
     assert result.returncode == 0, result.stderr
     lines = result.stdout.splitlines()
     tax_rules_lines = [line for line in lines if "[TAX-RULES]" in line]
     assert len(tax_rules_lines) == 1 and tax_rules_lines[0].startswith("❌")
     # log [TAX-RULES] มาก่อน app.run และเซิร์ฟเวอร์ไปถึง app.run
     assert lines.index(tax_rules_lines[0]) < lines.index("REACHED app.run")
+
+
+def test_main_block_stops_when_knowledge_base_fails_to_load():
+    # ตั้งใจ ไม่ใช่บั๊ก: โหลดฐานความรู้ไม่ได้ → เซิร์ฟเวอร์เปิดไม่ขึ้น (ตัดสินใจ 2026-10-13)
+    # ถ้าเปิดขึ้นมาโดยไม่มีฐานความรู้ คำถามความรู้ทุกข้อจะพยายามโหลดโมเดลใหม่จนเกินงบ 5 วินาทีโดยไม่มีใครรู้
+    # ล้มตอนเปิดทำให้เห็นทันที — ถ้าจะเปลี่ยนพฤติกรรมนี้ต้องเป็นการตัดสินใจใหม่ ไม่ใช่แก้เทสให้ผ่าน
+    result = run_main_block(GET_DB_FAILS)
+    assert result.returncode != 0
+    assert "OSError" in result.stderr
+    assert "REACHED app.run" not in result.stdout
 
 
 def test_main_block_applies_rules_before_app_run():
