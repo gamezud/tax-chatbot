@@ -105,6 +105,7 @@ def apply_doc(monkeypatch):
     """เรียก app.apply_effective_rules แบบที่ __main__ เรียก แล้วให้ monkeypatch คืน TAX_RULES หลังเทส"""
     def _apply(db):
         monkeypatch.setattr(tax_rules, "TAX_RULES", tax_rules.TAX_RULES)
+        monkeypatch.setattr(tax_rules, "RULES_INFO", tax_rules.RULES_INFO)
         return app_module.apply_effective_rules(db)
     return _apply
 

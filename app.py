@@ -76,8 +76,10 @@ def apply_effective_rules(db):
     # เรียกครั้งเดียวตอนเปิดเซิร์ฟเวอร์ (บล็อก __main__) ห้ามเรียกตอน import หรือใน webhook
     # เพราะอ่าน Firestore ใช้เวลาหลายร้อยมิลลิวินาที (CLAUDE.md กฎเหล็กข้อ 1)
     # แทนที่ทั้งก้อน ไม่แก้ในที่ — ทุกจุดอ่าน tax_rules.TAX_RULES ตอนถูกเรียก จึงเห็นค่าใหม่
+    # RULES_INFO ตั้งพร้อมกัน ที่มาของกติกาจึงตรงกับกติกาที่ใช้คำนวณเสมอ
     rules, info = rules_store.load_effective_rules(db)
     tax_rules.TAX_RULES = rules
+    tax_rules.RULES_INFO = info
     return info
 
 @app.route('/liff/ocr', methods=['POST'])
@@ -366,6 +368,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     rules = tax_rules.TAX_RULES
     # อ่านครั้งเดียวแล้วส่งต่อผ่าน tax_report_data ให้ LINE, PDF และ Firestore ได้ปีเดียวกัน
     tax_year = rules["tax_year"]
+    # ที่มาของกติกา (ตั้งพร้อม TAX_RULES ใน apply_effective_rules) อ่านครั้งเดียวแบบเดียวกับ rules
+    rules_info = tax_rules.RULES_INFO
     salary_expense = min(salary_total * rules["expense"]["salary_rate"], rules["expense"]["salary_cap"])
     rental_rate = get_rental_expense_rate(property_type)
     rental_expense = rental_income * rental_rate
@@ -431,6 +435,13 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         tax_advice += (f"\nหมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี {ssf_last_tax_year + 1} "
                        f"ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
 
+    # ประวัติเก็บชุดกติกาที่ใช้จริงทุกครั้งที่มาจาก Firestore แม้ค่าจะเท่าค่าตั้งต้น (None = ค่าตั้งต้นในโค้ด)
+    rules_version = rules_info["version"] if rules_info["source"] == "firestore" else None
+    # หมายเหตุบอกผู้ใช้เฉพาะเมื่อค่าต่างจากค่าตั้งต้นจริง ข้อความเดียวกันไปทั้ง LINE และ PDF
+    # บอกสถานะของระบบ ไม่ได้บอกว่าผลของผู้ใช้คนนี้เปลี่ยน (ค่าที่แก้อาจไม่เกี่ยวกับเงินได้ของเขา)
+    rules_note = (f"หมายเหตุ: ระบบใช้อัตราและเกณฑ์ภาษีที่ผู้ดูแลระบบปรับปรุง (เวอร์ชัน {rules_version}) ครับ"
+                  if rules_info["changed_keys"] else "")
+
     pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
     pdf_filepath = os.path.join("static", "reports", pdf_filename)
     os.makedirs(os.path.dirname(pdf_filepath), exist_ok=True)
@@ -450,6 +461,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         "withholding_tax": withholding_tax,
         "net_payable": net_payable,
         "tax_advice": tax_advice,         
+        "rules_version": rules_version,
+        "rules_note": rules_note,
     }
 
     generate_tax_pdf(pdf_filepath, tax_report_data)
@@ -458,8 +471,10 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     tax_report_data["pdf_file_url"] = download_url
     firebase_client.save_tax_report(line_user_id, tax_report_data)
 
+    rules_note_line = f"{rules_note}\n" if rules_note else ""
     reply_text = (
         f"📊 สรุปผลการประเมินภาษีประจำปีภาษี {tax_year}\n"
+        f"{rules_note_line}"
         f"--------------------------------\n"
         f"1. เงินได้พึงประเมินรวม: {total_income:,.2f} บาท\n"
         f"2. หักค่าใช้จ่ายตามกฎหมาย: {total_expense:,.2f} บาท\n"
