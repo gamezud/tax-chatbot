@@ -269,6 +269,14 @@ def test_session_cookie_flags_and_lifetime(client):
     assert timedelta(minutes=29) <= remaining <= timedelta(minutes=30, seconds=5)
 
 
+def test_session_cookie_is_secure(client):
+    # ตั้ง Secure ได้เพราะ Chrome เก็บ cookie ที่มี Secure บน http://127.0.0.1 และ http://localhost (ทดลอง 2026-10-13)
+    resp = post_login(client, TEST_PASSWORD)
+    cookie = next(v for k, v in resp.headers.items() if k == "Set-Cookie" and v.startswith("session="))
+    assert "Secure" in [part.strip() for part in cookie.split(";")]
+    assert app_module.app.config["SESSION_COOKIE_SECURE"] is True
+
+
 def test_secret_key_is_random_bytes():
     assert isinstance(app_module.app.secret_key, bytes) and len(app_module.app.secret_key) == 32
 

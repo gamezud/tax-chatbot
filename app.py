@@ -29,10 +29,14 @@ from admin_routes import admin_bp, admin_status_line
 app = Flask(__name__)
 # session ใช้เฉพาะหน้า admin — สุ่ม secret_key ใหม่ทุกครั้งที่เปิด ไม่ต้องเก็บ secret ไว้ที่ไหน (รีสตาร์ตแล้วต้อง login ใหม่)
 app.secret_key = os.urandom(32)
-# Secure ยังไม่ตั้ง: หน้า admin เปิดผ่าน http://127.0.0.1 รอผลทดลองว่าเบราว์เซอร์เก็บ cookie ที่ตั้ง Secure ไหม
+# Secure: หน้า admin เปิดผ่าน http://127.0.0.1 ไม่มี HTTPS แต่ Chrome ถือว่า 127.0.0.1 และ localhost
+# เป็น secure context จึงเก็บและส่ง cookie ที่มี Secure แม้เปิดผ่าน http
+# (ทดลอง Chrome 2026-10-13: ทั้ง http://127.0.0.1:5090 และ http://localhost:5090 เก็บ cookie ที่มี Secure และส่งกลับมา)
+# ถ้าวันหน้าเปิดหน้า admin ด้วยชื่อเครื่องอื่นที่ไม่ใช่สองชื่อนี้ผ่าน http เบราว์เซอร์จะไม่เก็บ cookie แล้ว login ไม่ติด
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Strict",
+    SESSION_COOKIE_SECURE=True,
     PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
 )
 app.register_blueprint(admin_bp)
