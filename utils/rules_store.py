@@ -1,7 +1,7 @@
 """
 ตรวจและรวมค่าที่ระบบ Admin แก้ (เก็บใน Firestore) เข้ากับค่าตั้งต้นใน utils/tax_rules.py
 
-ไฟล์นี้เป็นฟังก์ชันล้วน ไม่มี I/O — การอ่าน/เขียน Firestore อยู่ที่อื่น แล้วส่ง dict มาให้ฟังก์ชันที่นี่
+ไม่ import firebase — ฟังก์ชันที่อ่าน Firestore (load_effective_rules) รับ db เป็น argument เทสจึงส่ง db ปลอมได้
 ค่าที่แก้ (override) มีรูปเดียวกับ TAX_RULES แต่มีเฉพาะ key ที่แก้ได้ และ tax_brackets เป็น list ของ
 {"upper": ..., "rate": ...} เพราะ Firestore เก็บ list ซ้อน list ไม่ได้
 
@@ -9,6 +9,8 @@
 """
 import copy
 import math
+import threading
+import time
 
 from utils import tax_rules
 
@@ -156,8 +158,124 @@ def validate_rules(rules):
         small = _get(rules, small_path)
         cap = _get(rules, cap_path)
         if small > cap:
-            errors.append(f"{_name(small_path)} ({small:,.2f}) ต้องไม่เกิน {_name(cap_path)} ({cap:,.2f})")
+            # ไม่ใส่ตัวเลขในข้อความ — ข้อความนี้ลง log ตอนเปิดเซิร์ฟเวอร์ด้วย (log บอกได้แค่ชื่อ key)
+            errors.append(f"{_name(small_path)} ต้องไม่เกิน {_name(cap_path)}")
     return errors
+
+
+def changed_keys(rules):
+    """ชื่อ key ที่แก้ได้ซึ่งค่าใน rules ต่างจากค่าตั้งต้น (tax_brackets นับเป็น key เดียว)"""
+    return [_name(path) for path in _schema_paths(EDITABLE_SCHEMA, ())
+            if _get(rules, path) != _get(DEFAULT_TAX_RULES, path)]
+
+
+# ---------------------------------------------------------------------------
+# โหลดค่าที่แก้จาก Firestore — เรียกครั้งเดียวตอนเปิดเซิร์ฟเวอร์ ห้ามเรียกใน webhook (กฎเหล็กข้อ 1)
+# ---------------------------------------------------------------------------
+# doc เดียว: tax_rules_config/active (ระบบ Admin เขียนตามรูปนี้)
+#   based_on_tax_year: int  ต้องตรงกับ tax_year ของค่าตั้งต้น ไม่งั้นค่าที่แก้ไว้ของปีเก่าจะติดไปกับโค้ดปีใหม่
+#   version:           int ≥ 1  เพิ่มทีละ 1 ทุกครั้งที่บันทึก ใช้ผูกผลคำนวณกับชุดกติกา
+#   override:          dict รูปเดียวกับ to_override() (มีเฉพาะ key ที่แก้ได้)
+# field อื่นในระดับบนสุด (เช่น เวลา ผู้แก้ แหล่งอ้างอิง) ตัวโหลดไม่อ่าน จึงไม่ปฏิเสธ
+# — ชื่อสะกดผิดของ 3 field ข้างบนถูกจับอยู่แล้ว เพราะ field ที่ต้องมีจะหายไป
+CONFIG_COLLECTION = "tax_rules_config"
+CONFIG_DOCUMENT = "active"
+
+# เวลารออ่าน doc สูงสุด เกินแล้วเปิดเซิร์ฟเวอร์ด้วยค่าตั้งต้น
+# การอ่านปกติใช้หลายร้อยมิลลิวินาที แต่นี่เป็นการเรียก Firestore ครั้งแรกหลังเปิดโปรแกรม
+# ต้องต่อ TLS และขอ token ของ service account ก่อน จึงเผื่อไว้มาก ค่านี้ไม่อยู่ในงบ 5 วินาทีเพราะไม่ได้อยู่ใน webhook
+# log บอกเวลาที่ใช้จริงทุกครั้ง ใช้ตรวจว่าค่านี้เหมาะหรือไม่
+READ_TIMEOUT_SECONDS = 10.0
+
+
+def load_effective_rules(db):
+    """
+    คืน (rules, info) — ไม่โยน exception ไม่ว่ากรณีใด พิมพ์ log [TAX-RULES] หนึ่งบรรทัด
+    info = {"source": "default" หรือ "firestore", "version": int หรือ None, "changed_keys": [...]}
+    ผลมีได้ 4 แบบ: ไม่มี doc / doc ถูก / doc ผิด / อ่านไม่ได้ — ทุกแบบยกเว้น doc ถูกใช้ค่าตั้งต้น
+    log บอกแค่ชื่อ key ไม่พิมพ์ค่าใน doc และไม่พิมพ์ข้อความของ exception (อาจมีเนื้อหาของ doc)
+    """
+    started = time.monotonic()
+    if db is None:
+        return _use_defaults(f"❌ [TAX-RULES] ไม่ได้เชื่อม Firestore — ใช้ค่าตั้งต้นในโค้ด{_elapsed(started)}")
+    try:
+        doc = _read_config_doc(db)
+    except Exception as e:
+        return _use_defaults(f"❌ [TAX-RULES] อ่านค่าที่แก้จาก Firestore ไม่ได้ ({type(e).__name__}) "
+                             f"— ใช้ค่าตั้งต้นในโค้ด{_elapsed(started)}")
+
+    if doc is None:
+        return _use_defaults(f"ℹ️ [TAX-RULES] ไม่มีค่าที่แก้ใน Firestore — ใช้ค่าตั้งต้นในโค้ด "
+                             f"(ปีภาษี {DEFAULT_TAX_RULES['tax_year']}){_elapsed(started)}")
+
+    rules, errors = _rules_from_doc(doc)
+    if errors:
+        return _use_defaults(f"❌ [TAX-RULES] ค่าที่แก้ใน Firestore ผิด — ใช้ค่าตั้งต้นในโค้ดแทน: "
+                             f"{' / '.join(errors)}{_elapsed(started)}")
+
+    changed = changed_keys(rules)
+    changed_text = f"แก้ {len(changed)} รายการ: {', '.join(changed)}" if changed else "ไม่ต่างจากค่าตั้งต้น"
+    print(f"✅ [TAX-RULES] ใช้ค่าที่แก้จาก Firestore version {doc['version']} — {changed_text}{_elapsed(started)}")
+    return rules, {"source": "firestore", "version": doc["version"], "changed_keys": changed}
+
+
+def _read_config_doc(db):
+    """คืน dict ของ doc หรือ None ถ้าไม่มี doc — อ่านไม่ได้หรือเกินเวลาโยน exception"""
+    timeout = READ_TIMEOUT_SECONDS
+    result = {}
+
+    def read():
+        try:
+            # retry=None: ลองครั้งเดียว ถ้าใช้ retry ตั้งต้น การลองซ้ำจะทำให้รอนานเกิน timeout ได้
+            snapshot = db.collection(CONFIG_COLLECTION).document(CONFIG_DOCUMENT).get(timeout=timeout, retry=None)
+            result["doc"] = snapshot.to_dict() if snapshot.exists else None
+        except Exception as e:
+            result["error"] = e
+
+    # timeout ของ get คุมแค่ตัว RPC ครอบด้วย thread อีกชั้นให้แน่ใจว่าการเปิดเซิร์ฟเวอร์ไม่ค้างเกินเวลานี้
+    # daemon=True: ถ้าการอ่านค้าง thread นั้นไม่กันโปรแกรมปิด
+    thread = threading.Thread(target=read, daemon=True)
+    thread.start()
+    thread.join(timeout)
+    if thread.is_alive():
+        raise TimeoutError()
+    if "error" in result:
+        raise result["error"]
+    return result["doc"]
+
+
+def _rules_from_doc(doc):
+    """คืน (rules, errors) ตรวจทุก field แล้วรายงานข้อผิดพลาดทุกข้อพร้อมกัน"""
+    if not isinstance(doc, dict):
+        return None, ["doc ต้องเป็น map"]
+    errors = []
+    if not _is_int(doc.get("based_on_tax_year")) or doc["based_on_tax_year"] != DEFAULT_TAX_RULES["tax_year"]:
+        errors.append("based_on_tax_year ไม่ตรงกับ tax_year ของค่าตั้งต้น")
+    if not _is_int(doc.get("version")) or doc["version"] < 1:
+        errors.append("version ต้องเป็นจำนวนเต็มตั้งแต่ 1")
+    if "override" not in doc:
+        errors.append("ไม่มี override")
+        return None, errors
+
+    rules, override_errors = build_rules(doc["override"])
+    errors += override_errors
+    if errors:
+        return None, errors
+    return rules, []
+
+
+def _use_defaults(message):
+    print(message)
+    # สำเนาใหม่ทุกครั้ง: ถ้าคืน DEFAULT_TAX_RULES ตรง ๆ แล้วมีใครแก้ TAX_RULES ในที่ ค่าตั้งต้นจะเปลี่ยนตาม
+    return copy.deepcopy(DEFAULT_TAX_RULES), {"source": "default", "version": None, "changed_keys": []}
+
+
+def _elapsed(started):
+    return f" ({time.monotonic() - started:.2f}s)"
+
+
+def _is_int(value):
+    return isinstance(value, int) and not isinstance(value, bool)
 
 
 def _check_override_keys(override, schema, defaults, path, errors):
@@ -259,6 +377,14 @@ def _extract(node, schema):
         else:
             result[key] = node[key]
     return result
+
+
+def _schema_paths(schema, path):
+    for key, kind in schema.items():
+        if isinstance(kind, dict):
+            yield from _schema_paths(kind, path + (key,))
+        else:
+            yield path + (key,)
 
 
 def _get(rules, path):

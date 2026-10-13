@@ -17,7 +17,7 @@ from utils.tax_calculator import (
     compute_method_2_tax,
     generate_tax_planning_advice
 )
-from utils import tax_rules
+from utils import tax_rules, rules_store
 from utils.pdf_generator import generate_tax_pdf
 # import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
 from utils import ocr, liff_auth
@@ -71,6 +71,14 @@ def liff_id_status_line():
     if os.environ.get('LIFF_ID', '').strip():
         return "📱 [LIFF] ตั้ง LIFF_ID แล้ว — คำถามค่าลดหย่อนมีลิงก์อ่านใบเสร็จ"
     return "⚠️ [LIFF] ยังไม่ได้ตั้ง LIFF_ID — คำถามค่าลดหย่อนไม่มีลิงก์อ่านใบเสร็จ และ /liff/ocr ตอบ not_configured"
+
+def apply_effective_rules(db):
+    # เรียกครั้งเดียวตอนเปิดเซิร์ฟเวอร์ (บล็อก __main__) ห้ามเรียกตอน import หรือใน webhook
+    # เพราะอ่าน Firestore ใช้เวลาหลายร้อยมิลลิวินาที (CLAUDE.md กฎเหล็กข้อ 1)
+    # แทนที่ทั้งก้อน ไม่แก้ในที่ — ทุกจุดอ่าน tax_rules.TAX_RULES ตอนถูกเรียก จึงเห็นค่าใหม่
+    rules, info = rules_store.load_effective_rules(db)
+    tax_rules.TAX_RULES = rules
+    return info
 
 @app.route('/liff/ocr', methods=['POST'])
 def liff_ocr():
@@ -642,6 +650,9 @@ def webhook():
 if __name__ == '__main__':
     # โหลดโมเดลและ FAISS ล่วงหน้า ไม่งั้นผู้ใช้คนแรกที่ถามความรู้จะรอโหลดจนเกินงบ 5 วินาทีของ Dialogflow
     get_db()
+
+    # ค่าภาษีที่ระบบ Admin แก้ไว้ มีผลหลังรีสตาร์ตเท่านั้น — อ่าน Firestore ครั้งเดียวตรงนี้
+    apply_effective_rules(firebase_client.db)
 
     from pyngrok import ngrok
     ngrok.kill()
