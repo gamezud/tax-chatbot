@@ -215,7 +215,8 @@
 
     // ย่อด้วย canvas แล้วได้ JPEG ใหม่ที่ไม่มี EXIF — รูปต้องถูกหมุนตาม EXIF ก่อนวาด
     // เบราว์เซอร์ปัจจุบันหมุนให้เอง (CSS image-orientation: from-image เป็นค่าเริ่มต้น และ drawImage ใช้ค่านี้)
-    // ยังไม่ได้ยืนยันใน LINE บนมือถือจริง → ตั้ง TAX_DEBUG=1 แล้วดู "ข้อมูลสำหรับทดสอบ" และดูว่า preview ตั้งตรงไหม
+    // ยืนยันใน LINE บน Android แล้ว (2026-10-15) ด้วยไฟล์สังเคราะห์ Orientation 6 และ 8 → preview ตั้งตรงทั้งคู่
+    // ผลและวิธีทดสอบ: docs/ocr-eval-2569-10.md · ทดสอบซ้ำ: ตั้ง TAX_DEBUG=1 แล้วดู "ข้อมูลสำหรับทดสอบ"
     // preview คือรูปที่ถูกส่งจริง ถ้า preview ตั้งตรง เซิร์ฟเวอร์ก็ได้รูปตั้งตรง
     async function resizeImage(file) {
       setDebug("file", (file.type || "(ไม่ทราบชนิด)") + ", " + Math.round(file.size / 1024) + " KB");
