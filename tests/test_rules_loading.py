@@ -250,6 +250,37 @@ def test_reads_one_doc_with_timeout_and_no_retry():
 
 
 # ---------------------------------------------------------------------------
+# _call_with_timeout — ตัวครอบ thread ที่ read_config_doc และ save_config ใช้ร่วมกัน
+# ---------------------------------------------------------------------------
+def test_call_with_timeout_returns_value_from_another_thread():
+    caller = threading.current_thread()
+    assert rules_store._call_with_timeout(lambda: threading.current_thread() is not caller, 1) is True
+    assert rules_store._call_with_timeout(lambda: None, 1) is None  # None เป็นค่าที่คืนได้ (ไม่มี doc)
+
+
+def test_call_with_timeout_reraises_same_exception():
+    error = RuntimeError("จาก thread")
+
+    def fail():
+        raise error
+
+    with pytest.raises(RuntimeError) as caught:
+        rules_store._call_with_timeout(fail, 1)
+    assert caught.value is error
+
+
+def test_call_with_timeout_gives_up_without_waiting_for_fn():
+    release = threading.Event()
+    try:
+        started = time.monotonic()
+        with pytest.raises(TimeoutError):
+            rules_store._call_with_timeout(lambda: release.wait(10), 0.1)
+        assert time.monotonic() - started < 2
+    finally:
+        release.set()
+
+
+# ---------------------------------------------------------------------------
 # B. apply_effective_rules (ที่ __main__ เรียก)
 # ---------------------------------------------------------------------------
 def test_apply_replaces_tax_rules_and_returns_info(apply_doc):

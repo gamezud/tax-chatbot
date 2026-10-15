@@ -241,26 +241,36 @@ def read_config_doc(db):
     """คืน dict ของ doc หรือ None ถ้าไม่มี doc — อ่านไม่ได้หรือเกินเวลาโยน exception
     ใช้ทั้งตัวโหลดตอนเปิดเซิร์ฟเวอร์และหน้าแก้ค่าของ admin (timeout เดียวกัน) — ห้ามเรียกใน webhook"""
     timeout = READ_TIMEOUT_SECONDS
-    result = {}
 
     def read():
+        # retry=None: ลองครั้งเดียว ถ้าใช้ retry ตั้งต้น การลองซ้ำจะทำให้รอนานเกิน timeout ได้
+        snapshot = db.collection(CONFIG_COLLECTION).document(CONFIG_DOCUMENT).get(timeout=timeout, retry=None)
+        return snapshot.to_dict() if snapshot.exists else None
+
+    # timeout ของ get คุมแค่ตัว RPC ครอบด้วย thread อีกชั้นให้แน่ใจว่าการเปิดเซิร์ฟเวอร์ไม่ค้างเกินเวลานี้
+    return _call_with_timeout(read, timeout)
+
+
+def _call_with_timeout(fn, timeout):
+    """เรียก fn() ใน thread แยก รอไม่เกิน timeout วินาที แล้วคืนค่าที่ fn คืน
+    เกินเวลาโยน TimeoutError (thread ยังทำงานต่อจนจบเอง) · exception ที่ fn โยนถูกโยนต่อให้ผู้เรียก
+    daemon=True: ถ้า fn ค้าง thread นั้นไม่กันโปรแกรมปิด"""
+    result = {}
+
+    def run():
         try:
-            # retry=None: ลองครั้งเดียว ถ้าใช้ retry ตั้งต้น การลองซ้ำจะทำให้รอนานเกิน timeout ได้
-            snapshot = db.collection(CONFIG_COLLECTION).document(CONFIG_DOCUMENT).get(timeout=timeout, retry=None)
-            result["doc"] = snapshot.to_dict() if snapshot.exists else None
+            result["value"] = fn()
         except Exception as e:
             result["error"] = e
 
-    # timeout ของ get คุมแค่ตัว RPC ครอบด้วย thread อีกชั้นให้แน่ใจว่าการเปิดเซิร์ฟเวอร์ไม่ค้างเกินเวลานี้
-    # daemon=True: ถ้าการอ่านค้าง thread นั้นไม่กันโปรแกรมปิด
-    thread = threading.Thread(target=read, daemon=True)
+    thread = threading.Thread(target=run, daemon=True)
     thread.start()
     thread.join(timeout)
     if thread.is_alive():
         raise TimeoutError()
     if "error" in result:
         raise result["error"]
-    return result["doc"]
+    return result["value"]
 
 
 def rules_from_doc(doc):
@@ -291,7 +301,7 @@ HISTORY_COLLECTION = "tax_rules_history"
 
 # เวลารอบันทึกสูงสุด — begin + อ่าน active + อ่านประวัติ + commit ในโปรเซสที่ต่อ Firestore แล้ว
 # (อ่านครั้งแรกหลังเปิดโปรแกรมวัดได้ราว 0.5 วินาที) หน้า admin ไม่อยู่ในงบ 5 วินาทีของ webhook
-# begin/commit ของไลบรารีไม่รับ timeout จึงครอบทั้งก้อนด้วย thread แบบ read_config_doc
+# begin/commit ของไลบรารีไม่รับ timeout จึงครอบทั้งก้อนด้วย thread (_call_with_timeout ตัวเดียวกับ read_config_doc)
 SAVE_TIMEOUT_SECONDS = 15.0
 
 # ลายนิ้วมือของ "ยังไม่มี doc"
@@ -331,26 +341,15 @@ def save_config(db, rules, base, reference, note):
     from google.cloud import firestore
 
     timeout = SAVE_TIMEOUT_SECONDS
-    result = {}
 
     def run():
-        try:
-            # transactional ของไลบรารี: ถ้า commit ชนกับการเขียนอื่น (Aborted) จะเรียก _save_in_transaction ใหม่
-            # สูงสุด 5 รอบ อ่านค่าใหม่ทุกรอบ — error อื่นยกเลิก transaction แล้วโยนต่อ ไม่มี doc ไหนถูกเขียน
-            result["value"] = firestore.transactional(_save_in_transaction)(
-                db.transaction(), db, rules, base, reference, note, firestore.SERVER_TIMESTAMP)
-        except Exception as e:
-            result["error"] = e
+        # transactional ของไลบรารี: ถ้า commit ชนกับการเขียนอื่น (Aborted) จะเรียก _save_in_transaction ใหม่
+        # สูงสุด 5 รอบ อ่านค่าใหม่ทุกรอบ — error อื่นยกเลิก transaction แล้วโยนต่อ ไม่มี doc ไหนถูกเขียน
+        return firestore.transactional(_save_in_transaction)(
+            db.transaction(), db, rules, base, reference, note, firestore.SERVER_TIMESTAMP)
 
-    thread = threading.Thread(target=run, daemon=True)
-    thread.start()
-    thread.join(timeout)
-    if thread.is_alive():
-        # ไม่รู้ผล: commit อาจสำเร็จทีหลัง (ถ้าสำเร็จก็ได้ครบทั้งสอง doc) ผู้ใช้ต้องเปิดหน้า admin ตรวจ
-        raise TimeoutError()
-    if "error" in result:
-        raise result["error"]
-    return result["value"]
+    # เกินเวลา (TimeoutError) = ไม่รู้ผล: commit อาจสำเร็จทีหลัง (ถ้าสำเร็จก็ได้ครบทั้งสอง doc) ผู้ใช้ต้องเปิดหน้า admin ตรวจ
+    return _call_with_timeout(run, timeout)
 
 
 def _save_in_transaction(transaction, db, rules, base, reference, note, server_timestamp):
