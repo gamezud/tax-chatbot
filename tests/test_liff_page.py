@@ -106,6 +106,35 @@ def test_liff_id_status_printed_at_startup():
     assert "print(liff_id_status_line())" in main_block.split("app.run(", 1)[0]
 
 
+@pytest.mark.parametrize("value", [None, "", "0", "true", " "], ids=["unset", "empty", "zero", "true", "space"])
+def test_debug_panel_hidden_unless_tax_debug(get_page, monkeypatch, value):
+    # ตอนเดโมไม่ตั้ง TAX_DEBUG → ไม่มี "ข้อมูลสำหรับทดสอบ" (OS, เวอร์ชัน LINE, ขนาดรูปของผู้ใช้)
+    if value is None:
+        monkeypatch.delenv("TAX_DEBUG", raising=False)
+    else:
+        monkeypatch.setenv("TAX_DEBUG", value)
+    html = get_page()
+    assert 'id="debug"' not in html
+    assert 'id="debug-text"' not in html
+
+
+def test_debug_panel_shown_when_tax_debug_on(get_page, monkeypatch):
+    monkeypatch.setenv("TAX_DEBUG", "1")
+    html = get_page()
+    assert '<details id="debug">' in html
+    assert '<pre id="debug-text"></pre>' in html
+
+
+def test_set_debug_skips_without_panel(get_page, monkeypatch):
+    # ไม่มี JS test — เช็กแบบ substring ว่า setDebug ออกก่อนเขียน ถ้าไม่มี panel
+    # ไม่งั้นได้ TypeError ที่ error handler แสดงเป็นข้อความสีแดงบนจอผู้ใช้
+    monkeypatch.delenv("TAX_DEBUG", raising=False)
+    body = get_page().split("function setDebug(key, value) {", 1)[1].split("\n    }", 1)[0]
+    guard = 'if (!document.getElementById("debug-text")) return;'
+    assert guard in body
+    assert body.index(guard) < body.index('setText("debug-text"')
+
+
 @pytest.mark.parametrize("unsafe",["innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"])
 def test_no_html_injection_apis(get_page, unsafe):
     # ข้อความจากเซิร์ฟเวอร์หรือผู้ใช้ใส่ลงหน้าด้วย textContent เท่านั้น

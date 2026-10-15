@@ -56,10 +56,13 @@
 
   <div id="errors"></div>
 
+  {# แสดงเฉพาะเมื่อตั้ง TAX_DEBUG=1 — มี OS เวอร์ชัน LINE และขนาดรูปของผู้ใช้ ซ่อนตอนเดโม #}
+  {% if show_debug %}
   <details id="debug">
     <summary>ข้อมูลสำหรับทดสอบ</summary>
     <pre id="debug-text"></pre>
   </details>
+  {% endif %}
 
   <script>
     // tojson ให้สตริง JS ที่ escape แล้ว หรือ null ถ้าไม่ได้ตั้ง LIFF_ID
@@ -121,7 +124,10 @@
       document.getElementById("errors").appendChild(line);
     }
 
+    // ไม่มี panel (TAX_DEBUG ปิด) → ไม่ทำอะไร ถ้าเขียนลง element ที่ไม่มี จะเกิด TypeError
+    // แล้ว error handler ข้างล่างแสดงเป็นข้อความสีแดงบนจอผู้ใช้
     function setDebug(key, value) {
+      if (!document.getElementById("debug-text")) return;
       debugInfo[key] = value;
       setText("debug-text", Object.keys(debugInfo).map((k) => k + ": " + debugInfo[k]).join("\n"));
     }
@@ -209,7 +215,7 @@
 
     // ย่อด้วย canvas แล้วได้ JPEG ใหม่ที่ไม่มี EXIF — รูปต้องถูกหมุนตาม EXIF ก่อนวาด
     // เบราว์เซอร์ปัจจุบันหมุนให้เอง (CSS image-orientation: from-image เป็นค่าเริ่มต้น และ drawImage ใช้ค่านี้)
-    // ยังไม่ได้ยืนยันใน LINE บนมือถือจริง → ดู "ข้อมูลสำหรับทดสอบ" และดูว่า preview ตั้งตรงไหม
+    // ยังไม่ได้ยืนยันใน LINE บนมือถือจริง → ตั้ง TAX_DEBUG=1 แล้วดู "ข้อมูลสำหรับทดสอบ" และดูว่า preview ตั้งตรงไหม
     // preview คือรูปที่ถูกส่งจริง ถ้า preview ตั้งตรง เซิร์ฟเวอร์ก็ได้รูปตั้งตรง
     async function resizeImage(file) {
       setDebug("file", (file.type || "(ไม่ทราบชนิด)") + ", " + Math.round(file.size / 1024) + " KB");

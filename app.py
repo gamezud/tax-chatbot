@@ -21,6 +21,8 @@ from utils import tax_rules, rules_store
 from utils.pdf_generator import generate_tax_pdf
 # import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
 from utils import ocr, liff_auth
+# สวิตช์ TAX_DEBUG — import เป็นโมดูลแบบเดียวกัน อ่าน env ตอนถูกเรียก
+from utils import debug_log
 from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
 from utils.deduction_guard import check_deduction_parameters, has_number
 # หน้า /admin อยู่ในไฟล์แยก — ตัวกันในไฟล์นั้นทำงานเฉพาะ path /admin ไม่กระทบ /webhook ที่มาทาง ngrok
@@ -52,7 +54,9 @@ def liff_donation():
     # หน้า LIFF อ่านยอดเงินบริจาคจากรูป แล้วส่งข้อความเข้าแชตแทนผู้ใช้
     # อ่าน LIFF ID ตอนถูกเรียก ไม่ hardcode — ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
     liff_id = os.environ.get('LIFF_ID', '').strip() or None
-    return render_template('liff_donation.html', liff_id=liff_id)
+    # "ข้อมูลสำหรับทดสอบ" (OS, เวอร์ชัน LINE, ขนาดรูป, EXIF) แสดงเฉพาะเมื่อตั้ง TAX_DEBUG=1
+    return render_template('liff_donation.html', liff_id=liff_id,
+                           show_debug=debug_log.debug_enabled())
 
 # ขนาดไฟล์รูปสูงสุดของ /liff/ocr — ตั้งเฉพาะ route นี้ผ่าน request.max_content_length
 # ห้ามตั้ง app.config['MAX_CONTENT_LENGTH'] เพราะจะมีผลกับ /webhook ด้วย
@@ -691,4 +695,5 @@ if __name__ == '__main__':
     print(f"\n🔗 อัปเดต URL ใน Dialogflow: {PUBLIC_URL}/webhook\n")
     print(liff_id_status_line())
     print(admin_status_line())
+    print(debug_log.debug_status_line())
     app.run(port=5000, debug=False)
