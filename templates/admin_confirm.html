@@ -15,11 +15,17 @@
     tr.big-change { background: #FEF3C7; }
     .big-change-note { color: #B45309; display: block; font-size: .9rem; }
     .hint { color: #64748B; font-size: .9rem; }
+    .banner { padding: .6rem .8rem; border-radius: .25rem; }
+    .warn { background: #FEF3C7; }
   </style>
 </head>
 <body>
 <main>
   <h1>ยืนยันการแก้ไข</h1>
+  {% if overwrite_invalid %}
+  <p class="banner warn" id="overwrite-invalid">ค่าที่บันทึกใน Firestore ผิด การบันทึกนี้จะเขียนทับทั้งก้อน
+    {% if not rows %}(ค่าเท่าค่าตั้งต้น — บันทึกเพื่อเขียนทับค่าที่ผิดใน Firestore){% endif %}</p>
+  {% endif %}
   <p>รายการที่เปลี่ยนจากค่าที่บันทึกล่าสุด ({{ rows|length }} รายการ)</p>
   <table id="changes">
     <tr><th>รายการ</th><th>ค่าเดิม</th><th>ค่าใหม่</th></tr>
@@ -39,15 +45,16 @@
 
   <form method="post" action="{{ url_for('admin.edit') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-    <input type="hidden" name="base_version" value="{{ base_version }}">
+    <input type="hidden" name="base_token" value="{{ base_token }}">
     {% for name, value in values.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">
     {% endfor %}
     <input type="hidden" name="source_reference" value="{{ reference }}">
     <input type="hidden" name="note" value="{{ note }}">
     <button type="submit" name="action" value="back">กลับไปแก้</button>
-    <button type="button" id="confirm-save" disabled>ยืนยันบันทึก</button>
+    {# ฟอร์มเดียวกัน ปุ่มนี้ส่งไป /admin/save ซึ่งตรวจค่าทั้งหมดใหม่ #}
+    <button type="submit" formaction="{{ url_for('admin.save') }}" id="confirm-save">ยืนยันบันทึก</button>
   </form>
-  <p class="hint">ปุ่มยืนยันบันทึกยังไม่เปิดใช้ · ค่าที่บันทึกแล้วมีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
+  <p class="hint">ค่าที่บันทึกแล้วมีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
 </main>
 </body>
 </html>

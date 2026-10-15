@@ -228,7 +228,8 @@ def _config_db():
 
 
 def saved_state():
-    """ค่าที่บันทึกล่าสุด: {"exists", "version" (0 ถ้ายังไม่มี doc), "override" (ใช้เติมฟอร์มและเทียบ), "problem"}
+    """ค่าที่บันทึกล่าสุด: {"exists", "version" (0 ถ้ายังไม่มี doc หรือ version ผิดรูป ใช้กับแถบรอรีสตาร์ต),
+    "base" (ลายนิ้วมือของ doc ส่งไปกับฟอร์ม ใช้เทียบตอนบันทึก), "override" (ใช้เติมฟอร์มและเทียบ), "problem"}
     อ่านไม่ได้โยน SavedRulesUnavailable — ผู้เรียกห้ามเปิดฟอร์มด้วยค่าตั้งต้นแทน
     เพราะถ้าบันทึกจากฟอร์มนั้น ค่าที่แก้ไว้ใน Firestore จะถูกทับด้วยค่าตั้งต้นโดยไม่มีใครตั้งใจ
     อ่านด้วย read_config_doc ตัวเดียวกับตัวโหลด (timeout เดียวกัน) — หน้า admin ไม่อยู่ในงบ 5 วินาทีของ webhook"""
@@ -243,17 +244,19 @@ def saved_state():
         raise SavedRulesUnavailable() from e
 
     defaults = rules_store.to_override(rules_store.DEFAULT_TAX_RULES)
+    base = rules_store.base_token(doc)
     if doc is None:
-        return {"exists": False, "version": 0, "override": defaults, "problem": None}
+        return {"exists": False, "version": 0, "base": base, "override": defaults, "problem": None}
 
     version = doc.get("version") if isinstance(doc, dict) else None
     version = version if isinstance(version, int) and not isinstance(version, bool) and version >= 1 else 0
     rules, errors = rules_store.rules_from_doc(doc)
     if errors:
-        # ตัวโหลดก็ปฏิเสธ doc นี้ (เซิร์ฟเวอร์ใช้ค่าตั้งต้นอยู่) — เติมค่าตั้งต้นให้แก้ใหม่ได้ base_version ยังเป็นของ doc นี้
-        return {"exists": True, "version": version, "override": defaults,
+        # ตัวโหลดก็ปฏิเสธ doc นี้ (เซิร์ฟเวอร์ใช้ค่าตั้งต้นอยู่) — เติมค่าตั้งต้นให้แก้ใหม่ได้ base ยังเป็นของ doc นี้
+        return {"exists": True, "version": version, "base": base, "override": defaults,
                 "problem": "ค่าที่บันทึกใน Firestore ผิด ระบบจึงใช้ค่าตั้งต้นอยู่ ฟอร์มนี้เติมค่าตั้งต้นไว้ให้"}
-    return {"exists": True, "version": version, "override": rules_store.to_override(rules), "problem": None}
+    return {"exists": True, "version": version, "base": base, "override": rules_store.to_override(rules),
+            "problem": None}
 
 
 def pending_restart(saved):
@@ -262,36 +265,46 @@ def pending_restart(saved):
 
 
 # ---------------------------------------------------------------------------
-# ฟอร์มแก้ค่า + หน้ายืนยัน (5A: ยังไม่บันทึก)
+# ฟอร์มแก้ค่า + หน้ายืนยัน
 # ---------------------------------------------------------------------------
+# ข้อความหน้า 503 — อ่านไม่ได้ตั้งแต่ต้น (ไม่มีอะไรถูกเขียนแน่นอน) กับบันทึกแล้วล้มหรือเกินเวลา (อาจบันทึกไปแล้ว)
+UNREADABLE_MESSAGE = ("อ่านค่าที่บันทึกไว้ใน Firestore ไม่ได้ (ไม่ได้เชื่อมต่อ หรืออ่านไม่สำเร็จ) "
+                      "ระบบจึงไม่เปิดฟอร์ม เพราะถ้าเติมค่าตั้งต้นแทนแล้วบันทึก ค่าที่แก้ไว้เดิมจะถูกทับ "
+                      "กรุณาตรวจการเชื่อมต่อแล้วลองใหม่")
+SAVE_UNREADABLE_MESSAGE = ("อ่านค่าที่บันทึกไว้ใน Firestore ไม่ได้ (ไม่ได้เชื่อมต่อ หรืออ่านไม่สำเร็จ) "
+                           "ระบบจึงยังไม่ได้บันทึกอะไร กรุณาตรวจการเชื่อมต่อแล้วลองใหม่ครับ")
+SAVE_UNKNOWN_MESSAGE = ("บันทึกไม่สำเร็จหรือไม่แน่ใจว่าบันทึกแล้ว "
+                        "กรุณาเปิดหน้าผู้ดูแลตรวจเวอร์ชันก่อนลองใหม่ครับ")
+CONFLICT_MESSAGE = "มีการบันทึกจากที่อื่นหลังคุณเปิดฟอร์ม กรุณาเปิดฟอร์มใหม่ครับ"
+
+
 @admin_bp.route("/edit", methods=["GET", "POST"])
 def edit():
     try:
         saved = saved_state()
     except SavedRulesUnavailable:
-        return render_template("admin_unavailable.html"), 503
+        return render_template("admin_unavailable.html", title="แก้ตัวเลขภาษีไม่ได้ตอนนี้",
+                               message=UNREADABLE_MESSAGE), 503
 
     if request.method == "GET":
-        return _render_form(saved, admin_form.values_from_override(saved["override"]), saved["version"])
+        return _render_form(saved, admin_form.values_from_override(saved["override"]), saved["base"])
 
     if request.form.get("action") == "back":
-        # "กลับไปแก้" จากหน้ายืนยัน: เติมค่าที่ส่งมาคืนโดยไม่ตรวจ base_version เป็นของฟอร์มเดิม
+        # "กลับไปแก้" จากหน้ายืนยัน: เติมค่าที่ส่งมาคืนโดยไม่ตรวจ base_token เป็นของฟอร์มเดิม
         values = {name: request.form.get(name, "") for name, _, _ in admin_form.all_fields()}
-        return _render_form(saved, values, request.form.get("base_version", ""),
+        return _render_form(saved, values, request.form.get("base_token", ""),
                             reference=request.form.get("source_reference", ""), note=request.form.get("note", ""))
 
     result = admin_form.parse_form(request.form)
     if result["override"] is None:
-        # ผิด: แสดงค่าที่ผู้ใช้กรอกคืน (ไม่ล้าง) พร้อมข้อผิดพลาดข้างช่อง
-        return _render_form(saved, result["raw"], request.form.get("base_version", ""),
-                            reference=request.form.get("source_reference", ""), note=request.form.get("note", ""),
-                            field_errors=result["field_errors"], general_errors=result["general_errors"])
+        return _render_form_errors(saved, result)
 
     # เทียบกับค่าที่บันทึกล่าสุด ไม่คำนวณภาษีตัวอย่าง — การสลับ tax_rules.TAX_RULES ชั่วคราวจะทำให้
     # webhook ที่เข้ามาพร้อมกัน (Flask รับหลาย request พร้อมกัน) คิดภาษีด้วยค่าที่ยังไม่ได้ยืนยัน
     rows = admin_form.changes(saved["override"], result["override"])
-    if not rows:
-        return _render_form(saved, result["raw"], result["base_version"],
+    # doc ที่ถูกปฏิเสธ (saved["problem"]) ไปหน้ายืนยันได้แม้ค่าเท่าค่าตั้งต้น — ไม่อย่างนั้นแก้ doc ผิดกลับเป็นค่าตั้งต้นไม่ได้
+    if not rows and not saved["problem"]:
+        return _render_form(saved, result["raw"], result["base_token"],
                             reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน")
     return render_template(
         "admin_confirm.html",
@@ -299,19 +312,64 @@ def edit():
         values=admin_form.values_from_override(result["override"]),
         reference=result["reference"],
         note=result["note"],
-        base_version=result["base_version"],
+        base_token=result["base_token"],
+        overwrite_invalid=bool(saved["problem"]),
         csrf_token=csrf_token(),
         ratio=admin_form.CHANGE_WARNING_RATIO,
     )
 
 
-def _render_form(saved, values, base_version, reference="", note="", field_errors=None, general_errors=None,
+@admin_bp.route("/save", methods=["POST"])
+def save():
+    """ปุ่ม "ยืนยันบันทึก" ของหน้ายืนยัน — ตรวจค่าทั้งหมดใหม่ด้วยเส้นทางเดียวกับหน้ายืนยัน ไม่เชื่อว่าผ่านมาแล้ว
+    (hidden field แก้ได้จากเบราว์เซอร์) แล้วบันทึกใน transaction เดียว
+    ไม่แตะ tax_rules.TAX_RULES / RULES_INFO — ค่าที่บันทึกมีผลหลังรีสตาร์ตเท่านั้น"""
+    try:
+        saved = saved_state()
+    except SavedRulesUnavailable:
+        return render_template("admin_unavailable.html", title="บันทึกไม่ได้ตอนนี้",
+                               message=SAVE_UNREADABLE_MESSAGE), 503
+
+    result = admin_form.parse_form(request.form)
+    if result["override"] is None:
+        return _render_form_errors(saved, result), 400
+
+    try:
+        outcome = rules_store.save_config(_config_db(), result["rules"], result["base_token"],
+                                          result["reference"], result["note"])
+    except rules_store.VersionConflict:
+        print("⚠️ [ADMIN] ไม่บันทึกค่าภาษี — doc เปลี่ยนหลังเปิดฟอร์ม")
+        return render_template("admin_conflict.html", message=CONFLICT_MESSAGE), 409
+    except rules_store.NoChanges:
+        return _render_form(saved, result["raw"], result["base_token"],
+                            reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน")
+    except Exception as e:
+        # ไม่พิมพ์ข้อความของ exception (อาจมีเนื้อหาของ doc) — บอกแค่ชนิด
+        print(f"❌ [ADMIN] บันทึกค่าภาษีไม่สำเร็จหรือไม่รู้ผล ({type(e).__name__})")
+        return render_template("admin_unavailable.html", title="บันทึกไม่สำเร็จ",
+                               message=SAVE_UNKNOWN_MESSAGE), 503
+
+    # log นอก transaction (ฟังก์ชันใน transaction ถูกเรียกซ้ำได้) — ชื่อช่องเท่านั้น ไม่มีค่า แหล่งอ้างอิง หรือหมายเหตุ
+    names = [row["name"] for row in admin_form.changes(outcome["previous_override"], result["override"])]
+    print(f"✅ [ADMIN] บันทึกค่าภาษีเวอร์ชัน {outcome['version']} (แก้ {len(names)} รายการ: {', '.join(names)})")
+    return render_template("admin_saved.html", version=outcome["version"],
+                           reference=result["reference"], note=result["note"])
+
+
+def _render_form_errors(saved, result):
+    # ผิด: แสดงค่าที่ผู้ใช้กรอกคืน (ไม่ล้าง) พร้อมข้อผิดพลาดข้างช่อง
+    return _render_form(saved, result["raw"], request.form.get("base_token", ""),
+                        reference=request.form.get("source_reference", ""), note=request.form.get("note", ""),
+                        field_errors=result["field_errors"], general_errors=result["general_errors"])
+
+
+def _render_form(saved, values, base_token, reference="", note="", field_errors=None, general_errors=None,
                  notice=None):
     return render_template(
         "admin_edit.html",
         groups=admin_form.form_fields(),
         values=values,
-        base_version=base_version,
+        base_token=base_token,
         reference=reference,
         note=note,
         field_errors=field_errors or {},

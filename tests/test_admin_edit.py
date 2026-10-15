@@ -50,7 +50,8 @@ def client():
 def form_data(**changes):
     """ฟอร์มที่เติมค่าตั้งต้น + แหล่งอ้างอิง แล้วแทนบางช่อง (ชื่อช่องมีจุด จึงส่งผ่าน dict)"""
     data = admin_form.values_from_override(DEFAULT_OVERRIDE)
-    data.update({"csrf_token": TOKEN, "base_version": "0", "source_reference": REFERENCE, "note": ""})
+    data.update({"csrf_token": TOKEN, "base_token": rules_store.NO_DOC_TOKEN, "source_reference": REFERENCE,
+                 "note": ""})
     data.update(changes)
     return data
 
@@ -148,22 +149,23 @@ def test_get_form_filled_with_defaults_when_no_doc(client, saved):
     html = resp.get_data(as_text=True)
     assert resp.status_code == 200
     assert input_values(html) == admin_form.values_from_override(DEFAULT_OVERRIDE)
-    assert '<input type="hidden" name="base_version" value="0">' in html
+    assert '<input type="hidden" name="base_token" value="none">' in html
     assert 'id="pending-restart"' not in html
 
 
 def test_get_form_filled_from_saved_doc(client, saved):
-    saved(config_doc({"deduction": {"personal": 70000.0}}, version=4))
+    doc = config_doc({"deduction": {"personal": 70000.0}}, version=4)
+    saved(doc)
     html = client.get("/admin/edit").get_data(as_text=True)
     assert input_values(html)["deduction.personal"] == "70,000"
     assert input_values(html)["deduction.spouse"] == "60,000"
-    assert '<input type="hidden" name="base_version" value="4">' in html
+    assert f'<input type="hidden" name="base_token" value="{rules_store.base_token(doc)}">' in html
 
 
 def test_form_html_round_trip_has_no_changes(client, saved):
     # ค่าที่เติมใน HTML ส่งกลับไปตรง ๆ ต้องไม่มีอะไรเปลี่ยน (การแสดงผลและแปลงกลับไม่ทำค่าเพี้ยน)
     html = client.get("/admin/edit").get_data(as_text=True)
-    data = dict(input_values(html), csrf_token=TOKEN, base_version="0", source_reference=REFERENCE)
+    data = dict(input_values(html), csrf_token=TOKEN, base_token=rules_store.NO_DOC_TOKEN, source_reference=REFERENCE)
     resp, html = post_edit(client, data)
     assert not is_confirm_page(html)
     assert 'id="notice">ไม่มีค่าที่เปลี่ยน<' in html
@@ -212,8 +214,10 @@ def test_note_max_300(client, saved):
     assert is_confirm_page(html)
 
 
-def test_bad_base_version_is_general_error(client, saved):
-    _, html = post_edit(client, form_data(**{"deduction.personal": "70,000", "base_version": "abc"}))
+@pytest.mark.parametrize("token", ["abc", "", "0", "4", "A" * 64, "a" * 63, "a" * 65])
+def test_bad_base_token_is_general_error(client, saved, token):
+    # รับเฉพาะรูปที่ rules_store.base_token สร้าง ("none" หรือ sha256 hex ตัวเล็ก 64 ตัว) — เลข version แบบเดิมไม่รับแล้ว
+    _, html = post_edit(client, form_data(**{"deduction.personal": "70,000", "base_token": token}))
     assert 'id="general-errors"' in html and not is_confirm_page(html)
 
 
@@ -241,13 +245,14 @@ def test_confirm_shows_only_changed_rows(client, saved):
     assert "60,000 บาท" in html and "70,000 บาท" in html
     assert "60 %" in html and "50 %" in html
     assert REFERENCE in html and "หมายเหตุทดสอบ" in html
-    assert '<button type="button" id="confirm-save" disabled>' in html  # 5A ยังบันทึกไม่ได้
+    assert '<button type="submit" formaction="/admin/save" id="confirm-save">' in html  # 5B เปิดปุ่มแล้ว
 
 
 def test_confirm_compares_with_saved_doc_not_defaults(client, saved):
-    saved(config_doc({"deduction": {"personal": 70000.0}}, version=2))
+    doc = config_doc({"deduction": {"personal": 70000.0}}, version=2)
+    saved(doc)
     _, html = post_edit(client, form_data(**{"deduction.personal": "70,000", "deduction.spouse": "65,000",
-                                             "base_version": "2"}))
+                                             "base_token": rules_store.base_token(doc)}))
     # personal เท่ากับค่าที่บันทึกแล้ว จึงไม่นับว่าเปลี่ยน
     assert [name for _, name in confirm_rows(html)] == ["deduction.spouse"]
 
@@ -289,7 +294,7 @@ def test_confirm_page_carries_all_values_for_next_step(client, saved):
     expected = admin_form.values_from_override(DEFAULT_OVERRIDE)
     expected["deduction.personal"] = "70,000"
     assert {k: unescape(v) for k, v in hidden.items() if k in expected} == expected
-    assert unescape(hidden["source_reference"]) == REFERENCE and hidden["base_version"] == "0"
+    assert unescape(hidden["source_reference"]) == REFERENCE and hidden["base_token"] == rules_store.NO_DOC_TOKEN
 
 
 def test_confirm_does_not_touch_tax_rules(client, saved):
@@ -335,11 +340,12 @@ def test_admin_page_still_opens_when_firestore_unreadable(client, saved):
 
 
 def test_invalid_saved_doc_fills_defaults_with_warning(client, saved):
-    saved(config_doc({"salary_capp": 1.0}, version=5))  # ตัวโหลดก็ปฏิเสธ doc นี้
+    doc = config_doc({"salary_capp": 1.0}, version=5)  # ตัวโหลดก็ปฏิเสธ doc นี้
+    saved(doc)
     html = client.get("/admin/edit").get_data(as_text=True)
     assert 'id="saved-problem"' in html
     assert input_values(html) == admin_form.values_from_override(DEFAULT_OVERRIDE)
-    assert '<input type="hidden" name="base_version" value="5">' in html
+    assert f'<input type="hidden" name="base_token" value="{rules_store.base_token(doc)}">' in html
 
 
 # ---------------------------------------------------------------------------

@@ -7,6 +7,7 @@
 ชื่อช่องในฟอร์มคือชื่อ key แบบมีจุด เช่น "deduction.personal" และขั้นบันไดเป็น "tax_brackets.3.upper"
 ซึ่งตรงกับ RuleError.field ที่ build_rules คืนมา จึงแสดงข้อผิดพลาดข้างช่องได้ตรง ๆ
 """
+import re
 from decimal import Decimal, InvalidOperation
 
 from utils import rules_store
@@ -150,7 +151,7 @@ def parse_form(form):
     """แปลงฟอร์มทั้งหมด คืน dict:
     raw: ข้อความที่ผู้ใช้กรอก (ใช้เติมฟอร์มคืนเมื่อผิด) · override / rules: None ถ้าผิด
     field_errors: {ชื่อช่อง: ข้อความ} · general_errors: ข้อผิดพลาดที่ไม่ได้อยู่ที่ช่องเดียว
-    reference / note: ตัดช่องว่างหัวท้ายแล้ว · base_version: int หรือ None ถ้าผิดรูป"""
+    reference / note: ตัดช่องว่างหัวท้ายแล้ว · base_token: ลายนิ้วมือของ doc ที่ฟอร์มเห็น หรือ None ถ้าผิดรูป"""
     raw = {name: form.get(name, "") for name, _, _ in all_fields()}
     field_errors, general_errors = {}, []
     numbers = {}
@@ -169,8 +170,8 @@ def parse_form(form):
     if len(note) > NOTE_MAX_LENGTH:
         field_errors["note"] = f"หมายเหตุต้องไม่เกิน {NOTE_MAX_LENGTH} ตัวอักษร"
 
-    base_version = _parse_base_version(form.get("base_version", ""))
-    if base_version is None:
+    base_token = _parse_base_token(form.get("base_token", ""))
+    if base_token is None:
         general_errors.append("ฟอร์มไม่สมบูรณ์ กรุณาเปิดหน้าแก้ค่าใหม่")
 
     override = rules = None
@@ -191,7 +192,7 @@ def parse_form(form):
         override = rules = None
     return {"raw": raw, "override": override, "rules": rules, "field_errors": field_errors,
             "general_errors": general_errors, "reference": reference, "note": note,
-            "base_version": base_version}
+            "base_token": base_token}
 
 
 def rule_error_text(error):
@@ -201,12 +202,12 @@ def rule_error_text(error):
     return error.detail
 
 
-def _parse_base_version(text):
-    try:
-        version = int(str(text).strip())
-    except ValueError:
-        return None
-    return version if version >= 0 else None
+def _parse_base_token(text):
+    """รูปที่ rules_store.base_token สร้างเท่านั้น: "none" หรือ sha256 แบบ hex 64 ตัว"""
+    text = str(text).strip()
+    if text == rules_store.NO_DOC_TOKEN or re.fullmatch(r"[0-9a-f]{64}", text):
+        return text
+    return None
 
 
 def _assemble(numbers):

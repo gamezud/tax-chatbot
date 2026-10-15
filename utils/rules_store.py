@@ -8,6 +8,8 @@
 กติกา: ผิดข้อเดียว → ปฏิเสธทั้งชุด (build_rules คืน None) ผู้เรียกต้องใช้ค่าตั้งต้นแทน
 """
 import copy
+import hashlib
+import json
 import math
 import threading
 import time
@@ -279,6 +281,121 @@ def rules_from_doc(doc):
     if errors:
         return None, errors
     return rules, []
+
+
+# ---------------------------------------------------------------------------
+# บันทึกค่าที่แก้จากหน้า admin — เขียน active และประวัติใน transaction เดียว (สำเร็จพร้อมกันหรือไม่สำเร็จทั้งคู่)
+# ---------------------------------------------------------------------------
+# ประวัติ: tax_rules_history/{version} เนื้อหาเดียวกับ active + previous_version เขียนด้วย create (ห้ามทับของเดิม)
+HISTORY_COLLECTION = "tax_rules_history"
+
+# เวลารอบันทึกสูงสุด — begin + อ่าน active + อ่านประวัติ + commit ในโปรเซสที่ต่อ Firestore แล้ว
+# (อ่านครั้งแรกหลังเปิดโปรแกรมวัดได้ราว 0.5 วินาที) หน้า admin ไม่อยู่ในงบ 5 วินาทีของ webhook
+# begin/commit ของไลบรารีไม่รับ timeout จึงครอบทั้งก้อนด้วย thread แบบ read_config_doc
+SAVE_TIMEOUT_SECONDS = 15.0
+
+# ลายนิ้วมือของ "ยังไม่มี doc"
+NO_DOC_TOKEN = "none"
+
+
+class VersionConflict(Exception):
+    """doc ใน Firestore ไม่ใช่ตัวเดียวกับที่ฟอร์มเห็นตอนเปิด (มีการบันทึกหรือแก้จากที่อื่นในระหว่างนั้น)"""
+
+
+class NoChanges(Exception):
+    """ค่าที่จะบันทึกเท่ากับ doc ล่าสุด"""
+
+
+def valid_version(doc):
+    """version ของ doc ถ้าถูกรูป (int ≥ 1) ไม่อย่างนั้น None"""
+    version = doc.get("version") if isinstance(doc, dict) else None
+    return version if _is_int(version) and version >= 1 else None
+
+
+def base_token(doc):
+    """ลายนิ้วมือของ doc ที่ฟอร์มเห็น — ส่งไปกับฟอร์มแล้วเทียบใหม่ใน transaction ตอนบันทึก
+    hash ทั้ง doc ไม่ใช่แค่ version: จับได้ทั้งการบันทึกจากแท็บอื่น และการแก้ใน Firebase Console ที่ไม่เปลี่ยนเลข version
+    และใช้ได้กับ doc ที่ version ผิดรูป (ถ้าเทียบแค่ version doc แบบนั้นจะเทียบไม่ได้ แก้ผ่านเว็บไม่ได้เลย)
+    default=repr: ค่าที่ json ไม่รู้จัก (เช่น เวลาจาก Firestore) แปลงเป็นข้อความที่คงที่สำหรับค่าเดียวกัน"""
+    if doc is None:
+        return NO_DOC_TOKEN
+    text = json.dumps(doc, sort_keys=True, ensure_ascii=False, default=repr)
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def save_config(db, rules, base, reference, note):
+    """บันทึก rules (ผ่าน build_rules มาแล้ว) เป็น active + ประวัติ คืน {"version", "previous_override"}
+    โยน VersionConflict / NoChanges / TimeoutError (ไม่รู้ผล) / exception อื่นจาก Firestore
+    ห้ามเรียกใน webhook (กฎเหล็กข้อ 1) — ใช้จากหน้า admin เท่านั้น"""
+    # import ตอนเรียก: ไฟล์นี้ไม่ผูกกับ Firestore ตอน import (ตัวโหลดรับ db เป็น argument)
+    from google.cloud import firestore
+
+    timeout = SAVE_TIMEOUT_SECONDS
+    result = {}
+
+    def run():
+        try:
+            # transactional ของไลบรารี: ถ้า commit ชนกับการเขียนอื่น (Aborted) จะเรียก _save_in_transaction ใหม่
+            # สูงสุด 5 รอบ อ่านค่าใหม่ทุกรอบ — error อื่นยกเลิก transaction แล้วโยนต่อ ไม่มี doc ไหนถูกเขียน
+            result["value"] = firestore.transactional(_save_in_transaction)(
+                db.transaction(), db, rules, base, reference, note, firestore.SERVER_TIMESTAMP)
+        except Exception as e:
+            result["error"] = e
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    thread.join(timeout)
+    if thread.is_alive():
+        # ไม่รู้ผล: commit อาจสำเร็จทีหลัง (ถ้าสำเร็จก็ได้ครบทั้งสอง doc) ผู้ใช้ต้องเปิดหน้า admin ตรวจ
+        raise TimeoutError()
+    if "error" in result:
+        raise result["error"]
+    return result["value"]
+
+
+def _save_in_transaction(transaction, db, rules, base, reference, note, server_timestamp):
+    """ถูกเรียกซ้ำได้เมื่อชนกัน — ห้าม print และห้ามแก้ argument
+    Firestore บังคับให้อ่านทั้งหมดก่อนเขียน: อ่าน active และประวัติก่อน แล้วค่อย set/create"""
+    active_ref = db.collection(CONFIG_COLLECTION).document(CONFIG_DOCUMENT)
+    snapshot = next(iter(transaction.get(active_ref, timeout=READ_TIMEOUT_SECONDS, retry=None)))
+    doc = snapshot.to_dict() if snapshot.exists else None
+    if base_token(doc) != base:
+        raise VersionConflict()
+
+    new_override = to_override(rules)
+    if doc is None:
+        previous_override = to_override(DEFAULT_TAX_RULES)
+        doc_rejected = False
+    else:
+        previous_rules, errors = rules_from_doc(doc)
+        doc_rejected = bool(errors)
+        # doc ที่ตัวโหลดปฏิเสธ: ฟอร์มเติมค่าตั้งต้นให้ จึงเทียบกับค่าตั้งต้น
+        previous_override = to_override(DEFAULT_TAX_RULES if doc_rejected else previous_rules)
+    # doc ที่ถูกปฏิเสธบันทึกทับได้แม้ค่าเท่าค่าตั้งต้น ไม่อย่างนั้นแก้ doc ที่ผิดให้กลับเป็นค่าตั้งต้นผ่านเว็บไม่ได้
+    if new_override == previous_override and not doc_rejected:
+        raise NoChanges()
+
+    # เลขใหม่ต้องมากกว่าทั้ง active และทุกเลขในประวัติ — active อาจถูกแก้มือให้เลขต่ำลง หรือ version ผิดรูป
+    # rules_version ใน tax_history จึงชี้ชุดกติกาเดียวเสมอ (order_by คืนเฉพาะ doc ที่มี field version)
+    previous_version = valid_version(doc)
+    history_query = db.collection(HISTORY_COLLECTION).order_by("version")
+    history_versions = [valid_version(s.to_dict()) for s in
+                        transaction.get(history_query, timeout=READ_TIMEOUT_SECONDS, retry=None)]
+    new_version = max([previous_version or 0] + [v for v in history_versions if v is not None]) + 1
+
+    record = {
+        "based_on_tax_year": DEFAULT_TAX_RULES["tax_year"],
+        "version": new_version,
+        "override": new_override,
+        "source_reference": reference,
+        "note": note,
+        "updated_at": server_timestamp,
+    }
+    transaction.set(active_ref, record)
+    # create: ถ้ามี doc เลขนี้อยู่แล้ว (เช่น ถูกสร้างมือโดยไม่มี field version) commit ล้มทั้งก้อน ประวัติเดิมไม่ถูกทับ
+    transaction.create(db.collection(HISTORY_COLLECTION).document(str(new_version)),
+                       {**record, "previous_version": previous_version})
+    return {"version": new_version, "previous_override": previous_override}
 
 
 def _use_defaults(message):

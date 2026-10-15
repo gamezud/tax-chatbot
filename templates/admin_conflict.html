@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — ไม่ได้บันทึก</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 34rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>ไม่ได้บันทึก</h1>
+  <p id="message">{{ message }}</p>
+  <p><a href="{{ url_for('admin.edit') }}">เปิดฟอร์มใหม่</a></p>
+</main>
+</body>
+</html>
