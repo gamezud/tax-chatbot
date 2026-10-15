@@ -205,9 +205,14 @@ def index():
         saved = saved_state()
     except SavedRulesUnavailable:
         saved = None
+    # รายการที่ต่างจากค่าตั้งต้นเป็นชื่อไทยรายช่อง (ขั้นบันไดแยกทีละขั้น) — เทียบจากค่าที่ใช้อยู่ อ่านอย่างเดียว
+    # log [TAX-RULES] ยังใช้ชื่อ key จาก RULES_INFO["changed_keys"] ตามเดิม
+    changed = admin_form.changes(rules_store.to_override(rules_store.DEFAULT_TAX_RULES),
+                                 rules_store.to_override(tax_rules.TAX_RULES))
     return render_template(
         "admin_index.html",
         info=tax_rules.RULES_INFO,
+        changed_labels=[row["label"] for row in changed],
         tax_year=tax_rules.TAX_RULES["tax_year"],
         csrf_token=csrf_token(),
         saved=saved,

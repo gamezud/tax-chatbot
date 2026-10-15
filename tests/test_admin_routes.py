@@ -7,14 +7,17 @@
 ค่าที่ตั้งในเทสไฟล์นี้เป็นข้อความทดแทน ไม่ใช่ hash จริง — เทสไฟล์นี้ไม่ได้ login ด้วยรหัส
 """
 import json
+import re
 from pathlib import Path
 
 import pytest
 
+import admin_form
 import admin_routes
 import app as app_module
 from admin_routes import admin_status_line, is_admin_path, is_local_request, strip_port
-from utils import tax_rules
+from utils import rules_store, tax_rules
+from utils.rules_store import DEFAULT_TAX_RULES
 # fixture mocks แทน Firestore/PDF/RAG (ใช้กับเทส /webhook สาขาสรุปผล) และ db ปลอม
 from test_rules_loading import fake_db, mocks  # noqa: F401
 from test_line_verified_cases import line_payload
@@ -128,13 +131,42 @@ def test_admin_page_local_shows_default_rules_info(admin_on, logged_in):
     assert "ไม่มี" in html
 
 
+def use_changed_rules(monkeypatch, version=7):
+    """แทนค่าที่ใช้อยู่แบบที่ apply_effective_rules ทำ: ค่าลดหย่อนส่วนตัว และเพดานขั้นที่ 3 ต่างจากค่าตั้งต้น"""
+    override = rules_store.to_override(DEFAULT_TAX_RULES)
+    override["deduction"]["personal"] += 10000
+    override["tax_brackets"][2]["upper"] += 1000
+    rules, errors = rules_store.build_rules(override)
+    assert errors == []
+    monkeypatch.setattr(tax_rules, "TAX_RULES", rules)
+    monkeypatch.setattr(tax_rules, "RULES_INFO", {"source": "firestore", "version": version,
+                                                  "changed_keys": rules_store.changed_keys(rules)})
+
+
 def test_admin_page_shows_firestore_rules_info(admin_on, logged_in, monkeypatch):
-    monkeypatch.setattr(tax_rules, "RULES_INFO", {"source": "firestore", "version": 7,
-                                                  "changed_keys": ["deduction.personal", "tax_brackets"]})
+    use_changed_rules(monkeypatch)
     html = logged_in.get("/admin").get_data(as_text=True)
     assert "ค่าที่แก้ไว้ใน Firestore" in html
     assert '<td id="version">7</td>' in html
-    assert "<code>deduction.personal</code>" in html and "<code>tax_brackets</code>" in html
+    # ชื่อไทยรายช่องแบบเดียวกับฟอร์มแก้ค่า ขั้นบันไดแยกทีละขั้น ตามลำดับในฟอร์ม
+    changed = html.split('id="changed-keys"')[1].split("</td>")[0]
+    assert re.findall(r"<li>([^<]*)</li>", changed) == [admin_form.step_label(3, "upper"),
+                                                       admin_form.LABELS["deduction.personal"]]
+
+
+def test_admin_page_has_no_english_key_names(admin_on, logged_in, monkeypatch):
+    # ชื่อ key ภาษาอังกฤษใช้ใน log เท่านั้น หน้า /admin แสดงชื่อไทย
+    use_changed_rules(monkeypatch)
+    html = logged_in.get("/admin").get_data(as_text=True)
+    english_names = {name for name, _, _ in admin_form.all_fields()} | set(admin_form.LABELS)
+    assert [name for name in english_names if name in html] == []
+    assert tax_rules.RULES_INFO["changed_keys"] == ["deduction.personal", "tax_brackets"]  # log ยังได้ชื่อ key
+
+
+def test_admin_page_with_defaults_lists_nothing_changed(admin_on, logged_in):
+    html = logged_in.get("/admin").get_data(as_text=True)
+    changed = html.split('id="changed-keys"')[1].split("</td>")[0]
+    assert "<li>" not in changed and "ไม่มี" in changed
 
 
 def test_admin_page_accepts_ipv6_loopback_with_port(admin_on, client):

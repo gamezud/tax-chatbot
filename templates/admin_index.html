@@ -34,8 +34,8 @@
     <tr>
       <th>รายการที่ต่างจากค่าตั้งต้น</th>
       <td id="changed-keys">
-        {% if info.changed_keys %}
-        <ul>{% for key in info.changed_keys %}<li><code>{{ key }}</code></li>{% endfor %}</ul>
+        {% if changed_labels %}
+        <ul>{% for label in changed_labels %}<li>{{ label }}</li>{% endfor %}</ul>
         {% else %}ไม่มี{% endif %}
       </td>
     </tr>
