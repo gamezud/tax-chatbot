@@ -30,7 +30,9 @@ class FirebaseManager:
                 "tax_payable": report_data.get("tax_payable", 0.0),
                 "withholding_tax": report_data.get("withholding_tax", 0.0),
                 "net_payable": report_data.get("net_payable", 0.0),
-                "pdf_file_url": report_data.get("pdf_file_url", "")
+                "pdf_file_url": report_data.get("pdf_file_url", ""),
+                # ชุดกติกาที่ใช้คำนวณ (version ของค่าที่ระบบ Admin แก้) None = ค่าตั้งต้นในโค้ด
+                "rules_version": report_data.get("rules_version"),
             }
             self.db.collection("tax_history").add(doc_data)
             return True

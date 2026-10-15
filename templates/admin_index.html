@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — ตัวเลขภาษี</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 40rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+    table { border-collapse: collapse; width: 100%; background: #FFFFFF; }
+    th, td { text-align: left; padding: .5rem .75rem; border: 1px solid #CBD5E1; vertical-align: top; }
+    th { width: 14rem; background: #F1F5F9; font-weight: normal; }
+    .note { color: #64748B; font-size: .9rem; margin-top: 1rem; }
+    .banner { padding: .6rem .8rem; border-radius: .25rem; }
+    .warn { background: #FEF3C7; }
+    .error { background: #FEE2E2; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>สถานะตัวเลขภาษีที่เซิร์ฟเวอร์ใช้อยู่</h1>
+  {% include "_admin_banners.html" %}
+  {% if saved is none %}<p class="banner error" id="saved-unavailable">อ่านค่าที่บันทึกไว้ใน Firestore ไม่ได้ตอนนี้</p>{% endif %}
+  <table>
+    <tr><th>ปีภาษี</th><td>{{ tax_year }}</td></tr>
+    <tr>
+      <th>ที่มาของตัวเลข</th>
+      <td id="source">
+        {% if info.source == "firestore" %}ค่าที่แก้ไว้ใน Firestore{% else %}ค่าตั้งต้นในโค้ด (utils/tax_rules.py){% endif %}
+      </td>
+    </tr>
+    <tr><th>เวอร์ชัน</th><td id="version">{{ info.version if info.version is not none else "—" }}</td></tr>
+    <tr>
+      <th>รายการที่ต่างจากค่าตั้งต้น</th>
+      <td id="changed-keys">
+        {% if changed_labels %}
+        <ul>{% for label in changed_labels %}<li>{{ label }}</li>{% endfor %}</ul>
+        {% else %}ไม่มี{% endif %}
+      </td>
+    </tr>
+  </table>
+  <p class="note">ค่าที่แก้มีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
+  <p><a href="{{ url_for('admin.edit') }}" id="edit-link">แก้ตัวเลขภาษี</a>
+    · <a href="{{ url_for('admin.history') }}" id="history-link">ประวัติการแก้ค่า</a></p>
+  <form method="post" action="{{ url_for('admin.logout') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit">ออกจากระบบ</button>
+  </form>
+</main>
+</body>
+</html>

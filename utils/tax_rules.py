@@ -70,3 +70,8 @@ TAX_RULES = {
         "exempt_tax_up_to": 5000.0,
     },
 }
+
+# ที่มาของ TAX_RULES ที่ใช้อยู่ — ค่านี้คือ "ใช้ค่าตั้งต้นในไฟล์นี้"
+# app.apply_effective_rules แทนที่พร้อมกับ TAX_RULES ตอนเปิดเซิร์ฟเวอร์ ถ้ามีค่าที่ระบบ Admin แก้ไว้
+# อ่านแบบเดียวกับ TAX_RULES: `tax_rules.RULES_INFO` ตอนฟังก์ชันถูกเรียก ห้าม from ... import
+RULES_INFO = {"source": "default", "version": None, "changed_keys": []}

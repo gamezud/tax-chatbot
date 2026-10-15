@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — ประวัติการแก้ค่า</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 64rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+    h2 { font-size: 1.1rem; color: #1E3A8A; margin-top: 1.5rem; }
+    table { border-collapse: collapse; width: 100%; background: #FFFFFF; }
+    th, td { text-align: left; padding: .4rem .6rem; border: 1px solid #CBD5E1; vertical-align: top; }
+    th { background: #F1F5F9; font-weight: normal; }
+    td.num { text-align: right; white-space: nowrap; }
+    td table { margin-top: .3rem; font-size: .9rem; }
+    /* ไม่ให้ตัดบรรทัดกลางคำ: เวลา ("10:36 น.") และชื่อรายการในตารางเปลี่ยนค่า ("ค่าลดหย่อนส่วนตัว")
+       ชื่อรายการยาวบางชื่อ (เช่น เงินบริจาค) ยังขึ้นบรรทัดใหม่ได้ที่ช่องว่าง แต่ไม่แคบจนตัดกลางคำ */
+    td.saved-at { white-space: nowrap; }
+    td table td:first-child { min-width: 14rem; }
+    td.restore { white-space: nowrap; }
+    .badge { display: inline-block; padding: 0 .4rem; border-radius: .25rem; font-size: .85rem; margin-left: .3rem; }
+    .active { background: #DBEAFE; }
+    .in-use { background: #DCFCE7; }
+    .restored { background: #F3E8FF; }
+    .muted { color: #64748B; font-size: .9rem; }
+    .unusable { color: #B91C1C; font-size: .9rem; margin: .3rem 0 0; }
+    tr.malformed td { background: #FEE2E2; }
+    .banner { padding: .6rem .8rem; border-radius: .25rem; }
+    .warn { background: #FEF3C7; }
+    .error { background: #FEE2E2; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>ประวัติการแก้ตัวเลขภาษี</h1>
+  <p><a href="{{ url_for('admin.index') }}">กลับหน้าผู้ดูแล</a></p>
+  {% include "_admin_banners.html" %}
+
+  <h2>ค่าตั้งต้นในโค้ด</h2>
+  <p id="defaults">ค่าตั้งต้นใน utils/tax_rules.py ปีภาษี {{ tax_year }}
+    {% if defaults_in_use %}<span class="badge in-use">เซิร์ฟเวอร์ใช้อยู่</span>{% endif %}</p>
+  {# ลิงก์ GET เปิดฟอร์มที่เติมค่าไว้ — ไม่เขียนอะไร การบันทึกผ่านหน้ายืนยันเหมือนการแก้ปกติ #}
+  {% if defaults_restorable %}
+  <p><a href="{{ url_for('admin.edit', from_version='default') }}" id="restore-default">ใช้ค่าตั้งต้นในโค้ด</a></p>
+  {% endif %}
+
+  <h2>เวอร์ชันที่บันทึก (ใหม่ไปเก่า)</h2>
+  {% if not rows %}
+  <p id="no-history">ยังไม่มีประวัติ</p>
+  {% else %}
+  {# แหล่งอ้างอิงและหมายเหตุเป็นข้อความที่ผู้ใช้พิมพ์ — ให้ Jinja escape ตามปกติ ห้ามใส่ |safe #}
+  <table id="history">
+    <tr><th>เวอร์ชัน</th><th>บันทึกเมื่อ</th><th>แหล่งอ้างอิง / หมายเหตุ</th><th>เปลี่ยนจากเวอร์ชันก่อน</th><th></th></tr>
+    {% for row in rows %}
+    {% if row.malformed %}
+    <tr class="malformed" data-doc-id="{{ row.doc_id }}">
+      <td>{{ row.doc_id }}</td>
+      <td colspan="4">{{ row.status }}</td>
+    </tr>
+    {% else %}
+    <tr class="version" data-version="{{ row.version }}">
+      <td>{{ row.version }}
+        {% if row.is_active %}<span class="badge active">ค่าที่บันทึกล่าสุด</span>{% endif %}
+        {% if row.in_use %}<span class="badge in-use">เซิร์ฟเวอร์ใช้อยู่</span>{% endif %}
+        {% if row.restored_from %}<span class="badge restored">ย้อนจาก{{ row.restored_from }}</span>{% endif %}
+      </td>
+      <td class="saved-at">{{ row.saved_at }}</td>
+      <td>
+        <span class="reference">{{ row.reference or "—" }}</span><br>
+        <span class="muted">หมายเหตุ:</span> <span class="note">{{ row.note or "—" }}</span>
+      </td>
+      <td>
+        <span class="compared muted">{{ row.compared_with }}</span>
+        {% if row.changes %}
+        {% with rows=row.changes, table_id=none, ratio=none %}{% include "_change_table.html" %}{% endwith %}
+        {% elif row.changes is not none %}<span class="no-change">ไม่มีค่าที่ต่าง</span>{% endif %}
+        {% if row.unusable %}<p class="unusable">{{ row.unusable }}</p>{% endif %}
+      </td>
+      <td class="restore">
+        {% if row.is_active %}<span class="muted">เป็นค่าที่บันทึกล่าสุดแล้ว</span>
+        {% elif not row.unusable %}<a href="{{ url_for('admin.edit', from_version=row.version) }}" class="restore-link">ใช้ค่าของเวอร์ชันนี้</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endif %}
+    {% endfor %}
+  </table>
+  {% endif %}
+</main>
+</body>
+</html>

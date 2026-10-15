@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — บันทึกแล้ว</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 40rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+  </style>
+</head>
+<body>
+<main>
+  {# แหล่งอ้างอิงและหมายเหตุเป็นข้อความที่ผู้ใช้พิมพ์ — ให้ Jinja escape ตามปกติ ห้ามใส่ |safe #}
+  <h1 id="saved">บันทึกเวอร์ชัน {{ version }} แล้ว — มีผลหลังรีสตาร์ตเซิร์ฟเวอร์ครับ</h1>
+  {% if restored_name %}<p id="restored">ค่าตรงกับ{{ restored_name }} ทุกช่อง บันทึกว่าย้อนจาก{{ restored_name }}</p>{% endif %}
+  <p><b>แหล่งอ้างอิง:</b> <span id="reference">{{ reference }}</span></p>
+  <p><b>หมายเหตุ:</b> <span id="note">{{ note or "—" }}</span></p>
+  <p><a href="{{ url_for('admin.index') }}">กลับหน้าผู้ดูแล</a></p>
+</main>
+</body>
+</html>

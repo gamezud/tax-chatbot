@@ -43,3 +43,19 @@ def test_save_tax_report_writes_tax_year_in_single_add(real_firebase_db):
     assert doc["tax_year"] == 2569
     assert doc["user_id"] == "TEST_USER"
     assert doc["total_income"] == 360000.0
+
+
+@pytest.mark.parametrize("report_extra, expected", [
+    ({"rules_version": 7}, 7),
+    ({"rules_version": None}, None),
+    ({}, None),
+], ids=["firestore_rules", "default_rules", "no_key"])
+def test_save_tax_report_writes_rules_version(real_firebase_db, report_extra, expected):
+    # rules_version อยู่ใน add เดิมครั้งเดียว ไม่เพิ่มการเขียน Firestore
+    client = real_firebase_db.firebase_client
+    client.db = MagicMock(name="firestore_db")
+    assert client.save_tax_report("TEST_USER", {"tax_year": 2569, **report_extra}) is True
+    client.db.collection.return_value.add.assert_called_once()
+    doc = client.db.collection.return_value.add.call_args.args[0]
+    assert "rules_version" in doc
+    assert doc["rules_version"] == expected

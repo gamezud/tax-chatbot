@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — เข้าสู่ระบบ</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 22rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+    label { display: block; margin-bottom: .25rem; }
+    input[type=password] { width: 100%; padding: .5rem; box-sizing: border-box; }
+    button { margin-top: .75rem; padding: .5rem 1rem; }
+    .error { color: #B91C1C; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>เข้าสู่ระบบผู้ดูแล</h1>
+  {% if error %}<p class="error" id="error">{{ error }}</p>{% endif %}
+  <form method="post" action="{{ url_for('admin.login') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="password">รหัสผ่าน</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" autofocus required>
+    <button type="submit">เข้าสู่ระบบ</button>
+  </form>
+</main>
+</body>
+</html>

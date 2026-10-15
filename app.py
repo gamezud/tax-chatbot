@@ -3,7 +3,7 @@ import uuid
 import traceback
 import time
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify, send_from_directory, render_template
 from werkzeug.exceptions import RequestEntityTooLarge
 
@@ -17,14 +17,29 @@ from utils.tax_calculator import (
     compute_method_2_tax,
     generate_tax_planning_advice
 )
-from utils import tax_rules
+from utils import tax_rules, rules_store
 from utils.pdf_generator import generate_tax_pdf
 # import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
 from utils import ocr, liff_auth
 from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
 from utils.deduction_guard import check_deduction_parameters, has_number
+# หน้า /admin อยู่ในไฟล์แยก — ตัวกันในไฟล์นั้นทำงานเฉพาะ path /admin ไม่กระทบ /webhook ที่มาทาง ngrok
+from admin_routes import admin_bp, admin_status_line
 
 app = Flask(__name__)
+# session ใช้เฉพาะหน้า admin — สุ่ม secret_key ใหม่ทุกครั้งที่เปิด ไม่ต้องเก็บ secret ไว้ที่ไหน (รีสตาร์ตแล้วต้อง login ใหม่)
+app.secret_key = os.urandom(32)
+# Secure: หน้า admin เปิดผ่าน http://127.0.0.1 ไม่มี HTTPS แต่ Chrome ถือว่า 127.0.0.1 และ localhost
+# เป็น secure context จึงเก็บและส่ง cookie ที่มี Secure แม้เปิดผ่าน http
+# (ทดลอง Chrome 2026-10-13: ทั้ง http://127.0.0.1:5090 และ http://localhost:5090 เก็บ cookie ที่มี Secure และส่งกลับมา)
+# ถ้าวันหน้าเปิดหน้า admin ด้วยชื่อเครื่องอื่นที่ไม่ใช่สองชื่อนี้ผ่าน http เบราว์เซอร์จะไม่เก็บ cookie แล้ว login ไม่ติด
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Strict",
+    SESSION_COOKIE_SECURE=True,
+    PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
+)
+app.register_blueprint(admin_bp)
 PUBLIC_URL = ""
 
 @app.route('/download/<filename>')
@@ -71,6 +86,16 @@ def liff_id_status_line():
     if os.environ.get('LIFF_ID', '').strip():
         return "📱 [LIFF] ตั้ง LIFF_ID แล้ว — คำถามค่าลดหย่อนมีลิงก์อ่านใบเสร็จ"
     return "⚠️ [LIFF] ยังไม่ได้ตั้ง LIFF_ID — คำถามค่าลดหย่อนไม่มีลิงก์อ่านใบเสร็จ และ /liff/ocr ตอบ not_configured"
+
+def apply_effective_rules(db):
+    # เรียกครั้งเดียวตอนเปิดเซิร์ฟเวอร์ (บล็อก __main__) ห้ามเรียกตอน import หรือใน webhook
+    # เพราะอ่าน Firestore ใช้เวลาหลายร้อยมิลลิวินาที (CLAUDE.md กฎเหล็กข้อ 1)
+    # แทนที่ทั้งก้อน ไม่แก้ในที่ — ทุกจุดอ่าน tax_rules.TAX_RULES ตอนถูกเรียก จึงเห็นค่าใหม่
+    # RULES_INFO ตั้งพร้อมกัน ที่มาของกติกาจึงตรงกับกติกาที่ใช้คำนวณเสมอ
+    rules, info = rules_store.load_effective_rules(db)
+    tax_rules.TAX_RULES = rules
+    tax_rules.RULES_INFO = info
+    return info
 
 @app.route('/liff/ocr', methods=['POST'])
 def liff_ocr():
@@ -358,6 +383,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     rules = tax_rules.TAX_RULES
     # อ่านครั้งเดียวแล้วส่งต่อผ่าน tax_report_data ให้ LINE, PDF และ Firestore ได้ปีเดียวกัน
     tax_year = rules["tax_year"]
+    # ที่มาของกติกา (ตั้งพร้อม TAX_RULES ใน apply_effective_rules) อ่านครั้งเดียวแบบเดียวกับ rules
+    rules_info = tax_rules.RULES_INFO
     salary_expense = min(salary_total * rules["expense"]["salary_rate"], rules["expense"]["salary_cap"])
     rental_rate = get_rental_expense_rate(property_type)
     rental_expense = rental_income * rental_rate
@@ -423,6 +450,13 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         tax_advice += (f"\nหมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี {ssf_last_tax_year + 1} "
                        f"ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
 
+    # ประวัติเก็บชุดกติกาที่ใช้จริงทุกครั้งที่มาจาก Firestore แม้ค่าจะเท่าค่าตั้งต้น (None = ค่าตั้งต้นในโค้ด)
+    rules_version = rules_info["version"] if rules_info["source"] == "firestore" else None
+    # หมายเหตุบอกผู้ใช้เฉพาะเมื่อค่าต่างจากค่าตั้งต้นจริง ข้อความเดียวกันไปทั้ง LINE และ PDF
+    # บอกสถานะของระบบ ไม่ได้บอกว่าผลของผู้ใช้คนนี้เปลี่ยน (ค่าที่แก้อาจไม่เกี่ยวกับเงินได้ของเขา)
+    rules_note = (f"หมายเหตุ: ระบบใช้อัตราและเกณฑ์ภาษีที่ผู้ดูแลระบบปรับปรุง (เวอร์ชัน {rules_version}) ครับ"
+                  if rules_info["changed_keys"] else "")
+
     pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
     pdf_filepath = os.path.join("static", "reports", pdf_filename)
     os.makedirs(os.path.dirname(pdf_filepath), exist_ok=True)
@@ -442,6 +476,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         "withholding_tax": withholding_tax,
         "net_payable": net_payable,
         "tax_advice": tax_advice,         
+        "rules_version": rules_version,
+        "rules_note": rules_note,
     }
 
     generate_tax_pdf(pdf_filepath, tax_report_data)
@@ -450,8 +486,10 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     tax_report_data["pdf_file_url"] = download_url
     firebase_client.save_tax_report(line_user_id, tax_report_data)
 
+    rules_note_line = f"{rules_note}\n" if rules_note else ""
     reply_text = (
         f"📊 สรุปผลการประเมินภาษีประจำปีภาษี {tax_year}\n"
+        f"{rules_note_line}"
         f"--------------------------------\n"
         f"1. เงินได้พึงประเมินรวม: {total_income:,.2f} บาท\n"
         f"2. หักค่าใช้จ่ายตามกฎหมาย: {total_expense:,.2f} บาท\n"
@@ -643,10 +681,14 @@ if __name__ == '__main__':
     # โหลดโมเดลและ FAISS ล่วงหน้า ไม่งั้นผู้ใช้คนแรกที่ถามความรู้จะรอโหลดจนเกินงบ 5 วินาทีของ Dialogflow
     get_db()
 
+    # ค่าภาษีที่ระบบ Admin แก้ไว้ มีผลหลังรีสตาร์ตเท่านั้น — อ่าน Firestore ครั้งเดียวตรงนี้
+    apply_effective_rules(firebase_client.db)
+
     from pyngrok import ngrok
     ngrok.kill()
     public_url_obj = ngrok.connect(5000)
     PUBLIC_URL = public_url_obj.public_url
     print(f"\n🔗 อัปเดต URL ใน Dialogflow: {PUBLIC_URL}/webhook\n")
     print(liff_id_status_line())
+    print(admin_status_line())
     app.run(port=5000, debug=False)

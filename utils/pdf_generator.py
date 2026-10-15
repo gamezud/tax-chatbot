@@ -106,6 +106,20 @@ def generate_tax_pdf(output_path, tax_data):
     raw_uid = str(tax_data.get('user_id', 'General User'))
     masked_uid = f"User-{raw_uid[:8]}" if raw_uid != 'General User' else raw_uid
     story.append(Paragraph(f"วันที่ประเมิน: {tax_data.get('date', '')} | รหัสผู้ใช้งาน: {masked_uid}", sub_style))
+    # หมายเหตุเมื่อใช้ตัวเลขที่ระบบ Admin แก้ — ข้อความมาจาก tax_data (handle_deductions สร้าง ข้อความเดียวกับใน LINE)
+    # ไฟล์นี้ไม่อ่าน tax_rules เอง ไม่มี key นี้หรือว่างก็ไม่แสดงบรรทัด
+    rules_note = tax_data.get('rules_note')
+    if rules_note:
+        rules_note_style = ParagraphStyle(
+            'RulesNote',
+            fontName=font_family,
+            fontSize=12,
+            leading=16,
+            alignment=1,
+            textColor=colors.HexColor('#B45309')
+        )
+        story.append(Spacer(1, 4))
+        story.append(Paragraph(rules_note, rules_note_style))
     story.append(Spacer(1, 15))
 
     # ตารางแยกแจงรายได้พึงประเมิน

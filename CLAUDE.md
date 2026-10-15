@@ -36,6 +36,12 @@ Dialogflow ES  — ส่งข้อความต่อให้ LINE
 `https://api.line.me/oauth2/v2.1/verify` ทุกครั้งก่อนอ่านรูป — ไม่ใช่ Messaging API และไม่ใช้ token ของบอท **ห้ามลบ**
 > เหตุผล: ถ้าตีความกฎข้างบนว่า "ห้ามมี token ใดในโค้ด" แล้วลบการตรวจนี้ ใครก็ส่งรูปเข้า `/liff/ocr` ได้โดยไม่ต้องเปิดจาก LINE
 
+**ข้อยกเว้น: หน้า Admin แก้อัตราภาษี** (`/admin*` ใน `admin_routes.py`) ไม่ผ่าน Dialogflow และเข้าได้จากเครื่องที่รันเซิร์ฟเวอร์เท่านั้น
+request ที่มี header `X-Forwarded-*` / `Forwarded` หรือ Host ไม่ใช่ 127.0.0.1 / localhost / ::1 หรือยังไม่ได้ตั้ง `ADMIN_PASSWORD_HASH`
+ได้ 404 แบบเดียวกับหน้าที่ไม่มีอยู่ **ห้ามลบหรือผ่อนตัวกันนี้** และห้ามเช็กแค่ `remote_addr`
+> เหตุผล: ผ่าน ngrok `remote_addr` เป็น 127.0.0.1 เหมือน request ในเครื่อง (ทดลองจริงแล้ว) สิ่งที่แยกได้คือ header กับ Host
+> ตัวกันใช้ `before_app_request` และเช็ก `request.path` — `before_request` ของ blueprint ไม่ถูกเรียกเมื่อจับคู่ route ไม่ได้ (405/308 รั่ว)
+
 ---
 
 ## กฎเหล็ก (ละเมิดไม่ได้)
@@ -68,6 +74,10 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
 > เหตุผล: OCR ใช้เวลาหลายร้อยมิลลิวินาทีถึงหลายวินาทีและใช้ CPU เครื่องเดียวกับ webhook
 > ถ้าอยู่ในเส้นทางของ Dialogflow หรืออ่านพร้อมกันหลายรูป คำตอบของ webhook จะเกินงบ 5 วินาที
 
+หน้า `/admin*` ก็ไม่อยู่ในงบนี้ แต่ **ห้ามย้ายการอ่าน Firestore ของ admin หรือ `load_effective_rules` เข้า `webhook()`**
+ค่าที่ admin แก้ถูกอ่านครั้งเดียวตอนเปิดเซิร์ฟเวอร์ (`apply_effective_rules` ในบล็อก `__main__`)
+การอ่านและบันทึกครอบด้วย `_call_with_timeout` (`READ_TIMEOUT_SECONDS`, `SAVE_TIMEOUT_SECONDS` ใน `utils/rules_store.py`)
+
 ### 2. ตัวเลขภาษีต้องถูกต้อง
 
 คำตอบที่ช้าหรือไม่สวยยังพอรับได้ แต่ตัวเลขผิดคือระบบใช้ไม่ได้
@@ -80,7 +90,7 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
   ตัวเลขกฎหมายใหม่ต้องเพิ่มเป็น key ในไฟล์นั้น ห้ามเขียนลงในโค้ดตรง ๆ
   คอมเมนต์ในโค้ดให้อ้างชื่อ key (เช่น `social_security_cap`) ไม่ใช่ตัวเลข
   > เหตุผล: ถ้ามีตัวเลขซ้ำอยู่ในโค้ดหรือคอมเมนต์ ตอนเปลี่ยนปีภาษีจะมีจุดที่ผิดค้างอยู่โดยไม่มีอะไรเตือน
-- **วิธีอ่าน `tax_rules`:** `from utils import tax_rules` แล้วอ่าน `tax_rules.TAX_RULES[...]` ในตัวฟังก์ชันตอนถูกเรียก
+- **วิธีอ่าน `tax_rules`:** `from utils import tax_rules` แล้วอ่าน `tax_rules.TAX_RULES[...]` (และ `tax_rules.RULES_INFO`) ในตัวฟังก์ชันตอนถูกเรียก
   - ห้าม `from utils.tax_rules import TAX_RULES` — ปัญหาเดียวกับกับดักข้อ 2: ได้ dict ที่ผูกไว้ตอน import
     ถ้าระบบ Admin แทนที่ `tax_rules.TAX_RULES` ทีหลัง ฟังก์ชันนั้นจะยังใช้ค่าเก่าโดยไม่มี error
   - ห้ามใช้เป็นค่า default ของ parameter (กับดักข้อ 9)
@@ -92,10 +102,25 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
   พร้อมแหล่งอ้างอิงจากกรมสรรพากรหรือประมวลรัษฎากร แล้วค่อยแก้ `tax_rules.py`
   > เหตุผล: อาจารย์ที่ปรึกษากำหนดให้ทุกตัวเลขต้องมีแหล่งอ้างอิงชัดเจน docs คือที่เก็บแหล่งอ้างอิงนั้น
   > ถ้าแก้โค้ดก่อน จะมีตัวเลขที่ไม่มีที่มาอยู่ในระบบ
+- **ค่าที่ใช้คำนวณจริงอาจไม่ใช่ค่าใน `tax_rules.py`** — ตอนเปิดเซิร์ฟเวอร์ `apply_effective_rules` แทนที่ `tax_rules.TAX_RULES`
+  และ `RULES_INFO` ด้วยค่าที่ admin บันทึกใน Firestore (ถ้ามีและผ่านการตรวจ) ดูว่าใช้ค่าไหนจาก log `[TAX-RULES]` ตอนเปิด
+  - **ห้ามแทนหรือสลับ `tax_rules.TAX_RULES` ที่อื่น** (เช่น เพื่อคำนวณภาษีตัวอย่าง) ค่าที่บันทึกมีผลหลังรีสตาร์ตเท่านั้น
+    > เหตุผล: Flask รับหลาย request พร้อมกัน webhook ที่เข้ามาระหว่างนั้นจะคิดภาษีด้วยค่าที่ยังไม่ยืนยัน หรือได้ค่าครึ่งเก่าครึ่งใหม่
+  - กฎตรวจค่าที่แก้อยู่ใน `rules_store.build_rules` ที่เดียว (ตัวโหลด ฟอร์ม และการย้อนเวอร์ชันใช้ร่วมกัน) — กฎใหม่เพิ่มที่นั่น
+  - การเขียนมีทางเดียว: หน้ายืนยัน → `POST /admin/save` → `rules_store.save_config` (transaction เดียว เขียน active + ประวัติ)
+    GET ของหน้า admin ห้ามเขียน Firestore — ข้อตัดสินใจทั้งหมดพร้อมเหตุผลอยู่ใน `docs/history-admin-tax-rules.md`
+- **กฎหมายเปลี่ยนแล้วแก้ทางไหน**
+  - เปลี่ยนถาวรหรือขึ้นปีภาษีใหม่ → แก้ docs ก่อน แล้วแก้ `tax_rules.py` ตามข้อข้างบน
+  - ระบบ Admin ใช้กับการปรับระหว่างปีที่มีประกาศรองรับ ต้องกรอกแหล่งอ้างอิง (เก็บในประวัติทุกเวอร์ชัน)
+    หลังแก้ค่าตั้งต้นในโค้ดให้ตรงกับค่าที่ปรับไว้แล้ว → กด "ใช้ค่าตั้งต้นในโค้ด" ในหน้าประวัติ
+  - **ขึ้นปีภาษีใหม่:** doc active ที่ `based_on_tax_year` เป็นปีเก่าจะถูกตัวโหลดปฏิเสธ (log `❌ [TAX-RULES]` + แถบแดงในหน้า admin)
+    **ตั้งใจ ไม่ใช่บั๊ก ห้ามแก้ตัวโหลด** → กด "ใช้ค่าตั้งต้นในโค้ด" เพื่อบันทึก doc ของปีใหม่
+    > เหตุผล: ค่าที่แก้ไว้สำหรับปีเก่าต้องไม่ติดไปกับกติกาของปีใหม่โดยไม่มีใครตรวจ
 - **`tests/test_line_verified_cases.py` ล็อกภาษีจาก LINE จริง 21 กรณี** ถ้าล้มแปลว่าโค้ดเปลี่ยนตัวเลขภาษี
   **ห้ามแก้ค่าที่คาดให้ผ่าน** ต้องหาสาเหตุก่อน ถ้าตั้งใจเปลี่ยน (เช่น กฎหมายเปลี่ยน) ต้องแก้ `docs/tax-rules-2569.md` ก่อน
   แล้วทดสอบใน LINE ใหม่ จึงค่อยแก้ค่าในเทส
-  > เหตุผล: งาน Admin จะเปลี่ยนวิธีโหลดอัตราภาษี เทสนี้คือตัวจับถ้าภาษีเปลี่ยนโดยไม่ตั้งใจ
+  > เหตุผล: เทสนี้คำนวณด้วยค่าตั้งต้นเสมอ (`tax_rules_not_leaked` ใน conftest ล้มเทสที่ทิ้งค่าที่ถูกแทนไว้) จึงจับภาษีที่เปลี่ยนโดยไม่ตั้งใจ
+  > ส่วนใน LINE ถ้า admin แก้ค่าอยู่ ภาษีจะต่างจากเทสได้ — ดู `[TAX-RULES]` ก่อนเทียบ
   > เทสนี้กันถอยหลังเท่านั้น ไม่ใช่หลักฐานว่าสูตรถูกตามกฎหมาย (นั่นคือ `test_tax_calculator.py` + docs)
 - **อ่านยอดบริจาคจากรูปต้อง "ไม่เดา"** (`utils/receipt_parser.py`) ไม่แน่ใจ → ไม่ส่งยอด
   (`not_found` / `ambiguous` / `thai_digits` / `not_donation`) ให้ผู้ใช้พิมพ์เอง
@@ -239,6 +264,8 @@ training phrase ของ 04 ที่มี SSF หรือ "กองทุ�
 `firebase_key.json`, `faiss_tax_index`, `static/reports`, `tax_knowledge.txt`
 ถ้าสั่งรันจากโฟลเดอร์อื่นที่ไม่ใช่ root ของโปรเจกต์ จะหาไฟล์ไม่เจอ
 **ต้องรันจาก `C:\Projects\tax-chatbot` เสมอ**
+ระวัง: `/download` ส่งไฟล์ด้วย `send_from_directory('static/reports', ...)` ซึ่ง Flask อ้างจาก `app.root_path`
+แต่ `handle_deductions` เขียน PDF ลง `static/reports` โดยอ้างจาก cwd — สองที่ตรงกันเฉพาะเมื่อรันจาก root
 
 **4. `utils/knowledge_search.py` โหลดโมเดลและ FAISS ใน `get_db()` เมื่อถูกเรียกครั้งแรก** ใช้เวลาหลายวินาที
 `app.py` เรียก `get_db()` ล่วงหน้าในบล็อก `if __name__ == '__main__':` ก่อน `app.run`
@@ -287,6 +314,7 @@ Dialogflow จึงไม่จับคำตอบอย่าง "400000" �
 
 **9. handler ต้องอ่าน global ตอนถูกเรียก ห้ามรับเป็นค่า default ของ parameter**
 global ที่สาขาใช้: `PUBLIC_URL`, `firebase_client`, `generate_tax_pdf`, `query_tax_knowledge`
+และ `tax_rules.TAX_RULES` / `tax_rules.RULES_INFO` (อ่านผ่านชื่อโมดูล เพราะถูกแทนที่ตอนเปิดเซิร์ฟเวอร์ — กฎเหล็กข้อ 2)
 
 > ค่า default ของ parameter ถูกคำนวณครั้งเดียวตอนประกาศฟังก์ชัน
 > `def handle_deductions(..., public_url=PUBLIC_URL)` จะได้ `""` ตลอดไป เพราะตอนนั้น ngrok ยังไม่เปิด
@@ -338,6 +366,9 @@ global ที่สาขาใช้: `PUBLIC_URL`, `firebase_client`, `generat
 5. **แสดง diff แล้วหยุดรอคำตอบก่อน commit ทุกครั้ง** — การอนุมัติแผนไม่ใช่การอนุมัติ diff
    เพราะเนื้อหาจริงอาจต่างจากแผน ยกเว้นเจ้าของโปรเจกต์พิมพ์ชัดว่า "commit ได้เลยไม่ต้องให้ดู"
    > เหตุผล: เคย commit ก่อนให้ดูมาแล้วสองครั้ง (55d9210, 1d56146)
+6. **พิสูจน์ว่าเทสที่เพิ่มจับได้จริง** — ทำโค้ดเสียชั่วคราวแล้วรันให้เห็นว่าเทสล้ม
+   ขั้นตอน: คัดลอกไฟล์สำรอง → ทำเสีย → รันเทส → คืนจากสำเนา → เช็ก hash ให้ตรงกับสำเนา · **ห้ามคืนด้วย `git checkout -- <file>`**
+   > เหตุผล: `git checkout --` คืนไฟล์เป็นเวอร์ชันใน commit ล่าสุด ตอนพิสูจน์เทส โค้ดใหม่มักยังไม่ได้ commit จึงหายไปด้วย
 
 ---
 
@@ -385,6 +416,15 @@ Tesseract (อ่านรูปใบเสร็จ) — ติดตั้ง
 `utils/ocr.py` หาเองจาก `TESSERACT_CMD` → PATH → `C:\Program Files\Tesseract-OCR\tesseract.exe`
 ถ้าตั้ง `TESSERACT_CMD` แล้วไฟล์ไม่มีอยู่ จะไม่หาที่อื่นต่อ (ตั้งใจ ให้รู้ว่าตั้งผิด) — ไม่มี Tesseract ระบบอื่นยังทำงาน `/liff/ocr` ตอบ 503
 
+`ADMIN_PASSWORD_HASH` — เปิดหน้า `/admin` (ไม่ได้ตั้ง → `/admin*` ตอบ 404 ระบบอื่นทำงานปกติ)
+
+```powershell
+python scripts\make_admin_hash.py           # ถามรหัสสองครั้ง พิมพ์แค่ hash
+setx ADMIN_PASSWORD_HASH '<hash>'            # quote เดี่ยวเท่านั้น: hash มี $ ซึ่ง quote คู่จะถูกแปลงเป็นตัวแปร
+```
+
+- **ห้ามเก็บรหัสหรือ hash ใน repo หรือไฟล์นี้** · หลัง `setx` ตรวจประวัติคำสั่ง PowerShell ว่าไม่มี hash ค้าง
+
 **4. รันเซิร์ฟเวอร์**
 
 ```powershell
@@ -396,7 +436,11 @@ python app.py
 และคำถามความรู้ข้อแรกจะช้าจนเกินงบ 5 วินาที
 
 ควรเห็นข้อความตามลำดับ: เชื่อม Firebase สำเร็จ → ลงทะเบียนฟอนต์ไทย → โหลด FAISS สำเร็จ →
-URL ของ ngrok → บรรทัด `[LIFF]` (ตั้ง `LIFF_ID` แล้วหรือไม่) → `Running on http://127.0.0.1:5000`
+`[TAX-RULES]` (ใช้ค่าตั้งต้นหรือค่าที่แก้ version ไหน พร้อมเวลาที่ใช้อ่าน) → URL ของ ngrok →
+บรรทัด `[LIFF]` (ตั้ง `LIFF_ID` แล้วหรือไม่) → `[ADMIN]` (เปิดหรือปิด) → `Running on http://127.0.0.1:5000`
+
+โหลดฐานความรู้ (`get_db`) ไม่ได้ → เซิร์ฟเวอร์**ตั้งใจไม่เปิด** (`test_main_block_stops_when_knowledge_base_fails_to_load`)
+> เหตุผล: ถ้าเปิดได้ คำถามความรู้ทุกข้อจะเกินงบ 5 วินาทีโดยไม่มีใครรู้ ล้มตอนเปิดเห็นได้ทันที
 
 **5. ทดสอบผ่าน LINE**
 
@@ -409,6 +453,10 @@ URL ของ ngrok เป็น static domain ที่ผูกกับบั
 - log ที่พิมพ์ LINE user ID ข้อความ หรือยอดเงิน: `[INCOMING]`, `[QUERY]`, `[RAW PARAMS]`, `[DEBUG-STATE]`, `[DEBUG-HISTORY]`,
   `[DEBUG-STEP2]`, `[DEBUG-STEP3]`, `[DEBUG-STEP3.5]`, `[DEBUG-CALC-SUMMARY]`, `[DEDUCTION-GUARD]`, `[DEBUG-RAG]`
   > เหตุผล: เป็นข้อมูลรายได้ของผู้ทดสอบ (เหตุผลเดียวกับที่ `static/reports/` ถูก ignore) ห้ามให้คนอื่นเห็นหน้าจอเซิร์ฟเวอร์ตอนที่ log เหล่านี้ยังเปิด
+- log `[TAX-RULES]` ตอนเปิดต้องขึ้น "ใช้ค่าตั้งต้นในโค้ด" หรือ "ไม่ต่างจากค่าตั้งต้น"
+  > เหตุผล: ถ้าใช้ค่าที่แก้อยู่ ภาษีใน demo จะต่างจาก 21 กรณีที่ตรวจไว้
+- ภาพหน้าจอต้องเบลอโดเมน ngrok, รหัสผู้ใช้ในหัว PDF และชื่อโปรเจกต์ Firebase
+- ป้ายในคอลัมน์เวอร์ชันของหน้าประวัติ (`/admin/history`) ขึ้นบรรทัดใหม่กลางคำ — แก้ CSS
 
 ### รันชุด test
 
@@ -420,7 +468,7 @@ pytest -v
 
 **เกณฑ์ผ่าน: ต้องไม่มี `failed` และไม่มี `XPASS`**
 
-ตัวเลข ณ ตอนนี้คือ `680 passed` (เครื่องที่มี Tesseract) ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
+ตัวเลข ณ ตอนนี้คือ `1183 passed` (เครื่องที่มี Tesseract) ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
 (passed เพิ่ม xfailed ลด) และเครื่องที่ไม่มี Tesseract จะมี `skipped` จึงใช้ตัดสินผ่าน/ไม่ผ่านไม่ได้ ให้ดูเกณฑ์ข้างบนแทน
 
 - `pytest.ini` ที่ root บอก pytest สองอย่าง: `pythonpath = .` ให้ใส่ root ของโปรเจกต์ลง path
@@ -432,6 +480,11 @@ pytest -v
   - `app.py` import `from utils import ocr, liff_auth` แบบโมดูล แล้วเรียก `ocr.read_text(...)` ตอนใช้ — เทส patch ที่ `utils.ocr` / `utils.liff_auth`
     > เหตุผล: ถ้าเปลี่ยนเป็น `from utils.ocr import read_text` การ patch ในเทสจะไม่มีผล แล้วเทสเรียก Tesseract หรือ LINE จริง
   - เทสที่อ่านรูปจริงใน `test_ocr.py` (`requires_tesseract`) skip เองถ้าเครื่องไม่มี Tesseract ภาษา tha+eng หรือ OpenCV
+  - เทสระบบ Admin ที่**เขียน** Firestore (บันทึก ย้อนเวอร์ชัน) และหน้าประวัติ ใช้ `tests/fake_firestore.py` (เก็บข้อมูลจริงและบังคับกฎของ transaction)
+    **ห้ามใช้ `MagicMock` แทน** — เทสที่แค่อ่าน doc เดียว (ตัวโหลด ฟอร์ม) ยังใช้ `fake_db` แบบ `MagicMock` ใน `test_rules_loading.py` ได้
+    > เหตุผล: `MagicMock` ยอมรับทุกการเรียก พิสูจน์ไม่ได้ว่าเขียนสอง doc ใน transaction เดียว หรือว่าสิ่งที่ฟอร์มเขียน ตัวโหลดอ่านได้จริง
+    ตัวปลอมใช้ method private ของ google-cloud-firestore 2.29.0 — อัปเกรดแล้ว `test_fake_firestore.py` ล้ม ต้องตรวจตัวปลอมใหม่
+  - `tax_rules_not_leaked` (autouse ใน conftest) ล้มเทสที่ทิ้ง `TAX_RULES` / `RULES_INFO` ที่ถูกแก้ไว้ — แทนค่าในเทสด้วย `monkeypatch` เท่านั้น
 - เทสแต่ละไฟล์
   - `test_tax_calculator.py` — สูตรใน `utils/tax_calculator.py` (import แค่ `re` กับ `utils.tax_rules`)
   - `test_dialogflow_export.py` — การตั้งค่าในไฟล์ export ใน `dialogflow/` และ annotation ของ training phrase (ใช้รายการคำจาก `deduction_terms`)
@@ -454,7 +507,10 @@ pytest -v
     mock PDF / RAG ทุกเทส จึงไม่สร้าง PDF และไม่เรียก Ollama
   - `test_line_verified_cases.py` — ภาษีของ 21 กรณีที่ทดสอบใน LINE แล้ว (เงินเดือน 40,000/เดือน ประกันสังคม 10,500)
     ยิงผ่าน `/webhook` แบบเดียวกับ `test_webhook.py` (มี `mocks` ของตัวเอง) — ถ้าล้มดูกฎเหล็กข้อ 2
-- รันทั้งชุดราว 3–4 วินาที ส่วนใหญ่คือเวลา import langchain ตอน `import app`
+  - ระบบ Admin: `test_rules_store` / `test_rules_loading` / `test_rules_version` (ตรวจค่า โหลด และหมายเหตุใน LINE/PDF)
+    · `test_admin_routes` / `test_admin_login` / `test_admin_edit` / `test_admin_save` / `test_admin_history` / `test_admin_restore`
+    · `test_fake_firestore` (ตัวปลอมเอง) — สิ่งที่แต่ละไฟล์ทดสอบอยู่ใน docstring หัวไฟล์ เหตุผลของข้อตัดสินใจที่เทสล็อกอยู่ใน `docs/history-admin-tax-rules.md`
+- รันทั้งชุดราว 20–25 วินาที ส่วนใหญ่คือเทสบล็อก `__main__` ใน `test_rules_loading.py` และ import langchain ตอน `import app`
 - `1 warning` ท้ายผล pytest: `langchain-community` แจ้ง `DeprecationWarning` ตอน import FAISS
   ใน `utils/knowledge_search.py` (มีมาก่อน refactor) ยังใช้งานได้ปกติเพราะ `requirements.txt` ล็อกเวอร์ชันไว้
   **ห้ามซ่อนคำเตือนด้วย `filterwarnings`** ย้ายไป package ใหม่หลัง refactor เสร็จ
@@ -484,6 +540,8 @@ pytest -v
 | ไฟล์ลับ | `firebase_key.json` ที่ root ถูกกันไว้ใน `.gitignore` — **ห้ามเปิดอ่าน ห้าม commit** |
 | LLM | `llama3.2:3b` ผ่าน Ollama ที่ `http://127.0.0.1:11434` — **ห้ามเปลี่ยนกลับเป็น `localhost`** บน Windows จะลอง IPv6 ก่อน เสียเวลาราว 2 วินาที เกิน connect timeout ทำให้ LLM timeout ทุกครั้ง |
 | Embedding | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` |
+| google-cloud-firestore | ล็อก 2.29.0 ใน `requirements.txt` — **อัปเกรดแล้วต้องตรวจ `tests/fake_firestore.py`** (ใช้ method private ของ Transaction) |
+| เวลาไทย | หน้า admin ใช้ +7 คงที่ — ห้ามเปลี่ยนเป็น `zoneinfo("Asia/Bangkok")` บน Windows ต้องลง `tzdata` เพิ่ม (ไทยไม่มีเวลาออมแสง) |
 
 ---
 
@@ -491,7 +549,12 @@ pytest -v
 
 | ไฟล์ | หน้าที่ | หมายเหตุ |
 |---|---|---|
-| `app.py` | route `/webhook` (รับจาก Dialogflow), `/download/<filename>` (ส่ง PDF), `/liff/donation` (หน้า LIFF) และ `POST /liff/ocr` (อ่านยอดจากรูป) | ~650 บรรทัด `webhook()` เตรียมข้อมูลและเลือกสาขา เนื้อหาแต่ละสาขาอยู่ใน `handle_*` |
+| `app.py` | route `/webhook` (รับจาก Dialogflow), `/download/<filename>` (ส่ง PDF), `/liff/donation` (หน้า LIFF) และ `POST /liff/ocr` (อ่านยอดจากรูป) · ลงทะเบียน blueprint `/admin` | ~700 บรรทัด `webhook()` เตรียมข้อมูลและเลือกสาขา เนื้อหาแต่ละสาขาอยู่ใน `handle_*` |
+| `utils/rules_store.py` | ตรวจ รวม โหลด และบันทึกค่าที่ admin แก้ (`build_rules`, `load_effective_rules`, `save_config`, ลายนิ้วมือ `base_token`) | ไม่ import firebase ตอน import — รับ `db` เป็น argument · ห้ามเรียกใน `webhook()` (กฎเหล็กข้อ 1) |
+| `admin_routes.py`, `admin_form.py`, `admin_history.py` | หน้า `/admin`: ตัวกันในเครื่อง + login, ฟอร์มแก้ค่าและหน้ายืนยัน, ประวัติและย้อนเวอร์ชัน | `admin_form` แปลงข้อความด้วย `Decimal` แล้วให้ `build_rules` ตรวจ · `admin_history` ไม่อ่าน Firestore เอง |
+| `templates/admin_*.html`, `_admin_banners.html`, `_change_table.html` | หน้าของระบบ Admin | แหล่งอ้างอิงและหมายเหตุเป็นข้อความที่ผู้ใช้พิมพ์ — ห้ามใส่ `\|safe` |
+| `scripts/make_admin_hash.py` | สร้างค่า `ADMIN_PASSWORD_HASH` | พิมพ์แค่ hash ไม่เขียนไฟล์ |
+| `tests/fake_firestore.py` | Firestore ปลอมที่เก็บข้อมูลจริง ใช้เทสระบบ Admin | ไม่ใช่ไฟล์เทส · ผูกกับ google-cloud-firestore 2.29.0 |
 | `utils/tax_calculator.py` | สูตรภาษีทั้งหมด: แปลงข้อความเป็นตัวเลข, ขั้นบันได, วิธีที่ 2, อัตราค่าใช้จ่ายค่าเช่า, ค่าลดหย่อน, คำแนะนำวางแผนภาษี | **import แค่ `re` กับ `utils.tax_rules`** ไม่พึ่ง Flask หรือ Firebase จึงเขียน test ได้ทันที — รักษาคุณสมบัตินี้ไว้ |
 | `utils/tax_rules.py` | ตัวเลขตามกฎหมายของปีภาษีเดียว (`TAX_RULES`, ปีอยู่ใน key `tax_year` ตอนนี้ 2569) | ค่าคงที่ล้วน ไม่ import อะไร ไม่มี I/O — วิธีอ่านดูกฎเหล็กข้อ 2 |
 | `docs/tax-rules-2569.md` | สเปกตัวเลขภาษีปี 2569 ที่โค้ดใช้อยู่ เทียบกับค่าเดิม (2567) พร้อมแหล่งอ้างอิง | ⚠️ = แหล่งรอง ต้องตรวจตัวบทก่อนอ้างในเล่ม |
@@ -515,6 +578,7 @@ pytest -v
 | `docs/holdout-sentences.md` | ประโยคทดสอบที่ห้ามใช้เป็น training phrase + ขั้นตอนแก้ training phrase | |
 | `docs/ocr-eval-2569-10.md` | ผลวัดความแม่น OCR ก่อน/หลังแก้ parser | |
 | `docs/history-tax-year-2569.md` | ประวัติงานเปลี่ยนเป็นปีภาษี 2569 (ขั้น C–G) | |
+| `docs/history-admin-tax-rules.md` | ประวัติงานระบบ Admin (ก้อน 1–7): ข้อตัดสินใจพร้อมเหตุผล รูปร่าง doc ใน Firestore และผลทดลองจริง | |
 
 ---
 
@@ -529,7 +593,9 @@ pytest -v
 แสดงปีภาษีใน LINE, PDF, Firestore และประวัติ ·
 อ่านยอดเงินบริจาคจากรูปใบเสร็จผ่านหน้า LIFF (OCR) โดยผู้ใช้ตรวจตัวเลขและกดส่งเอง ·
 ตัวกันค่าลดหย่อนที่ Dialogflow ใส่ผิดช่อง (#25) ·
-แจ้งผู้ใช้เมื่อเงินบริจาคถูกตัดที่ `donation_rate` ("ใช้ได้ X จาก Y บาท" ต่อท้าย `tax_advice` ไปถึง LINE และ PDF)
+แจ้งผู้ใช้เมื่อเงินบริจาคถูกตัดที่ `donation_rate` ("ใช้ได้ X จาก Y บาท" ต่อท้าย `tax_advice` ไปถึง LINE และ PDF) ·
+ระบบ Admin แก้อัตราภาษีและเพดานลดหย่อนผ่านเว็บ (แหล่งอ้างอิงบังคับ, ประวัติทุกเวอร์ชัน, ย้อนเวอร์ชัน, มีผลหลังรีสตาร์ต,
+`rules_version` ใน `tax_history` และหมายเหตุใน LINE/PDF เมื่อค่าต่างจากค่าตั้งต้น — ทดสอบกับ Firestore จริงแล้ว)
 
 **ข้อจำกัดที่ควรเขียนในเล่ม** อยู่ใน `docs/known-limitations.md` (ผลวัด OCR ใน `docs/ocr-eval-2569-10.md`)
 
@@ -559,17 +625,7 @@ pytest -v
   - เล่มข้อ 1.3.2: ตัวอย่างในวงเล็บควรแก้เป็น "ปี 2569 ที่ต้องยื่นต้นปี 2570" (docs หัวข้อ 1) — เจ้าของโปรเจกต์แก้ในเล่ม
 
 **จะทำต่อไป**
-- ระบบ Admin แก้อัตราภาษีและเพดานลดหย่อน: โหลดจาก Firestore ครั้งเดียวแล้วแทนที่ `tax_rules.TAX_RULES`
-  ค่าตั้งต้นคือค่าใน `tax_rules.py`
-  - ต้อง merge ค่าจาก Firestore กับค่าตั้งต้นแบบลงไปถึง dict ชั้นใน (`expense`, `rental_rate`, `deduction`, `method_2`)
-    และ validate ก่อนบันทึก (key ครบ ค่าเป็นตัวเลข)
-    > เหตุผล: ถ้าขาด key ไปตัวเดียว ฟังก์ชันคำนวณจะเกิด `KeyError` ที่ `except` ใน `webhook()` กลืนไป
-    > ผู้ใช้ทุกคนจะได้ข้อความ error โดยไม่รู้สาเหตุ merge แค่ชั้นบนสุด (`{**ค่าตั้งต้น, **ค่าจาก Firestore}`)
-    > ไม่พอ เพราะถ้า Firestore มี `deduction` แค่บาง key ทั้งก้อน `deduction` ของค่าตั้งต้นจะถูกทับหาย
-  - `tax_brackets` เป็น list ซ้อน list ซึ่ง Firestore เก็บตรง ๆ ไม่ได้ (array ซ้อน array ไม่ได้)
-    ต้องแปลงเป็น list ของ map เช่น `{"upper": 150000, "rate": 0.0}` ตอนบันทึก แล้วแปลงกลับตอนโหลด
-    และ validate ว่าเพดานเรียงจากน้อยไปมากและขั้นสุดท้ายเป็น `None`
-    (ถ้าขั้นสุดท้ายไม่ใช่ `None` เงินได้ส่วนที่เกินเพดานสุดท้ายจะไม่ถูกคิดภาษี)
+- งานก่อน demo (หลัง merge ระบบ Admin): ซ่อน debug หน้า LIFF, ปิด log ที่มีข้อมูลอ่อนไหว, CSS ป้ายหน้าประวัติ — ดู "ก่อน demo / วันสอบ"
 - ย้าย FAISS ออกจาก `langchain-community` ไป package ใหม่ (ดูหมายเหตุ `1 warning` ในหัวข้อ "รันชุด test")
 - แจ้งค่าลดหย่อนรายการอื่นที่ถูกตัดที่เพดาน (รายการอยู่ใน `docs/known-limitations.md` หัวข้อ 1) ด้วย `deduction_breakdown(total_income, params)`
   ดึงเนื้อในของ `calculate_detailed_deductions` ออกมาคืน `{รายการ: (ยอดที่กรอก, ยอดที่ใช้ได้)}`
