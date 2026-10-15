@@ -41,7 +41,8 @@
     </tr>
   </table>
   <p class="note">ค่าที่แก้มีผลหลังรีสตาร์ตเซิร์ฟเวอร์</p>
-  <p><a href="{{ url_for('admin.edit') }}" id="edit-link">แก้ตัวเลขภาษี</a></p>
+  <p><a href="{{ url_for('admin.edit') }}" id="edit-link">แก้ตัวเลขภาษี</a>
+    · <a href="{{ url_for('admin.history') }}" id="history-link">ประวัติการแก้ค่า</a></p>
   <form method="post" action="{{ url_for('admin.logout') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit">ออกจากระบบ</button>

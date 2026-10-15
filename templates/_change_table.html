@@ -1,0 +1,14 @@
+{# ตารางรายการที่เปลี่ยน (แถวจาก admin_form.changes) ใช้ร่วมกันในหน้ายืนยันและหน้าประวัติ
+   ต้องมี rows · table_id: id ของตาราง (หน้ายืนยันใช้ "changes") · ratio: ไฮไลต์แถวที่เปลี่ยนมาก (เฉพาะหน้ายืนยัน) #}
+<table{% if table_id %} id="{{ table_id }}"{% endif %}>
+    <tr><th>รายการ</th><th>ค่าเดิม</th><th>ค่าใหม่</th></tr>
+    {% for row in rows %}
+    <tr class="change{% if ratio and row.warn %} big-change{% endif %}" data-name="{{ row.name }}">
+      <td>{{ row.label }}
+        {% if ratio and row.warn %}<span class="big-change-note">ตรวจอีกครั้ง: เปลี่ยนมากกว่า {{ ratio }} เท่า</span>{% endif %}
+      </td>
+      <td class="num">{{ row.old }} {{ row.unit }}</td>
+      <td class="num">{{ row.new }} {{ row.unit }}</td>
+    </tr>
+    {% endfor %}
+</table>

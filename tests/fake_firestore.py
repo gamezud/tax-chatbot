@@ -24,6 +24,7 @@ Firestore ปลอมที่เก็บข้อมูลในหน่ว�
     ตัวปลอมตรวจตอน commit (optimistic — คนอื่นชนะเสมอ) ผลต่อโค้ดเราเหมือนกัน: ถูกเรียกใหม่ อ่านใหม่ แล้วเทียบลายนิ้วมือ
   - ไม่มีเครือข่าย ล็อก หรือ timeout จริง · SERVER_TIMESTAMP แทนด้วยเวลาในเครื่องตอน commit
   - query รองรับแค่ collection().order_by(field) (คืนเฉพาะ doc ที่มี field นั้น เรียงแบบคร่าว ๆ)
+    และ collection().stream() (ทุก doc เรียงตาม doc id แบบข้อความ เหมือนของจริง)
   - ความเป็น atomic เป็นการรับประกันของ Firestore เทสพิสูจน์ได้แค่ว่าโค้ดเราเขียนทั้งสอง doc ใน transaction เดียว
     และตรวจลายนิ้วมือข้างใน — ยังต้องทดสอบกับ Firestore จริงแบบ end-to-end
 """
@@ -102,6 +103,13 @@ class FakeCollection:
     def order_by(self, field, direction="ASCENDING"):
         return FakeQuery(self._db, self.name, field, direction)
 
+    def stream(self, timeout=None, retry=None):
+        """อ่านทุก doc ใน collection นอก transaction (หน้าประวัติ) — ของจริงเรียงตาม doc id ตัวปลอมก็เรียงตาม id"""
+        if self._db.fail_reads is not None:
+            raise self._db.fail_reads
+        found = sorted((doc_id, data) for (name, doc_id), data in self._db.docs.items() if name == self.name)
+        return iter([FakeSnapshot(doc_id, data) for doc_id, data in found])
+
 
 class FakeDocumentReference:
     def __init__(self, db, path):
@@ -149,6 +157,10 @@ class FakeQuery:
 
         found.sort(key=key, reverse=(self.direction == "DESCENDING"))
         return [FakeSnapshot(doc_id, data) for doc_id, data in found]
+
+    def stream(self, timeout=None, retry=None):
+        # อ่าน query นอก transaction — เหมือนของจริง: doc ที่ไม่มี field ที่ order_by ไม่ถูกคืน
+        return iter(self._snapshots())
 
 
 class FakeTransaction:

@@ -27,18 +27,7 @@
     {% if not rows %}(ค่าเท่าค่าตั้งต้น — บันทึกเพื่อเขียนทับค่าที่ผิดใน Firestore){% endif %}</p>
   {% endif %}
   <p>รายการที่เปลี่ยนจากค่าที่บันทึกล่าสุด ({{ rows|length }} รายการ)</p>
-  <table id="changes">
-    <tr><th>รายการ</th><th>ค่าเดิม</th><th>ค่าใหม่</th></tr>
-    {% for row in rows %}
-    <tr class="change{% if row.warn %} big-change{% endif %}" data-name="{{ row.name }}">
-      <td>{{ row.label }}
-        {% if row.warn %}<span class="big-change-note">ตรวจอีกครั้ง: เปลี่ยนมากกว่า {{ ratio }} เท่า</span>{% endif %}
-      </td>
-      <td class="num">{{ row.old }} {{ row.unit }}</td>
-      <td class="num">{{ row.new }} {{ row.unit }}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  {% with table_id="changes" %}{% include "_change_table.html" %}{% endwith %}
 
   <p><b>แหล่งอ้างอิง:</b> <span id="reference">{{ reference }}</span></p>
   <p><b>หมายเหตุ:</b> <span id="note">{{ note or "—" }}</span></p>

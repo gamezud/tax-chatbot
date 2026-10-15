@@ -120,6 +120,17 @@ def test_query_returns_docs_with_field_only():
         return [s.id for s in transaction.get(db.collection("h").order_by("version"))]
 
     assert firestore.transactional(read)(db.transaction(), db) == ["1", "2"]
+    assert [s.id for s in db.collection("h").order_by("version").stream()] == ["1", "2"]  # นอก transaction ก็เหมือนกัน
+
+
+def test_stream_returns_every_doc_including_ones_without_fields():
+    db = FakeFirestore({("h", "2"): {"version": 2}, ("h", "10"): {"version": 10}, ("h", "x"): {"other": 1},
+                        ("other", "1"): {"version": 1}})
+    snapshots = list(db.collection("h").stream(timeout=1, retry=None))
+    assert [s.id for s in snapshots] == ["10", "2", "x"]  # เรียงตาม id แบบข้อความ ไม่ใช่ตัวเลข
+    assert snapshots[2].to_dict() == {"other": 1}
+    with pytest.raises(RuntimeError):
+        FakeFirestore(fail_reads=RuntimeError()).collection("h").stream()
 
 
 def test_plain_reads_work_and_failing_reads_raise():

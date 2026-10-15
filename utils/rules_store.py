@@ -352,6 +352,21 @@ def save_config(db, rules, base, reference, note):
     return _call_with_timeout(run, timeout)
 
 
+def read_history_docs(db):
+    """คืน [(doc id, dict)] ของทุก doc ใน tax_rules_history ไม่เรียง — อ่านไม่ได้หรือเกินเวลาโยน exception
+    อ่านทั้งหมดไม่จำกัดจำนวน (หนึ่ง doc ต่อการกดบันทึกหนึ่งครั้ง) และไม่ใช้ order_by("version")
+    เพราะ Firestore ตัด doc ที่ไม่มี field นั้นทิ้งเงียบ ๆ หน้าประวัติต้องเห็น doc ผิดรูปด้วย
+    ไม่มี limit: ถ้าไม่มี order_by จะเรียงตาม doc id แบบข้อความ ("10" มาก่อน "2") ตัดผิดตัว"""
+    timeout = READ_TIMEOUT_SECONDS
+
+    def read():
+        # อ่านจนครบใน thread — stream คืน generator ที่ต่อ Firestore ทีละชุดระหว่างวน
+        return [(snapshot.id, snapshot.to_dict())
+                for snapshot in db.collection(HISTORY_COLLECTION).stream(timeout=timeout, retry=None)]
+
+    return _call_with_timeout(read, timeout)
+
+
 def _save_in_transaction(transaction, db, rules, base, reference, note, server_timestamp):
     """ถูกเรียกซ้ำได้เมื่อชนกัน — ห้าม print และห้ามแก้ argument
     Firestore บังคับให้อ่านทั้งหมดก่อนเขียน: อ่าน active และประวัติก่อน แล้วค่อย set/create"""

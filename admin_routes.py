@@ -22,6 +22,7 @@ from flask import Blueprint, abort, redirect, render_template, request, session,
 from werkzeug.security import check_password_hash
 
 import admin_form
+import admin_history
 from utils import firebase_db, rules_store, tax_rules
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -359,6 +360,40 @@ def save():
     print(f"✅ [ADMIN] บันทึกค่าภาษีเวอร์ชัน {outcome['version']} (แก้ {len(names)} รายการ: {', '.join(names)})")
     return render_template("admin_saved.html", version=outcome["version"],
                            reference=result["reference"], note=result["note"])
+
+
+# ---------------------------------------------------------------------------
+# ประวัติการแก้ค่า (อ่านอย่างเดียว — ไม่เขียน Firestore)
+# ---------------------------------------------------------------------------
+HISTORY_UNREADABLE_MESSAGE = ("อ่านประวัติจาก Firestore ไม่ได้ (ไม่ได้เชื่อมต่อ หรืออ่านไม่สำเร็จ) "
+                              "กรุณาตรวจการเชื่อมต่อแล้วลองใหม่ครับ")
+
+
+@admin_bp.route("/history")
+def history():
+    try:
+        saved = saved_state()
+        docs = rules_store.read_history_docs(_config_db())
+    except SavedRulesUnavailable:
+        docs = None
+    except Exception as e:
+        print(f"⚠️ [ADMIN] อ่านประวัติไม่ได้ ({type(e).__name__})")
+        docs = None
+    if docs is None:
+        return render_template("admin_unavailable.html", title="เปิดประวัติไม่ได้ตอนนี้",
+                               message=HISTORY_UNREADABLE_MESSAGE), 503
+
+    # อ่าน active กับประวัติคนละครั้ง (ไม่อยู่ใน transaction) — ถ้ามีคนบันทึกระหว่างนั้น ป้ายอาจคลาดไปหนึ่งเวอร์ชัน
+    # จนกว่าจะเปิดหน้าใหม่ ยอมรับได้เพราะหน้านี้อ่านอย่างเดียว การบันทึกตรวจลายนิ้วมือของตัวเองอยู่แล้ว
+    rows = admin_history.history_rows(docs, saved["version"], tax_rules.RULES_INFO)
+    return render_template(
+        "admin_history.html",
+        rows=rows,
+        tax_year=rules_store.DEFAULT_TAX_RULES["tax_year"],
+        defaults_in_use=tax_rules.RULES_INFO.get("source") != "firestore",
+        saved=saved,
+        pending_restart=pending_restart(saved),
+    )
 
 
 def _render_form_errors(saved, result):
