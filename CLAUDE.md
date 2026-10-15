@@ -425,6 +425,19 @@ setx ADMIN_PASSWORD_HASH '<hash>'            # quote เดี่ยวเท่
 
 - **ห้ามเก็บรหัสหรือ hash ใน repo หรือไฟล์นี้** · หลัง `setx` ตรวจประวัติคำสั่ง PowerShell ว่าไม่มี hash ค้าง
 
+`TAX_DEBUG` — โหมดดีบักตอนพัฒนา (`utils/debug_log.py`) ค่าตั้งต้นคือปิด ไม่ต้องตั้งอะไร
+
+```powershell
+$env:TAX_DEBUG = "1"          # เปิดเฉพาะหน้าต่างนี้ — ห้ามใช้ setx เพราะจะค้างในเครื่องถาวรแล้วไปเปิดตอนเดโม
+Remove-Item Env:TAX_DEBUG     # ปิด (หรือปิดหน้าต่าง PowerShell)
+```
+
+- เปิดเฉพาะค่า `1` ค่าอื่นถือว่าปิด · เปลี่ยนแล้วต้องรัน `python app.py` ใหม่ (env ที่ตั้งทีหลังไม่ไปถึง process ที่รันอยู่)
+- เปิด → log พิมพ์ LINE user ID ข้อความที่ผู้ใช้พิมพ์ ยอดเงิน และชื่อไฟล์ PDF · หน้า LIFF แสดง "ข้อมูลสำหรับทดสอบ" (OS, เวอร์ชัน LINE, EXIF)
+- log ใหม่ที่มีข้อมูลเหล่านี้ต้องใช้ `debug_log.debug_print` ไม่ใช่ `print` แล้วเพิ่มป้ายใน `SENSITIVE_TAGS` และเคสใน `LOG_CASES` ของ `test_webhook.py`
+  > เหตุผล: `test_sensitive_logs_hidden_by_default` ตรวจเฉพาะสาขาที่อยู่ใน `LOG_CASES` ถ้าไม่เพิ่ม log ที่หลุดจะไม่มีเทสจับ
+- ห้ามใช้ `logging.DEBUG` แทน (ดูตาราง "สภาพแวดล้อม") และห้ามเปิด debug ของ Flask — Werkzeug debugger ที่เข้าถึงผ่าน ngrok ได้ให้คนภายนอกรันโค้ดบนเครื่องนี้
+
 **4. รันเซิร์ฟเวอร์**
 
 ```powershell
@@ -437,7 +450,7 @@ python app.py
 
 ควรเห็นข้อความตามลำดับ: เชื่อม Firebase สำเร็จ → ลงทะเบียนฟอนต์ไทย → โหลด FAISS สำเร็จ →
 `[TAX-RULES]` (ใช้ค่าตั้งต้นหรือค่าที่แก้ version ไหน พร้อมเวลาที่ใช้อ่าน) → URL ของ ngrok →
-บรรทัด `[LIFF]` (ตั้ง `LIFF_ID` แล้วหรือไม่) → `[ADMIN]` (เปิดหรือปิด) → `Running on http://127.0.0.1:5000`
+บรรทัด `[LIFF]` (ตั้ง `LIFF_ID` แล้วหรือไม่) → `[ADMIN]` (เปิดหรือปิด) → `[TAX-DEBUG]` (เปิดหรือปิด) → `Running on http://127.0.0.1:5000`
 
 โหลดฐานความรู้ (`get_db`) ไม่ได้ → เซิร์ฟเวอร์**ตั้งใจไม่เปิด** (`test_main_block_stops_when_knowledge_base_fails_to_load`)
 > เหตุผล: ถ้าเปิดได้ คำถามความรู้ทุกข้อจะเกินงบ 5 วินาทีโดยไม่มีใครรู้ ล้มตอนเปิดเห็นได้ทันที
@@ -447,16 +460,17 @@ python app.py
 URL ของ ngrok เป็น static domain ที่ผูกกับบัญชี จึงเหมือนเดิมทุกครั้ง
 ช่อง Fulfillment ใน Dialogflow Console ตั้งไว้แล้ว ไม่ต้องแก้ แค่พิมพ์ใน LINE ทดสอบได้เลย
 
-### ก่อน demo / วันสอบ (ยังไม่ได้แก้โค้ด — เป็นรายการตรวจ)
+### ก่อน demo / วันสอบ (รายการตรวจ)
 
-- ซ่อนกล่อง debug ในหน้า LIFF (`<details id="debug">` ใน `templates/liff_donation.html` แสดง OS, เวอร์ชัน LINE, ขนาดรูป)
-- log ที่พิมพ์ LINE user ID ข้อความ หรือยอดเงิน: `[INCOMING]`, `[QUERY]`, `[RAW PARAMS]`, `[DEBUG-STATE]`, `[DEBUG-HISTORY]`,
-  `[DEBUG-STEP2]`, `[DEBUG-STEP3]`, `[DEBUG-STEP3.5]`, `[DEBUG-CALC-SUMMARY]`, `[DEDUCTION-GUARD]`, `[DEBUG-RAG]`
-  > เหตุผล: เป็นข้อมูลรายได้ของผู้ทดสอบ (เหตุผลเดียวกับที่ `static/reports/` ถูก ignore) ห้ามให้คนอื่นเห็นหน้าจอเซิร์ฟเวอร์ตอนที่ log เหล่านี้ยังเปิด
+- log `[TAX-DEBUG]` ตอนเปิดต้องขึ้น "ปิดอยู่" — log ไม่มี LINE user ID ข้อความ ยอดเงิน ชื่อไฟล์ PDF และหน้า LIFF ไม่มี "ข้อมูลสำหรับทดสอบ"
+  > เหตุผล: เป็นข้อมูลรายได้ของผู้ทดสอบ (เหตุผลเดียวกับที่ `static/reports/` ถูก ignore)
+- ใช้ข้อมูลรายได้สมมติตอนเดโม — ชื่อไฟล์ PDF ปรากฏทั้งใน access log และลิงก์ใน LINE
+  > เหตุผล: access log ของ Werkzeug (`GET /download/<ชื่อไฟล์>`) `TAX_DEBUG` ซ่อนไม่ได้ และใครรู้ชื่อไฟล์ก็โหลด PDF ได้ (#17)
+- log ตอนเกิด error ทุกตัวยังพิมพ์รายละเอียด (`[CRITICAL ERROR TRACEBACK]`, error ของ Firebase, `❌ Error in query_tax_knowledge`, `[LLM-FAIL]`)
+  ตั้งใจไว้เพื่อให้เห็นสาเหตุ ถ้าเกิด error ระหว่างเดโม อย่าเลื่อนหน้าต่างเซิร์ฟเวอร์ขึ้นจอ
 - log `[TAX-RULES]` ตอนเปิดต้องขึ้น "ใช้ค่าตั้งต้นในโค้ด" หรือ "ไม่ต่างจากค่าตั้งต้น"
   > เหตุผล: ถ้าใช้ค่าที่แก้อยู่ ภาษีใน demo จะต่างจาก 21 กรณีที่ตรวจไว้
-- ภาพหน้าจอต้องเบลอโดเมน ngrok, รหัสผู้ใช้ในหัว PDF และชื่อโปรเจกต์ Firebase
-- ป้ายในคอลัมน์เวอร์ชันของหน้าประวัติ (`/admin/history`) ขึ้นบรรทัดใหม่กลางคำ — แก้ CSS
+- ภาพหน้าจอต้องเบลอโดเมน ngrok (log ตอนเปิดพิมพ์ URL นี้), รหัสผู้ใช้ในหัว PDF และชื่อโปรเจกต์ Firebase
 
 ### รันชุด test
 
@@ -468,7 +482,7 @@ pytest -v
 
 **เกณฑ์ผ่าน: ต้องไม่มี `failed` และไม่มี `XPASS`**
 
-ตัวเลข ณ ตอนนี้คือ `1183 passed` (เครื่องที่มี Tesseract) ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
+ตัวเลข ณ ตอนนี้คือ `1223 passed` (เครื่องที่มี Tesseract) ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
 (passed เพิ่ม xfailed ลด) และเครื่องที่ไม่มี Tesseract จะมี `skipped` จึงใช้ตัดสินผ่าน/ไม่ผ่านไม่ได้ ให้ดูเกณฑ์ข้างบนแทน
 
 - `pytest.ini` ที่ root บอก pytest สองอย่าง: `pythonpath = .` ให้ใส่ root ของโปรเจกต์ลง path
@@ -491,7 +505,8 @@ pytest -v
   - `test_deduction_terms.py` / `test_deduction_guard.py` — รายการคำ และตัวกัน รวมถึง training phrase ทุกประโยคของ 04 ต้องผ่านตัวกัน
   - `test_receipt_parser.py` — หายอดจากข้อความ OCR (ข้อความล้วน ไม่ต้องมีรูป) · `test_ocr.py` — `utils/ocr.py`
   - `test_liff_auth.py` — ตรวจ token (mock `requests.get`) · `test_liff_ocr.py` — route `/liff/ocr` (mock ตรวจ token และ OCR)
-  - `test_liff_page.py` — หน้า LIFF (เช็กแบบ substring ไม่มี JS test) และ log `LIFF_ID` ตอนเริ่มเซิร์ฟเวอร์
+  - `test_liff_page.py` — หน้า LIFF (เช็กแบบ substring ไม่มี JS test), "ข้อมูลสำหรับทดสอบ" ตาม `TAX_DEBUG` และ log `LIFF_ID` ตอนเริ่มเซิร์ฟเวอร์
+  - `test_debug_log.py` — สวิตช์ `TAX_DEBUG`, `debug_print`, log คำถามใน `knowledge_search` และ `debug_log.py` import แค่ `os` (กัน import วน)
   - `test_firebase_db.py` — `utils/firebase_db.py` ตัวจริง (ไฟล์อื่นใช้โมดูลปลอม จึงไม่ครอบไฟล์นี้)
     โหลดด้วย `importlib.util.spec_from_file_location("real_firebase_db", ...)` ชื่อโมดูลต่างจาก `utils.firebase_db`
     จึงไม่ชนกับโมดูลปลอมใน `sys.modules` และก่อนโหลด patch `firebase_admin.credentials.Certificate` ให้โยน error
@@ -505,6 +520,7 @@ pytest -v
   - `test_webhook.py` — ยิง fixture ใน `tests/fixtures/` เข้า `/webhook` ผ่าน Flask test client
     เพื่อล็อกการเลือกสาขา, outputContexts และข้อความตอบ ก่อน refactor `webhook()`
     mock PDF / RAG ทุกเทส จึงไม่สร้าง PDF และไม่เรียก Ollama
+    ท้ายไฟล์ตรวจว่า `TAX_DEBUG` ปิดแล้ว stdout ไม่มีป้ายอ่อนไหว user ID ข้อความ และยอดเงินทั้งที่ส่งเข้าไปและที่คำนวณได้ (`LOG_CASES`)
   - `test_line_verified_cases.py` — ภาษีของ 21 กรณีที่ทดสอบใน LINE แล้ว (เงินเดือน 40,000/เดือน ประกันสังคม 10,500)
     ยิงผ่าน `/webhook` แบบเดียวกับ `test_webhook.py` (มี `mocks` ของตัวเอง) — ถ้าล้มดูกฎเหล็กข้อ 2
   - ระบบ Admin: `test_rules_store` / `test_rules_loading` / `test_rules_version` (ตรวจค่า โหลด และหมายเหตุใน LINE/PDF)
@@ -575,6 +591,7 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 | `utils/tax_rules.py` | ตัวเลขตามกฎหมายของปีภาษีเดียว (`TAX_RULES`, ปีอยู่ใน key `tax_year` ตอนนี้ 2569) | ค่าคงที่ล้วน ไม่ import อะไร ไม่มี I/O — วิธีอ่านดูกฎเหล็กข้อ 2 |
 | `docs/tax-rules-2569.md` | สเปกตัวเลขภาษีปี 2569 ที่โค้ดใช้อยู่ เทียบกับค่าเดิม (2567) พร้อมแหล่งอ้างอิง | ⚠️ = แหล่งรอง ต้องตรวจตัวบทก่อนอ้างในเล่ม |
 | `utils/knowledge_search.py` | ค้นฐานความรู้ด้วย FAISS + ให้ Ollama เรียบเรียงคำตอบภายใน deadline | มีข้อความสำรองเมื่อ LLM ใช้ไม่ได้ |
+| `utils/debug_log.py` | สวิตช์ `TAX_DEBUG`: `debug_enabled`, `debug_print` (log ที่มีข้อมูลผู้ใช้), บรรทัดสถานะตอนเปิด | import แค่ `os` เพราะ `app.py` และ `knowledge_search.py` import ไฟล์นี้ — ห้ามย้าย helper ไป `app.py` (import วน) |
 | `utils/pdf_generator.py` | สร้าง PDF สรุปผลด้วย ReportLab | ใช้ฟอนต์ไทย `static/fonts/THSarabunNew.ttf` |
 | `utils/firebase_db.py` | `firebase_client` สำหรับ `save_tax_report()` และ `get_user_history()` | อ่าน key จาก `firebase_key.json` |
 | `utils/create_knowledge.py` | สร้าง FAISS index ใหม่จาก `tax_knowledge.txt` แล้วเขียน hash ของไฟล์นั้นลง `faiss_tax_index/tax_knowledge.sha256` | รันแยกเมื่อแก้ฐานความรู้ ต้องรันจาก root (`python utils\create_knowledge.py`) · import langchain อยู่ใน `build_vector_store()` ให้เทส import `knowledge_sha256` ได้เบา — ห้ามย้ายขึ้นหัวไฟล์ (`test_create_knowledge_import_is_light` จับ) |
@@ -587,7 +604,7 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 | `utils/ocr.py` | อ่านข้อความจากรูปด้วย OpenCV + Tesseract (ส่งรูปทาง stdin ไม่เขียนรูปลงดิสก์) | import `cv2` ในตัวฟังก์ชัน เครื่องที่ไม่มี OpenCV/Tesseract ยังรันระบบเดิมได้ |
 | `utils/receipt_parser.py` | ตรวจคำบริจาค และหายอดจากข้อความ OCR แบบไม่เดา | import แค่ `re`, `decimal`, `thai_text` — กฎ "ไม่เดา" ดูกฎเหล็กข้อ 2 |
 | `utils/liff_auth.py` | ตรวจ LIFF access token ของผู้ใช้กับ LINE | ไม่ใช่ Messaging API — ดู "โปรเจกต์นี้คืออะไร" |
-| `templates/liff_donation.html` | หน้า LIFF: เลือกรูป → ย่อเป็น JPEG ในเบราว์เซอร์ → ส่ง `/liff/ocr` → ส่ง "บริจาค N" เข้าแชต | ข้อความทุกสถานะลงท้าย "ครับ" · status ใหม่ต้องเพิ่มที่นี่ (กฎเหล็กข้อ 2) |
+| `templates/liff_donation.html` | หน้า LIFF: เลือกรูป → ย่อเป็น JPEG ในเบราว์เซอร์ → ส่ง `/liff/ocr` → ส่ง "บริจาค N" เข้าแชต | ข้อความทุกสถานะลงท้าย "ครับ" · status ใหม่ต้องเพิ่มที่นี่ (กฎเหล็กข้อ 2) · "ข้อมูลสำหรับทดสอบ" แสดงเฉพาะ `TAX_DEBUG=1` |
 | `scripts/make_sample_receipts.py`, `scripts/measure_ocr.py` | สร้างใบเสร็จจำลอง (seed คงที่) และวัดความแม่นของ OCR | ผลอยู่ใน `ocr_eval/` ซึ่งถูก ignore — ห้าม commit รูป |
 | `scripts/scrub_fixtures.py` | แทน LINE user ID ใน `tests/fixtures/` ด้วยค่าปลอมก่อน commit | |
 | `docs/known-limitations.md` | ข้อจำกัดที่ยอมรับไว้ แต่ละข้อมีผลกระทบและสิ่งที่ระบบเลือกทำ | ข้อที่มีเลขปัญหาอยู่ในหัวข้อ "ปัญหาที่รู้แล้ว" ของไฟล์นี้ |
@@ -611,7 +628,9 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 ตัวกันค่าลดหย่อนที่ Dialogflow ใส่ผิดช่อง (#25) ·
 แจ้งผู้ใช้เมื่อเงินบริจาคถูกตัดที่ `donation_rate` ("ใช้ได้ X จาก Y บาท" ต่อท้าย `tax_advice` ไปถึง LINE และ PDF) ·
 ระบบ Admin แก้อัตราภาษีและเพดานลดหย่อนผ่านเว็บ (แหล่งอ้างอิงบังคับ, ประวัติทุกเวอร์ชัน, ย้อนเวอร์ชัน, มีผลหลังรีสตาร์ต,
-`rules_version` ใน `tax_history` และหมายเหตุใน LINE/PDF เมื่อค่าต่างจากค่าตั้งต้น — ทดสอบกับ Firestore จริงแล้ว)
+`rules_version` ใน `tax_history` และหมายเหตุใน LINE/PDF เมื่อค่าต่างจากค่าตั้งต้น — ทดสอบกับ Firestore จริงแล้ว) ·
+งานก่อนเดโม: log ที่มีข้อมูลผู้ใช้และ "ข้อมูลสำหรับทดสอบ" ของหน้า LIFF อยู่หลังสวิตช์ `TAX_DEBUG` (ค่าตั้งต้นปิด),
+ป้ายหน้าประวัติไม่ตัดกลางคำ, ยืนยันการหมุนรูปตาม EXIF ใน LINE บน Android (`docs/ocr-eval-2569-10.md`)
 
 **ข้อจำกัดที่ควรเขียนในเล่ม** อยู่ใน `docs/known-limitations.md` (ผลวัด OCR ใน `docs/ocr-eval-2569-10.md`)
 
@@ -629,6 +648,7 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
   · "สูตรต้มยำกุ้ง" 22.02 → 18.98 · "วันนี้อากาศเป็นยังไง" 28.69 → 28.52 · "VAT คืออะไร" 32.03 → 27.89
   · ในขอบเขต "SSF ยังลดหย่อนได้ไหม" 15.37 (ถูกปัด) → 12.77 · "Thai ESG ต้องถือกี่ปี" 13.11 → 12.93
   — chunk มากขึ้นทำให้ระยะใกล้สุดลดลงทั้งคำถามในและนอกขอบเขต ยังไม่แก้ค่า
+  — ระยะ L2 อยู่ใน log `🔍 คำถาม:` ซึ่งพิมพ์เฉพาะเมื่อตั้ง `TAX_DEBUG=1` (มีข้อความที่ผู้ใช้พิมพ์)
 - ✅ **เปลี่ยนเป็นปีภาษี 2569** (เงินได้ปี 2569 ยื่นต้นปี 2570) — **เสร็จแล้ว (ขั้น C–G)** รายละเอียดแต่ละขั้นอยู่ใน `docs/history-tax-year-2569.md`
   **ที่ยังเหลือ (ยังไม่ต้องทำจนกว่าจะสั่ง)**
   - ⚠️ แหล่งอ้างอิงที่ยังเป็นแหล่งรอง: อัตราเงินสมทบประกันสังคม 5% (docs 2.2) · กอช. 30,000 จากหน้า [4] ที่เป็นข้อมูลปี 2567 (docs หัวข้อ 4)
@@ -641,7 +661,6 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
   - เล่มข้อ 1.3.2: ตัวอย่างในวงเล็บควรแก้เป็น "ปี 2569 ที่ต้องยื่นต้นปี 2570" (docs หัวข้อ 1) — เจ้าของโปรเจกต์แก้ในเล่ม
 
 **จะทำต่อไป**
-- งานก่อน demo (หลัง merge ระบบ Admin): ซ่อน debug หน้า LIFF, ปิด log ที่มีข้อมูลอ่อนไหว, CSS ป้ายหน้าประวัติ — ดู "ก่อน demo / วันสอบ"
 - ย้าย FAISS ออกจาก `langchain-community` ไป package ใหม่ (ดูหมายเหตุ `1 warning` ในหัวข้อ "รันชุด test")
 - แจ้งค่าลดหย่อนรายการอื่นที่ถูกตัดที่เพดาน (รายการอยู่ใน `docs/known-limitations.md` หัวข้อ 1) ด้วย `deduction_breakdown(total_income, params)`
   ดึงเนื้อในของ `calculate_detailed_deductions` ออกมาคืน `{รายการ: (ยอดที่กรอก, ยอดที่ใช้ได้)}`

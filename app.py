@@ -21,6 +21,9 @@ from utils import tax_rules, rules_store
 from utils.pdf_generator import generate_tax_pdf
 # import เป็นโมดูล แล้วเรียก ocr.read_text ฯลฯ ตอนใช้ — เทส patch ที่ utils.ocr / utils.liff_auth ได้
 from utils import ocr, liff_auth
+# สวิตช์ TAX_DEBUG — import เป็นโมดูลแบบเดียวกัน อ่าน env ตอนถูกเรียก
+# log ที่มี LINE user ID ข้อความ ยอดเงิน หรือชื่อไฟล์ PDF ใช้ debug_log.debug_print (ค่าตั้งต้นไม่พิมพ์)
+from utils import debug_log
 from utils.receipt_parser import extract_donation_amount, format_amount, has_donation_keyword
 from utils.deduction_guard import check_deduction_parameters, has_number
 # หน้า /admin อยู่ในไฟล์แยก — ตัวกันในไฟล์นั้นทำงานเฉพาะ path /admin ไม่กระทบ /webhook ที่มาทาง ngrok
@@ -44,7 +47,7 @@ PUBLIC_URL = ""
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    print(f"\n📥 [DEBUG-PDF] มีคำขอไฟล์: {filename}")
+    debug_log.debug_print(f"\n📥 [DEBUG-PDF] มีคำขอไฟล์: {filename}")
     return send_from_directory('static/reports', filename, as_attachment=True)
 
 @app.route('/liff/donation')
@@ -52,7 +55,9 @@ def liff_donation():
     # หน้า LIFF อ่านยอดเงินบริจาคจากรูป แล้วส่งข้อความเข้าแชตแทนผู้ใช้
     # อ่าน LIFF ID ตอนถูกเรียก ไม่ hardcode — ไม่ได้ตั้งค่า → ส่ง None ให้หน้าเว็บแสดงว่าไม่มี LIFF ID
     liff_id = os.environ.get('LIFF_ID', '').strip() or None
-    return render_template('liff_donation.html', liff_id=liff_id)
+    # "ข้อมูลสำหรับทดสอบ" (OS, เวอร์ชัน LINE, ขนาดรูป, EXIF) แสดงเฉพาะเมื่อตั้ง TAX_DEBUG=1
+    return render_template('liff_donation.html', liff_id=liff_id,
+                           show_debug=debug_log.debug_enabled())
 
 # ขนาดไฟล์รูปสูงสุดของ /liff/ocr — ตั้งเฉพาะ route นี้ผ่าน request.max_content_length
 # ห้ามตั้ง app.config['MAX_CONTENT_LENGTH'] เพราะจะมีผลกับ /webhook ด้วย
@@ -193,7 +198,7 @@ def handle_reset(output_contexts):
     }
 
 def handle_history(line_user_id):
-    print(f"📜 [DEBUG-HISTORY] กำลังดึงประวัติของ User: {line_user_id}")
+    debug_log.debug_print(f"📜 [DEBUG-HISTORY] กำลังดึงประวัติของ User: {line_user_id}")
     records = firebase_client.get_user_history(line_user_id, limit=3)
     if records:
         history_list = []
@@ -261,7 +266,7 @@ def handle_salary(merged_params, user_query, session_id):
     withholding_tax = clean_number(merged_params.get('withholding_tax'))
     total_salary = (salary_per_month * 12) + bonus
 
-    print(f"💵 [DEBUG-STEP2] เงินเดือน/ด: {salary_per_month:,.2f} | ทั้งปี: {total_salary:,.2f} | ประกันสังคม: {social_security:,.2f} | หัก ณ ที่จ่าย: {withholding_tax:,.2f}")
+    debug_log.debug_print(f"💵 [DEBUG-STEP2] เงินเดือน/ด: {salary_per_month:,.2f} | ทั้งปี: {total_salary:,.2f} | ประกันสังคม: {social_security:,.2f} | หัก ณ ที่จ่าย: {withholding_tax:,.2f}")
 
     all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower() + " " + user_query.lower()
     has_rental = any(k in all_income_str for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"])
@@ -299,7 +304,7 @@ def handle_rental(merged_params, session_id):
     rate = get_rental_expense_rate(property_type)
     rental_expense = rental_income * rate
 
-    print(f"🏠 [DEBUG-STEP3] อสังหาฯ: {property_type} | รายได้ค่าเช่า: {rental_income:,.2f} | อัตราหักเหมา: {rate*100}%")
+    debug_log.debug_print(f"🏠 [DEBUG-STEP3] อสังหาฯ: {property_type} | รายได้ค่าเช่า: {rental_income:,.2f} | อัตราหักเหมา: {rate*100}%")
 
     all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower()
     has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
@@ -340,7 +345,7 @@ def handle_online(merged_params, user_query, session_id):
     online_expense = online_income * online_rate
     merged_params['online_income'] = online_income
 
-    print(f"📦 [DEBUG-STEP3.5] ยอดขายออนไลน์: {online_income:,.2f} | ค่าใช้จ่าย {online_rate*100:.0f}%: {online_expense:,.2f}")
+    debug_log.debug_print(f"📦 [DEBUG-STEP3.5] ยอดขายออนไลน์: {online_income:,.2f} | ค่าใช้จ่าย {online_rate*100:.0f}%: {online_expense:,.2f}")
 
     reply_text = (
         f"เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ 📦\n"
@@ -416,16 +421,16 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     else:
         tax_status_str = "ภาษีที่ชำระไว้พอดีแล้ว"
 
-    print(f"🧮 [DEBUG-CALC-SUMMARY]")
-    print(f"   ├─ รายได้รวม:       {total_income:,.2f} บ.")
-    print(f"   ├─ ค่าใช้จ่ายรวม:    {total_expense:,.2f} บ.")
-    print(f"   ├─ ค่าลดหย่อนรวม:   {total_deduction:,.2f} บ. (ลดหย่อนทั่วไป: {subtotal_deduct:,.2f}, บริจาค: {capped_donation:,.2f})")
-    print(f"   ├─ เงินได้สุทธิ:      {net_income:,.2f} บ.")
-    print(f"   ├─ ภาษีวิธี 1:       {tax_method_1:,.2f} บ.")
-    print(f"   ├─ ภาษีวิธี 2:       {tax_method_2:,.2f} บ.")
-    print(f"   ├─ ภาษีทั้งสิ้น:      {final_tax:,.2f} บ.")
-    print(f"   ├─ หัก ณ ที่จ่าย:    {withholding_tax:,.2f} บ.")
-    print(f"   └─ ยอดสุทธิชำระ/คืน: {net_payable:,.2f} บ.")
+    debug_log.debug_print(f"🧮 [DEBUG-CALC-SUMMARY]")
+    debug_log.debug_print(f"   ├─ รายได้รวม:       {total_income:,.2f} บ.")
+    debug_log.debug_print(f"   ├─ ค่าใช้จ่ายรวม:    {total_expense:,.2f} บ.")
+    debug_log.debug_print(f"   ├─ ค่าลดหย่อนรวม:   {total_deduction:,.2f} บ. (ลดหย่อนทั่วไป: {subtotal_deduct:,.2f}, บริจาค: {capped_donation:,.2f})")
+    debug_log.debug_print(f"   ├─ เงินได้สุทธิ:      {net_income:,.2f} บ.")
+    debug_log.debug_print(f"   ├─ ภาษีวิธี 1:       {tax_method_1:,.2f} บ.")
+    debug_log.debug_print(f"   ├─ ภาษีวิธี 2:       {tax_method_2:,.2f} บ.")
+    debug_log.debug_print(f"   ├─ ภาษีทั้งสิ้น:      {final_tax:,.2f} บ.")
+    debug_log.debug_print(f"   ├─ หัก ณ ที่จ่าย:    {withholding_tax:,.2f} บ.")
+    debug_log.debug_print(f"   └─ ยอดสุทธิชำระ/คืน: {net_payable:,.2f} บ.")
 
     tax_advice = generate_tax_planning_advice(
         total_income=total_income,
@@ -541,7 +546,7 @@ def handle_unclear_deductions(reason, merged_params, parameters, session_id):
         if value not in ("", None):
             session_params[name] = ""
 
-    print(f"🚫 [DEDUCTION-GUARD] ปฏิเสธ ({reason}): {parameters}")
+    debug_log.debug_print(f"🚫 [DEDUCTION-GUARD] ปฏิเสธ ({reason}): {parameters}")
     return {
         "fulfillmentText": reply_text,
         "outputContexts": [
@@ -552,7 +557,7 @@ def handle_unclear_deductions(reason, merged_params, parameters, session_id):
 
 def handle_knowledge(user_query, active_contexts, deadline):
     clean_check = user_query.replace(',', '').replace('.', '').strip()
-    print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
+    debug_log.debug_print(f"🤖 [DEBUG-RAG] กำลังประมวลผลคำถามด้วย Semantic Search: \"{user_query}\"")
 
     # เช็กว่ามี context การคำนวณค้างอยู่หรือไม่
     has_interview_ctx = any(k in active_contexts for k in ['awaiting_salary', 'awaiting_rental', 'awaiting_online', 'awaiting_deduction'])
@@ -590,11 +595,11 @@ def webhook():
         # -------------------------------------------------------------
         active_contexts = [ctx.get('name', '').split('/')[-1] for ctx in output_contexts if ctx.get('name')]
         print("\n" + "="*75)
-        print(f"📡 [INCOMING] User: {line_user_id}")
-        print(f"💬 [QUERY]    \"{user_query}\"")
+        debug_log.debug_print(f"📡 [INCOMING] User: {line_user_id}")
+        debug_log.debug_print(f"💬 [QUERY]    \"{user_query}\"")
         print(f"🎯 [INTENT]   {intent_name}")
         print(f"🔑 [ACTIVE CONTEXTS] {active_contexts}")
-        print(f"📦 [RAW PARAMS]     {parameters}")
+        debug_log.debug_print(f"📦 [RAW PARAMS]     {parameters}")
 
         # -------------------------------------------------------------
         # INTENT: ทักทายเริ่มต้น (Welcome Intent & Greeting Text)
@@ -618,7 +623,7 @@ def webhook():
                 merged_params.update(ctx.get('parameters', {}))
         merged_params.update(parameters)
 
-        print(f"🧠 [DEBUG-STATE] รวมพารามิเตอร์สะสม (merged_params): {merged_params}")
+        debug_log.debug_print(f"🧠 [DEBUG-STATE] รวมพารามิเตอร์สะสม (merged_params): {merged_params}")
 
         # ==========================================
         # STEP 1: เริ่มต้นเลือกประเภทเงินได้
@@ -691,4 +696,5 @@ if __name__ == '__main__':
     print(f"\n🔗 อัปเดต URL ใน Dialogflow: {PUBLIC_URL}/webhook\n")
     print(liff_id_status_line())
     print(admin_status_line())
+    print(debug_log.debug_status_line())
     app.run(port=5000, debug=False)
