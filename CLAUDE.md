@@ -524,6 +524,22 @@ pytest -v
 
 (`test_speed.py` เป็นสคริปต์วัดความเร็วที่ถูก ignore ไว้ ไม่ใช่ส่วนหนึ่งของชุด test)
 
+### ตรวจก่อน push
+
+repo อยู่บน GitHub และ fixture มาจาก LINE จริง — รันทุกข้อแล้วแสดงผล · **ห้าม push จนกว่าเจ้าของโปรเจกต์จะพิมพ์ "push ได้"**
+
+1. `git fetch` → `git status` ต้องสะอาด · `git log --oneline origin/main..main` ต้องมีแค่ commit ที่ตั้งใจ
+2. `Select-String -Path tests\fixtures\*.json -Pattern 'U[0-9a-f]{32}' -CaseSensitive` ต้องว่าง (LINE user ID จริง — แทนด้วย `scripts\scrub_fixtures.py`)
+3. ต้องว่าง: `git grep -nE "U[0-9a-f]{32}" main` · `git grep -nE "User-U[0-9a-f]+" main` · `git grep -n "scrypt:" main`
+4. `git grep -nE "[0-9]{10}-[A-Za-z0-9]{8}" main` (รูปแบบ LIFF ID) ได้แค่ค่าปลอมในเทส
+   > เหตุผล: `git grep -E` ไม่รู้จัก `\d` ถ้าเขียน `\d{10}` ผลจะว่างเสมอแม้มีค่าจริงอยู่ — ใช้ `[0-9]`
+5. เจ้าของโปรเจกต์ตรวจเอง — AI ห้ามใส่ค่าจริงในคำสั่ง:
+   `git grep -nF "<โดเมน ngrok>" main` · `git grep -nF "<Project ID ของ Firebase>" main` · `git grep -nF $env:LIFF_ID main`
+   ตรวจด้วย `[string]::IsNullOrEmpty($env:LIFF_ID)` ก่อน ต้องได้ `False` (ไม่ใช้ `echo` เพราะจะพิมพ์ LIFF ID จริงขึ้นจอ ถ้าถ่ายภาพหน้าจอผลตรวจจะติดไปด้วย)
+   — ถ้าว่าง PowerShell ทิ้ง argument แล้ว `main` กลายเป็นคำค้น (ได้ผลเยอะแต่ไม่เกี่ยว)
+6. เจอบรรทัดไหน เทียบกับ `origin/main` (คำสั่งเดิมแต่เปลี่ยน `main` เป็น `origin/main`) ว่าเป็นของใหม่หรือมีอยู่แล้ว
+   โดเมน ngrok ใน `dialogflow/agent.json` อยู่บน GitHub มาก่อนแล้ว ไม่นับเป็นของใหม่ (`docs/known-limitations.md` หัวข้อ 4)
+
 ---
 
 ## สภาพแวดล้อม
