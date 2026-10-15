@@ -170,6 +170,9 @@ def parse_form(form):
     if len(note) > NOTE_MAX_LENGTH:
         field_errors["note"] = f"หมายเหตุต้องไม่เกิน {NOTE_MAX_LENGTH} ตัวอักษร"
 
+    # คำอ้างว่าย้อนจากเวอร์ชันไหน — รูปผิดถือว่าไม่ได้อ้าง (ไม่ใช่ข้อผิดพลาด) การตัดสินจริงอยู่ใน transaction ตอนบันทึก
+    restored_from = parse_restored_from(form.get("restored_from", ""))
+
     base_token = _parse_base_token(form.get("base_token", ""))
     if base_token is None:
         general_errors.append("ฟอร์มไม่สมบูรณ์ กรุณาเปิดหน้าแก้ค่าใหม่")
@@ -192,7 +195,7 @@ def parse_form(form):
         override = rules = None
     return {"raw": raw, "override": override, "rules": rules, "field_errors": field_errors,
             "general_errors": general_errors, "reference": reference, "note": note,
-            "base_token": base_token}
+            "base_token": base_token, "restored_from": restored_from}
 
 
 def rule_error_text(error):
@@ -208,6 +211,34 @@ def _parse_base_token(text):
     if text == rules_store.NO_DOC_TOKEN or re.fullmatch(r"[0-9a-f]{64}", text):
         return text
     return None
+
+
+def parse_restored_from(text):
+    """"default" → rules_store.RESTORE_DEFAULT · "3" → 3 · อย่างอื่น (ว่าง, ไม่ใช่ตัวเลข, < 1) → None"""
+    text = str(text).strip()
+    if text == rules_store.RESTORE_DEFAULT:
+        return rules_store.RESTORE_DEFAULT
+    # [0-9] ไม่ใช่ isdigit(): isdigit รับเลขไทยและตัวยก ("²" แล้ว int() โยน error)
+    if re.fullmatch(r"[0-9]+", text) and int(text) >= 1:
+        return int(text)
+    return None
+
+
+def restore_source_name(source):
+    return "ค่าตั้งต้นในโค้ด" if source == rules_store.RESTORE_DEFAULT else f"เวอร์ชัน {source}"
+
+
+def restore_reference(source, old_reference=""):
+    """แหล่งอ้างอิงที่เติมไว้ในฟอร์มย้อนเวอร์ชัน — ไม่เกิน REFERENCE_MAX_LENGTH ไม่อย่างนั้นฟอร์มจะปฏิเสธข้อความที่ระบบเติมเอง
+    แหล่งอ้างอิงเดิมที่ยาวเกินถูกตัดแล้วลงท้าย "…" """
+    if source == rules_store.RESTORE_DEFAULT:
+        return "ย้อนไปใช้ค่าตั้งต้นในโค้ด (utils/tax_rules.py)"
+    head = f"ย้อนไปใช้ค่าของเวอร์ชัน {source} (แหล่งอ้างอิงเดิม: "
+    old = (old_reference if isinstance(old_reference, str) else "").strip() or "—"
+    room = REFERENCE_MAX_LENGTH - len(head) - len(")")
+    if len(old) > room:
+        old = old[:room - 1] + "…"
+    return f"{head}{old})"
 
 
 def _assemble(numbers):

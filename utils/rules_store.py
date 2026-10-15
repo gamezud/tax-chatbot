@@ -333,8 +333,10 @@ def base_token(doc):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def save_config(db, rules, base, reference, note):
-    """บันทึก rules (ผ่าน build_rules มาแล้ว) เป็น active + ประวัติ คืน {"version", "previous_override"}
+def save_config(db, rules, base, reference, note, restored_from=None):
+    """บันทึก rules (ผ่าน build_rules มาแล้ว) เป็น active + ประวัติ
+    คืน {"version", "previous_override", "restored_from"}
+    restored_from: คำอ้างจากฟอร์มว่าย้อนจากเวอร์ชันไหน (int หรือ RESTORE_DEFAULT) — บันทึกเฉพาะเมื่อตรวจใน transaction แล้วตรง
     โยน VersionConflict / NoChanges / TimeoutError (ไม่รู้ผล) / exception อื่นจาก Firestore
     ห้ามเรียกใน webhook (กฎเหล็กข้อ 1) — ใช้จากหน้า admin เท่านั้น"""
     # import ตอนเรียก: ไฟล์นี้ไม่ผูกกับ Firestore ตอน import (ตัวโหลดรับ db เป็น argument)
@@ -346,7 +348,7 @@ def save_config(db, rules, base, reference, note):
         # transactional ของไลบรารี: ถ้า commit ชนกับการเขียนอื่น (Aborted) จะเรียก _save_in_transaction ใหม่
         # สูงสุด 5 รอบ อ่านค่าใหม่ทุกรอบ — error อื่นยกเลิก transaction แล้วโยนต่อ ไม่มี doc ไหนถูกเขียน
         return firestore.transactional(_save_in_transaction)(
-            db.transaction(), db, rules, base, reference, note, firestore.SERVER_TIMESTAMP)
+            db.transaction(), db, rules, base, reference, note, firestore.SERVER_TIMESTAMP, restored_from)
 
     # เกินเวลา (TimeoutError) = ไม่รู้ผล: commit อาจสำเร็จทีหลัง (ถ้าสำเร็จก็ได้ครบทั้งสอง doc) ผู้ใช้ต้องเปิดหน้า admin ตรวจ
     return _call_with_timeout(run, timeout)
@@ -367,7 +369,37 @@ def read_history_docs(db):
     return _call_with_timeout(read, timeout)
 
 
-def _save_in_transaction(transaction, db, rules, base, reference, note, server_timestamp):
+# ---------------------------------------------------------------------------
+# ย้อนเวอร์ชัน — ค่าของเวอร์ชันเก่าต้องผ่านการตรวจปัจจุบันใหม่ (rules_from_doc) ก่อนใช้
+# ---------------------------------------------------------------------------
+# restored_from ใน doc: int (เวอร์ชันที่ย้อนไป) หรือค่านี้ (ค่าตั้งต้นในโค้ด) · ไม่มี field = แก้ปกติ
+RESTORE_DEFAULT = "default"
+
+
+def read_history_doc(db, version):
+    """dict ของ tax_rules_history/{version} หรือ None ถ้าไม่มี — อ่านไม่ได้หรือเกินเวลาโยน exception"""
+    timeout = READ_TIMEOUT_SECONDS
+
+    def read():
+        snapshot = db.collection(HISTORY_COLLECTION).document(str(version)).get(timeout=timeout, retry=None)
+        return snapshot.to_dict() if snapshot.exists else None
+
+    return _call_with_timeout(read, timeout)
+
+
+def restore_target(source, doc=None):
+    """override ที่การย้อนไป source จะได้ หรือ None ถ้าใช้ไม่ได้
+    source = RESTORE_DEFAULT → ค่าตั้งต้น · source = int → doc ต้องเป็นประวัติเวอร์ชันนั้น (version ตรง) และผ่าน rules_from_doc
+    ใช้ที่เดียวทั้งตอนเปิดฟอร์มย้อน หน้ายืนยัน และใน transaction ตอนบันทึก — กติกาจึงตรงกันเสมอ"""
+    if source == RESTORE_DEFAULT:
+        return to_override(DEFAULT_TAX_RULES)
+    if not _is_int(source) or source < 1 or valid_version(doc) != source:
+        return None
+    rules, errors = rules_from_doc(doc)
+    return None if errors else to_override(rules)
+
+
+def _save_in_transaction(transaction, db, rules, base, reference, note, server_timestamp, restored_from=None):
     """ถูกเรียกซ้ำได้เมื่อชนกัน — ห้าม print และห้ามแก้ argument
     Firestore บังคับให้อ่านทั้งหมดก่อนเขียน: อ่าน active และประวัติก่อน แล้วค่อย set/create"""
     active_ref = db.collection(CONFIG_COLLECTION).document(CONFIG_DOCUMENT)
@@ -397,6 +429,17 @@ def _save_in_transaction(transaction, db, rules, base, reference, note, server_t
                         transaction.get(history_query, timeout=READ_TIMEOUT_SECONDS, retry=None)]
     new_version = max([previous_version or 0] + [v for v in history_versions if v is not None]) + 1
 
+    # restored_from จากฟอร์มเป็นแค่คำอ้าง — อ่านเวอร์ชันนั้นใน transaction (ก่อนเขียน) แล้วบันทึกเฉพาะเมื่อค่าตรงทุกช่อง
+    # ไม่ตรง (แก้ค่าหลังเติม, เลขปลอม, doc หายหรือถูกแก้) → บันทึกเป็นการแก้ปกติ ไม่ปฏิเสธ เพราะค่าผ่านการตรวจครบแล้ว
+    restored = None
+    source_doc = None
+    if _is_int(restored_from) and restored_from >= 1:
+        source_ref = db.collection(HISTORY_COLLECTION).document(str(restored_from))
+        source_snapshot = next(iter(transaction.get(source_ref, timeout=READ_TIMEOUT_SECONDS, retry=None)))
+        source_doc = source_snapshot.to_dict() if source_snapshot.exists else None
+    if restored_from is not None and restore_target(restored_from, source_doc) == new_override:
+        restored = restored_from
+
     record = {
         "based_on_tax_year": DEFAULT_TAX_RULES["tax_year"],
         "version": new_version,
@@ -405,11 +448,13 @@ def _save_in_transaction(transaction, db, rules, base, reference, note, server_t
         "note": note,
         "updated_at": server_timestamp,
     }
+    if restored is not None:
+        record["restored_from"] = restored
     transaction.set(active_ref, record)
     # create: ถ้ามี doc เลขนี้อยู่แล้ว (เช่น ถูกสร้างมือโดยไม่มี field version) commit ล้มทั้งก้อน ประวัติเดิมไม่ถูกทับ
     transaction.create(db.collection(HISTORY_COLLECTION).document(str(new_version)),
                        {**record, "previous_version": previous_version})
-    return {"version": new_version, "previous_override": previous_override}
+    return {"version": new_version, "previous_override": previous_override, "restored_from": restored}
 
 
 def _use_defaults(message):

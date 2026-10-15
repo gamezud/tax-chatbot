@@ -26,6 +26,7 @@
   <p class="banner warn" id="overwrite-invalid">ค่าที่บันทึกใน Firestore ผิด การบันทึกนี้จะเขียนทับทั้งก้อน
     {% if not rows %}(ค่าเท่าค่าตั้งต้น — บันทึกเพื่อเขียนทับค่าที่ผิดใน Firestore){% endif %}</p>
   {% endif %}
+  {% if restore_note %}<p class="banner warn" id="restore-note">{{ restore_note }}</p>{% endif %}
   <p>รายการที่เปลี่ยนจากค่าที่บันทึกล่าสุด ({{ rows|length }} รายการ)</p>
   {% with table_id="changes" %}{% include "_change_table.html" %}{% endwith %}
 
@@ -35,6 +36,7 @@
   <form method="post" action="{{ url_for('admin.edit') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="base_token" value="{{ base_token }}">
+    <input type="hidden" name="restored_from" value="{{ restored_from }}">
     {% for name, value in values.items() %}<input type="hidden" name="{{ name }}" value="{{ value }}">
     {% endfor %}
     <input type="hidden" name="source_reference" value="{{ reference }}">

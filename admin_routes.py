@@ -293,13 +293,16 @@ def edit():
                                message=UNREADABLE_MESSAGE), 503
 
     if request.method == "GET":
+        if "from_version" in request.args:
+            return _restore_form(saved, request.args.get("from_version", ""))
         return _render_form(saved, admin_form.values_from_override(saved["override"]), saved["base"])
 
     if request.form.get("action") == "back":
         # "กลับไปแก้" จากหน้ายืนยัน: เติมค่าที่ส่งมาคืนโดยไม่ตรวจ base_token เป็นของฟอร์มเดิม
         values = {name: request.form.get(name, "") for name, _, _ in admin_form.all_fields()}
         return _render_form(saved, values, request.form.get("base_token", ""),
-                            reference=request.form.get("source_reference", ""), note=request.form.get("note", ""))
+                            reference=request.form.get("source_reference", ""), note=request.form.get("note", ""),
+                            restored_from=request.form.get("restored_from", ""))
 
     result = admin_form.parse_form(request.form)
     if result["override"] is None:
@@ -311,7 +314,8 @@ def edit():
     # doc ที่ถูกปฏิเสธ (saved["problem"]) ไปหน้ายืนยันได้แม้ค่าเท่าค่าตั้งต้น — ไม่อย่างนั้นแก้ doc ผิดกลับเป็นค่าตั้งต้นไม่ได้
     if not rows and not saved["problem"]:
         return _render_form(saved, result["raw"], result["base_token"],
-                            reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน")
+                            reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน",
+                            restored_from=_restored_text(result["restored_from"]))
     return render_template(
         "admin_confirm.html",
         rows=rows,
@@ -319,10 +323,80 @@ def edit():
         reference=result["reference"],
         note=result["note"],
         base_token=result["base_token"],
+        restored_from=_restored_text(result["restored_from"]),
+        restore_note=_restore_note(result["restored_from"], result["override"]),
         overwrite_invalid=bool(saved["problem"]),
         csrf_token=csrf_token(),
         ratio=admin_form.CHANGE_WARNING_RATIO,
     )
+
+
+# ---------------------------------------------------------------------------
+# ย้อนเวอร์ชัน: GET /admin/edit?from_version=N (หรือ default) เปิดฟอร์มเดิมที่เติมค่าของเวอร์ชันนั้น
+# ไม่เขียนอะไร — การบันทึกผ่านหน้ายืนยันและ /admin/save เส้นทางเดิมทุกอย่าง
+# ---------------------------------------------------------------------------
+RESTORE_UNREADABLE_MESSAGE = ("อ่านเวอร์ชันที่จะย้อนไปจาก Firestore ไม่ได้ (ไม่ได้เชื่อมต่อ หรืออ่านไม่สำเร็จ) "
+                              "กรุณาตรวจการเชื่อมต่อแล้วลองใหม่ครับ")
+
+
+def _restore_form(saved, text):
+    source = admin_form.parse_restored_from(text)
+    if source is None:
+        return _restore_error(f"ไม่พบเวอร์ชัน {text}"), 404
+
+    if source == rules_store.RESTORE_DEFAULT:
+        old_reference = ""
+        target = rules_store.restore_target(source)
+    else:
+        try:
+            doc = rules_store.read_history_doc(_config_db(), source)
+        except Exception as e:
+            print(f"⚠️ [ADMIN] อ่านเวอร์ชันที่จะย้อนไปไม่ได้ ({type(e).__name__})")
+            return render_template("admin_unavailable.html", title="ย้อนเวอร์ชันไม่ได้ตอนนี้",
+                                   message=RESTORE_UNREADABLE_MESSAGE), 503
+        if doc is None:
+            return _restore_error(f"ไม่พบเวอร์ชัน {source}"), 404
+        # ค่าของเวอร์ชันเก่าต้องผ่านการตรวจปัจจุบันใหม่ (ปีภาษี, version, build_rules) — ไม่ผ่านไม่เปิดฟอร์ม
+        if not admin_history.is_well_formed(str(source), doc):
+            return _restore_error(f"เวอร์ชัน {source}: {admin_history.MALFORMED}"), 422
+        reason = admin_history.unusable_reason(doc)
+        if reason:
+            return _restore_error(f"เวอร์ชัน {source}: {reason}"), 422
+        old_reference = doc.get("source_reference", "")
+        target = rules_store.restore_target(source, doc)
+
+    name = admin_form.restore_source_name(source)
+    # base_token มาจาก active ปัจจุบันเสมอ (ไม่ใช่ของ doc ประวัติ) — การบันทึกจึงยังกันแท็บเก่าได้เหมือนเดิม
+    return _render_form(saved, admin_form.values_from_override(target), saved["base"],
+                        reference=admin_form.restore_reference(source, old_reference),
+                        notice=f"เติมค่าของ{name} ไว้ให้ ตรวจแล้วกดตรวจสอบค่าครับ",
+                        restored_from=_restored_text(source))
+
+
+def _restore_error(message):
+    return render_template("admin_restore_error.html", message=message)
+
+
+def _restore_note(source, override):
+    """ข้อความในหน้ายืนยันว่าจะบันทึกเป็นการย้อนหรือไม่ — แค่บอกล่วงหน้า การตัดสินจริงอยู่ใน transaction ตอนบันทึก"""
+    if source is None:
+        return None
+    name = admin_form.restore_source_name(source)
+    if source == rules_store.RESTORE_DEFAULT:
+        target = rules_store.restore_target(source)
+    else:
+        try:
+            target = rules_store.restore_target(source, rules_store.read_history_doc(_config_db(), source))
+        except Exception as e:
+            print(f"⚠️ [ADMIN] อ่านเวอร์ชันที่จะย้อนไปไม่ได้ ({type(e).__name__})")
+            return f"ตรวจไม่ได้ว่าค่าตรงกับ{name} หรือไม่ — ระบบจะตรวจอีกครั้งตอนบันทึก"
+    if target == override:
+        return f"ค่าตรงกับ{name} ทุกช่อง — จะบันทึกว่าย้อนจาก{name}"
+    return f"ค่าต่างจาก{name} แล้ว — จะบันทึกเป็นการแก้ปกติ"
+
+
+def _restored_text(source):
+    return "" if source is None else str(source)
 
 
 @admin_bp.route("/save", methods=["POST"])
@@ -342,13 +416,14 @@ def save():
 
     try:
         outcome = rules_store.save_config(_config_db(), result["rules"], result["base_token"],
-                                          result["reference"], result["note"])
+                                          result["reference"], result["note"], restored_from=result["restored_from"])
     except rules_store.VersionConflict:
         print("⚠️ [ADMIN] ไม่บันทึกค่าภาษี — doc เปลี่ยนหลังเปิดฟอร์ม")
         return render_template("admin_conflict.html", message=CONFLICT_MESSAGE), 409
     except rules_store.NoChanges:
         return _render_form(saved, result["raw"], result["base_token"],
-                            reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน")
+                            reference=result["reference"], note=result["note"], notice="ไม่มีค่าที่เปลี่ยน",
+                            restored_from=_restored_text(result["restored_from"]))
     except Exception as e:
         # ไม่พิมพ์ข้อความของ exception (อาจมีเนื้อหาของ doc) — บอกแค่ชนิด
         print(f"❌ [ADMIN] บันทึกค่าภาษีไม่สำเร็จหรือไม่รู้ผล ({type(e).__name__})")
@@ -357,8 +432,12 @@ def save():
 
     # log นอก transaction (ฟังก์ชันใน transaction ถูกเรียกซ้ำได้) — ชื่อช่องเท่านั้น ไม่มีค่า แหล่งอ้างอิง หรือหมายเหตุ
     names = [row["name"] for row in admin_form.changes(outcome["previous_override"], result["override"])]
-    print(f"✅ [ADMIN] บันทึกค่าภาษีเวอร์ชัน {outcome['version']} (แก้ {len(names)} รายการ: {', '.join(names)})")
+    restored = outcome.get("restored_from")
+    restored_text = f" · ย้อนจาก{admin_form.restore_source_name(restored)}" if restored is not None else ""
+    print(f"✅ [ADMIN] บันทึกค่าภาษีเวอร์ชัน {outcome['version']} (แก้ {len(names)} รายการ: {', '.join(names)})"
+          f"{restored_text}")
     return render_template("admin_saved.html", version=outcome["version"],
+                           restored_name=admin_form.restore_source_name(restored) if restored is not None else None,
                            reference=result["reference"], note=result["note"])
 
 
@@ -386,11 +465,16 @@ def history():
     # อ่าน active กับประวัติคนละครั้ง (ไม่อยู่ใน transaction) — ถ้ามีคนบันทึกระหว่างนั้น ป้ายอาจคลาดไปหนึ่งเวอร์ชัน
     # จนกว่าจะเปิดหน้าใหม่ ยอมรับได้เพราะหน้านี้อ่านอย่างเดียว การบันทึกตรวจลายนิ้วมือของตัวเองอยู่แล้ว
     rows = admin_history.history_rows(docs, saved["version"], tax_rules.RULES_INFO)
+    # ปุ่ม "ใช้ค่าตั้งต้นในโค้ด": ไม่แสดงเมื่อย้อนแล้วจะได้ "ไม่มีค่าที่เปลี่ยน" แน่นอน
+    # (ยังไม่มี doc หรือ doc ถูกต้องและเท่าค่าตั้งต้น) — doc ที่ผิด (problem) ยังแสดง เพราะเขียนทับได้
+    defaults_override = rules_store.to_override(rules_store.DEFAULT_TAX_RULES)
+    defaults_restorable = saved["exists"] and (bool(saved["problem"]) or saved["override"] != defaults_override)
     return render_template(
         "admin_history.html",
         rows=rows,
         tax_year=rules_store.DEFAULT_TAX_RULES["tax_year"],
         defaults_in_use=tax_rules.RULES_INFO.get("source") != "firestore",
+        defaults_restorable=defaults_restorable,
         saved=saved,
         pending_restart=pending_restart(saved),
     )
@@ -400,16 +484,18 @@ def _render_form_errors(saved, result):
     # ผิด: แสดงค่าที่ผู้ใช้กรอกคืน (ไม่ล้าง) พร้อมข้อผิดพลาดข้างช่อง
     return _render_form(saved, result["raw"], request.form.get("base_token", ""),
                         reference=request.form.get("source_reference", ""), note=request.form.get("note", ""),
-                        field_errors=result["field_errors"], general_errors=result["general_errors"])
+                        field_errors=result["field_errors"], general_errors=result["general_errors"],
+                        restored_from=request.form.get("restored_from", ""))
 
 
 def _render_form(saved, values, base_token, reference="", note="", field_errors=None, general_errors=None,
-                 notice=None):
+                 notice=None, restored_from=""):
     return render_template(
         "admin_edit.html",
         groups=admin_form.form_fields(),
         values=values,
         base_token=base_token,
+        restored_from=restored_from,
         reference=reference,
         note=note,
         field_errors=field_errors or {},

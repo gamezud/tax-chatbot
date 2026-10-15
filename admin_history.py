@@ -100,6 +100,7 @@ def history_rows(docs, active_version, rules_info):
             "unusable": reason,
             "is_active": version == active_version,
             "in_use": version == in_use,
+            "restored_from": _restored_from(doc.get("restored_from")),
         })
     rows.sort(key=lambda row: row["version"], reverse=True)
     malformed.sort(key=lambda row: row["doc_id"])
@@ -119,6 +120,13 @@ def _compare(doc, overrides):
     if rules_store._is_int(previous) and previous in overrides:
         return f"เทียบกับเวอร์ชัน {previous}", admin_form.changes(overrides[previous], own)
     return NOT_COMPARABLE, None
+
+
+def _restored_from(value):
+    """ชื่อที่ย้อนมาจาก (เช่น "เวอร์ชัน 1") หรือ None — ค่ารูปอื่นที่ save_config ไม่เขียน ไม่แสดง"""
+    if value == rules_store.RESTORE_DEFAULT or (rules_store._is_int(value) and value >= 1):
+        return admin_form.restore_source_name(value)
+    return None
 
 
 def _text(value):

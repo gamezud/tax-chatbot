@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ระบบผู้ดูแล — ย้อนเวอร์ชันไม่ได้</title>
+  <style>
+    body { font-family: "Sarabun", "Tahoma", sans-serif; margin: 2rem; color: #1E293B; background: #F8FAFC; }
+    main { max-width: 40rem; }
+    h1 { font-size: 1.4rem; color: #1E3A8A; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>ย้อนเวอร์ชันไม่ได้</h1>
+  <p id="message">{{ message }}</p>
+  <p><a href="{{ url_for('admin.history') }}">กลับหน้าประวัติ</a></p>
+</main>
+</body>
+</html>

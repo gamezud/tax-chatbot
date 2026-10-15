@@ -35,6 +35,7 @@
   <form method="post" action="{{ url_for('admin.edit') }}">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <input type="hidden" name="base_token" value="{{ base_token }}">
+    <input type="hidden" name="restored_from" value="{{ restored_from }}">
     {% for title, fields in groups %}
     <h2>{{ title }}</h2>
     <table>
