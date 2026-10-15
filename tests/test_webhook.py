@@ -18,9 +18,11 @@
   และ chdir ไป tmp_path เพื่อให้ไฟล์ที่หลุดออกมา (static/reports) ไม่ลง repo
 """
 import json
+import re
 import sys
 import time
 import types
+from decimal import Decimal
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -931,3 +933,102 @@ def test_unclear_examples_together_pass_guard():
     text = ", ".join(UNCLEAR_EXAMPLE_PARAMETERS)
     params = {k: v for p in UNCLEAR_EXAMPLE_PARAMETERS.values() for k, v in p.items()}
     assert app_module.check_deduction_parameters(text, params) is None
+
+
+# ---------------------------------------------------------------------------
+# log ที่มีข้อมูลผู้ใช้ — พิมพ์เฉพาะเมื่อตั้ง TAX_DEBUG=1 (utils/debug_log.py)
+# ตอนเดโมหน้าจอเซิร์ฟเวอร์ต้องไม่มี LINE user ID ข้อความที่ผู้ใช้พิมพ์ หรือยอดเงิน
+# ---------------------------------------------------------------------------
+SENSITIVE_TAGS = ["[INCOMING]", "[QUERY]", "[RAW PARAMS]", "[DEBUG-STATE]", "[DEBUG-HISTORY]",
+                  "[DEBUG-STEP2]", "[DEBUG-STEP3]", "[DEBUG-STEP3.5]", "[DEBUG-CALC-SUMMARY]",
+                  "[DEDUCTION-GUARD]", "[DEBUG-RAG]"]
+
+# (fixture หรือ (ข้อความ, parameters) ของ deductions_payload, ป้ายที่สาขานั้นพิมพ์)
+LOG_CASES = {
+    "history": ("002_Default_Fallback_Intent", "[DEBUG-HISTORY]"),
+    "salary": ("004_02_Tax_Interview_Salary", "[DEBUG-STEP2]"),
+    "rental": ("008_03_Tax_Interview_Rental", "[DEBUG-STEP3]"),
+    "online": ("009_Default_Fallback_Intent", "[DEBUG-STEP3.5]"),
+    "summary": ("010_04_Tax_Interview_Deductions", "[DEBUG-CALC-SUMMARY]"),
+    "guard": (("ดอกเบี้ยเงินกู้รถ 20000", {"donation": 20000.0}), "[DEDUCTION-GUARD]"),
+    "knowledge": ("011_Default_Fallback_Intent", "[DEBUG-RAG]"),
+}
+
+
+def _log_case_payload(source):
+    return deductions_payload(*source) if isinstance(source, tuple) else load(source)
+
+
+AMOUNT_RE = re.compile(r"\d[\d,]*(?:\.\d+)?")
+# ต่ำกว่านี้ไม่ใช่ยอดเงิน (จำนวนคน, lifespanCount, อัตรา %) และตัวเลขเล็กชนกับข้อความอื่นใน log ได้ง่าย
+MIN_AMOUNT = 100
+
+
+def _amount_forms(payload, body):
+    """ยอดเงินที่ส่งเข้าไป (queryText, parameters, parameters ของ context) และที่คำนวณได้ (ตัวเลขในคำตอบ)
+    คืนทุกรูปที่อาจโผล่ใน log: 40000, 40,000, 40,000.00"""
+    query = payload["queryResult"]
+    values = AMOUNT_RE.findall(query["queryText"]) + AMOUNT_RE.findall(body["fulfillmentText"])
+    for params in [query.get("parameters", {})] + [c.get("parameters", {}) for c in query.get("outputContexts", [])]:
+        for value in params.values():
+            if isinstance(value, (int, float)) and not isinstance(value, bool):
+                values.append(str(value))
+            elif isinstance(value, str) and AMOUNT_RE.fullmatch(value.strip()):
+                values.append(value.strip())
+    forms = set()
+    for value in values:
+        amount = Decimal(value.replace(",", ""))
+        if amount >= MIN_AMOUNT:
+            forms |= {f"{amount:.0f}", f"{amount:,.0f}", f"{amount:,.2f}"}
+    return forms
+
+
+def test_log_cases_cover_every_tag():
+    # เพิ่มป้ายใน SENSITIVE_TAGS แล้วต้องมีกรณีที่สาขานั้นพิมพ์ ไม่งั้นเทสข้างล่างไม่ได้ตรวจป้ายนั้นจริง
+    # [INCOMING] / [QUERY] / [RAW PARAMS] / [DEBUG-STATE] พิมพ์ทุก request ที่ผ่านขั้นนั้น
+    every_request = {"[INCOMING]", "[QUERY]", "[RAW PARAMS]", "[DEBUG-STATE]"}
+    assert set(SENSITIVE_TAGS) == every_request | {tag for _, tag in LOG_CASES.values()}
+
+
+@pytest.mark.parametrize("source, tag", LOG_CASES.values(), ids=LOG_CASES.keys())
+def test_sensitive_logs_hidden_by_default(post, capsys, monkeypatch, source, tag):
+    monkeypatch.delenv("TAX_DEBUG", raising=False)
+    payload = _log_case_payload(source)
+    body = post(payload)
+    out = capsys.readouterr().out
+    for sensitive in SENSITIVE_TAGS:
+        assert sensitive not in out
+    assert "TEST_USER" not in out
+    assert payload["queryResult"]["queryText"] not in out
+    # ยอดเงินห้ามหลุดผ่าน log ตัวอื่นที่ยังพิมพ์ (เช่น *-EMIT) — รวมยอดที่คำนวณได้ในคำตอบ
+    amounts = _amount_forms(payload, body)
+    if tag not in ("[DEBUG-HISTORY]", "[DEBUG-RAG]"):   # สองสาขานี้ไม่มียอดเงินในเคส
+        assert amounts, "เคสนี้ควรมียอดเงินให้ตรวจ — ถ้าว่าง การตรวจข้างล่างไม่ได้ตรวจอะไร"
+    for amount in amounts:
+        assert amount not in out
+    # log ที่ไม่มีข้อมูลผู้ใช้ยังพิมพ์ ตอนเดโมยังเห็นว่าข้อความไปสาขาไหน
+    assert "[INTENT]" in out
+
+
+@pytest.mark.parametrize("source, tag", LOG_CASES.values(), ids=LOG_CASES.keys())
+def test_sensitive_logs_shown_when_tax_debug_on(post, capsys, monkeypatch, source, tag):
+    monkeypatch.setenv("TAX_DEBUG", "1")
+    payload = _log_case_payload(source)
+    post(payload)
+    out = capsys.readouterr().out
+    assert tag in out
+    assert "📡 [INCOMING] User: TEST_USER" in out
+    assert f'💬 [QUERY]    "{payload["queryResult"]["queryText"]}"' in out
+
+
+@pytest.mark.parametrize("debug, shown", [(None, False), ("1", True)], ids=["off", "on"])
+def test_download_log_hides_pdf_filename(capsys, monkeypatch, debug, shown):
+    # ชื่อไฟล์ PDF คือสิ่งเดียวที่ใช้โหลด PDF ได้ (ปัญหา #17) — ไฟล์ไม่มีอยู่จริง ได้ 404 ก็พอ
+    if debug is None:
+        monkeypatch.delenv("TAX_DEBUG", raising=False)
+    else:
+        monkeypatch.setenv("TAX_DEBUG", debug)
+    app_module.app.test_client().get("/download/tax_report_deadbeef.pdf")
+    out = capsys.readouterr().out
+    assert ("[DEBUG-PDF]" in out) is shown
+    assert ("tax_report_deadbeef.pdf" in out) is shown

@@ -5,6 +5,8 @@ import requests
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
+from utils import debug_log
+
 # ใช้ 127.0.0.1 แทน localhost: บน Windows ชื่อ localhost จะลอง IPv6 (::1) ก่อน
 # แต่ Ollama รับแค่ IPv4 จึงเสียเวลาราว 2 วินาทีก่อนถอยไปใช้ 127.0.0.1 ซึ่งเกิน connect timeout (1.0 วินาที)
 # วัดจริง: GET /api/tags ผ่าน localhost = 2.05 วินาที, ผ่าน 127.0.0.1 = 0.005 วินาที
@@ -103,7 +105,8 @@ def query_tax_knowledge(user_question, deadline=None):
 
         valid_chunks = [doc.page_content for doc, score in results if score <= TAX_DISTANCE_THRESHOLD]
         best_doc, best_score = results[0]
-        print(f"🔍 คำถาม: '{user_question}' | L2 Distance ดีที่สุด: {best_score:.4f}")
+        # มีข้อความที่ผู้ใช้พิมพ์ — พิมพ์เฉพาะเมื่อตั้ง TAX_DEBUG=1
+        debug_log.debug_print(f"🔍 คำถาม: '{user_question}' | L2 Distance ดีที่สุด: {best_score:.4f}")
 
         if not valid_chunks:
             return "ขออภัยครับ คำถามนี้อยู่นอกเหนือขอบเขตฐานข้อมูลภาษีเงินได้บุคคลธรรมดาครับ"
