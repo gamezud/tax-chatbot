@@ -530,7 +530,7 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 
 1. `git fetch` → `git status` ต้องสะอาด · `git log --oneline origin/main..main` ต้องมีแค่ commit ที่ตั้งใจ
 2. `Select-String -Path tests\fixtures\*.json -Pattern 'U[0-9a-f]{32}' -CaseSensitive` ต้องว่าง (LINE user ID จริง — แทนด้วย `scripts\scrub_fixtures.py`)
-3. ต้องว่าง: `git grep -nE "U[0-9a-f]{32}" main` · `git grep -nE "User-U[0-9a-f]+" main` · `git grep -n "scrypt:" main`
+3. ต้องว่าง: `git grep -nE "U[0-9a-f]{32}" main` · `git grep -nE "User-U[0-9a-f]+" main` · `git grep -n "scrypt:[0-9]" main` (ข้อความ `scrypt:` ตรง ๆ จะเจอบรรทัดนี้เอง จึงต้องมีตัวเลขตามหลังเหมือน hash จริง)
 4. `git grep -nE "[0-9]{10}-[A-Za-z0-9]{8}" main` (รูปแบบ LIFF ID) ได้แค่ค่าปลอมในเทส
    > เหตุผล: `git grep -E` ไม่รู้จัก `\d` ถ้าเขียน `\d{10}` ผลจะว่างเสมอแม้มีค่าจริงอยู่ — ใช้ `[0-9]`
 5. เจ้าของโปรเจกต์ตรวจเอง — AI ห้ามใส่ค่าจริงในคำสั่ง:
