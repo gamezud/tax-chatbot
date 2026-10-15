@@ -1,6 +1,6 @@
 # ระบบ Admin แก้อัตราภาษี — บันทึกส่งต่องาน
 
-branch `feature/admin-tax-rules` · ชุด test ณ 5B: `1085 passed` (เกณฑ์ผ่าน: ไม่มี failed และไม่มี XPASS)
+branch `feature/admin-tax-rules` · ชุด test ณ 6B: `1183 passed` (เกณฑ์ผ่าน: ไม่มี failed และไม่มี XPASS)
 แผนเดิม: ก้อน 1–7 เป้าเสร็จ 22 ต.ค. 2569 buffer ถึง 26 ต.ค. 2569 · ลำดับตัดงานถ้าไม่ทัน: 6 → ส่วน LINE/PDF ของ 3 → หน้ายืนยันใน 5
 
 ## 1. ก้อนที่เสร็จแล้ว
@@ -16,6 +16,9 @@ branch `feature/admin-tax-rules` · ชุด test ณ 5B: `1085 passed` (เก
 | Secure | 04f4899 | cookie ของ session ตั้ง Secure |
 | 5A | d120cd6 | ฟอร์ม `/admin/edit` + หน้ายืนยัน ยังไม่บันทึก (`admin_form.py`) |
 | 5B | 2f0fc75 | `POST /admin/save` ตรวจซ้ำแล้วเขียน active + `tax_rules_history/{version}` ใน transaction เดียว (`rules_store.save_config`) + Firestore ปลอมที่เก็บข้อมูลจริง (`tests/fake_firestore.py`) |
+| 6-0 | bb69e2f | ย้ายโค้ดล้วน: `read_config_doc` กับ `save_config` ใช้ `_call_with_timeout` ตัวเดียว |
+| 6A | d3e6833 | `/admin/history` อ่านอย่างเดียว (`admin_history.py`) + ตารางเปลี่ยนค่าใช้ร่วมกับหน้ายืนยัน (`_change_table.html`) |
+| 6B | cf0e79b | ย้อนเวอร์ชันผ่านฟอร์มเดิม (`/admin/edit?from_version=N` หรือ `default`) + `restored_from` ตรวจใน transaction |
 
 ## 2. ข้อตัดสินใจที่ยังมีผลกับงานต่อไป
 
@@ -34,6 +37,16 @@ branch `feature/admin-tax-rules` · ชุด test ณ 5B: `1085 passed` (เก
 - **เลข version ใหม่ = max(version ของ active ถ้าถูกรูป, เลขสูงสุดใน `tax_rules_history`) + 1** — อ่านประวัติใน transaction ก่อนเขียน
   `rules_version` ใน `tax_history` จึงชี้ชุดกติกาเดียวเสมอ แม้ active ถูกแก้มือให้เลขต่ำลง
 - **ประวัติเขียนด้วย `create` ไม่ใช่ `set`** — ถ้ามี doc เลขนั้นอยู่แล้ว (เช่น สร้างมือ) commit ล้มทั้งก้อน ตอบ 503 ไม่ทับประวัติเดิม
+- **GET ไม่เขียน Firestore** (`/admin/history`, `/admin/edit?from_version=…`) — ปุ่มย้อนเป็นลิงก์เปิดฟอร์มที่เติมค่าไว้
+  การเขียนมีทางเดียวคือหน้ายืนยัน → `/admin/save` → `save_config` (เทสตรวจ `commits == 0`, `begins == 0`)
+- **`restored_from` จากฟอร์มเป็นแค่คำอ้าง** — อ่านเวอร์ชันนั้นใน transaction แล้วบันทึกเฉพาะเมื่อค่าตรงทุกช่อง
+  ไม่ตรง (แก้ค่าหลังเติม, เลขปลอม, doc ถูกแก้) → บันทึกเป็นการแก้ปกติ ไม่ปฏิเสธ เพราะค่าผ่านการตรวจครบแล้ว
+  เทียบใน route ก่อนเข้า transaction ไม่พอ (เทส `test_restored_from_compared_inside_transaction`)
+- **หน้าประวัติอ่านทั้ง collection ด้วย `stream()` ไม่ใช้ `order_by` และ `limit`** — `order_by("version")` ตัด doc ที่ไม่มี field นั้นทิ้งเงียบ ๆ
+  และถ้าไม่มี `order_by` แล้วใช้ `limit` จะตัดตาม doc id แบบข้อความ ("10" มาก่อน "2") · เรียงตามเลข version ใน Python
+- **เวลาไทยใช้ +7 คงที่** ไม่ใช้ `zoneinfo("Asia/Bangkok")` ซึ่งบน Windows ต้องลง `tzdata` เพิ่ม (ไทยไม่มีเวลาออมแสง)
+- **ซ่อนปุ่ม "ใช้ค่าตั้งต้นในโค้ด" เมื่อจะได้ "ไม่มีค่าที่เปลี่ยน" แน่นอน** (ยังไม่มี doc หรือ doc ถูกต้องและเท่าค่าตั้งต้น)
+  doc ที่ตัวโหลดปฏิเสธยังแสดงปุ่ม เพราะเขียนทับด้วยค่าตั้งต้นได้
 - key ที่ไม่รู้จักหรือห้ามแก้ใน Firestore → ปฏิเสธทั้ง doc · `based_on_tax_year` ต้องตรงกับ `tax_year` ของค่าตั้งต้น
 - ห้ามแก้ผ่านเว็บ: `tax_year`, `expense.rental_rate.unmatched`, `deduction.parent_max_count`, `deduction.ssf_last_tax_year`
 - อัตราที่ข้อความถึงผู้ใช้แสดงแบบ `:.0f` ต้องเป็นจำนวนเต็ม %: ค่าเช่า 3 อัตรา, ขายออนไลน์, อัตราขั้นบันไดทั้ง 8 ขั้น
@@ -73,6 +86,7 @@ CLAUDE.md (รวมเป็น commit เดียวตอนท้าย)
 
 รายการตรวจก่อน demo (เพิ่มใน CLAUDE.md หัวข้อ "ก่อน demo / วันสอบ")
 - ภาพหน้าจอต้องเบลอโดเมน ngrok, รหัสผู้ใช้ในหัว PDF และชื่อโปรเจกต์ Firebase
+- ป้ายในคอลัมน์เวอร์ชันของหน้าประวัติขึ้นบรรทัดใหม่กลางคำ — แก้ CSS รวมกับการซ่อน debug ของหน้า LIFF และ log ที่มีข้อมูลอ่อนไหว
 
 ทดลองจริง
 - `/admin` ผ่านโดเมน ngrok จริง → 404 และ `/webhook` ยังตอบ
@@ -98,8 +112,11 @@ CLAUDE.md (รวมเป็น commit เดียวตอนท้าย)
   → รีสตาร์ต `[TAX-RULES]` version 2 ไม่ต่างจากค่าตั้งต้น (0.46s)
   → `tax_history`: รอบที่ใช้ v1 มี `rules_version` = 1 ภาษี 7,475 · รอบที่ใช้ v2 มี `rules_version` = 2 ภาษี 8,450 และ LINE ไม่มีหมายเหตุ
   (ยืนยันกับ Firestore จริงว่าบันทึกเวอร์ชันเสมอ แต่แสดงหมายเหตุเฉพาะตอนค่าต่างจากค่าตั้งต้น — ข้อตัดสินใจก้อน 3)
-- **`tax_rules_history` เวอร์ชัน 1 และ 2 คือการทดสอบ end-to-end วันที่ 15 ต.ค. 2569** แหล่งอ้างอิงที่บันทึกไว้คือ "ตรวจสอบค่า" ไม่ใช่ค่าจริง
-  เก็บไว้เป็นหลักฐาน ไม่ลบ — active เป็น version 2 (เท่าค่าตั้งต้น) log ตอนเปิดจึงขึ้น version 2 และ `tax_history` บันทึก `rules_version` 2
+- **ย้อนเวอร์ชันกับ Firestore จริง** (15 ต.ค. 2569): ย้อน v1 → ได้ v3 (`restored_from` = 1, ป้าย "ค่าที่บันทึกล่าสุด" กับ "เซิร์ฟเวอร์ใช้อยู่" คนละแถว, แถบรอรีสตาร์ต)
+  → ย้อนค่าตั้งต้น → ได้ v4 → รีสตาร์ต `[TAX-RULES]` version 4 ไม่ต่างจากค่าตั้งต้น (0.51s) · CSS หน้าประวัติไม่ตัดคำ (เวลาและชื่อรายการ) แล้ว
+- **`tax_rules_history` เวอร์ชัน 1–4 คือการทดสอบวันที่ 15 ต.ค. 2569** (v1/v2 บันทึก end-to-end, v3/v4 ย้อนเวอร์ชัน)
+  แหล่งอ้างอิงของ v1/v2 คือ "ตรวจสอบค่า" ไม่ใช่ค่าจริง · เก็บไว้เป็นหลักฐาน ไม่ลบ
+  — active เป็น version 4 (เท่าค่าตั้งต้น) log ตอนเปิดจึงขึ้น version 4 และ `tax_history` บันทึก `rules_version` 4
 
 ## 6. ก้อน 5B: บันทึกด้วย transaction
 
