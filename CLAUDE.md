@@ -393,8 +393,9 @@ global ที่สาขาใช้: `PUBLIC_URL`, `firebase_client`, `generat
 - URL อยู่บรรทัดของตัวเอง (`test_urls_on_own_line`)
   > เหตุผล: LINE อาจลากตัวอักษรที่ติดกันเข้าไปในลิงก์ (ลิงก์ PDF ในประวัติเคยจบด้วย "]")
 - คำสั่งรีเซ็ตในข้อความใช้ "เริ่มใหม่" ให้ตรงกับปุ่มบน rich menu (โค้ดรับทั้ง "เริ่มใหม่" และ "รีเซ็ต")
-- `tax_advice` ไปถึง PDF ด้วย ข้อความที่มีไว้สำหรับแชตเท่านั้น (บรรทัดปิดท้าย คำสั่งให้พิมพ์) ห้ามใส่ใน `tax_advice`
-  บรรทัดปิดท้ายของสรุปผลจึงต่อเฉพาะใน `reply_text` ของ `handle_deductions`
+- `tax_advice` ไปถึง PDF ด้วย ห้ามมีภาษาพูด ("ครับ") และข้อความที่มีไว้สำหรับแชตเท่านั้น (บรรทัดปิดท้าย คำสั่งให้พิมพ์)
+  บรรทัดปิดท้ายของสรุปผลจึงต่อเฉพาะใน `reply_text` ของ `handle_deductions` — ล็อกด้วย `test_advice_has_no_krub`
+  และ fixture `mocks` ของ `test_webhook.py` (#31)
   > เหตุผล: PDF เป็นเอกสารทางการที่จะอยู่ในเล่ม ไม่ควรมีภาษาพูด
 
 ### การตัดสินใจ: หยุด refactor ที่ตรงนี้ (2026-10-04)
@@ -863,17 +864,15 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 - **#30** **webhook ที่ตอบเกิน 5 วินาทียังทำงานต่อจนจบ** Dialogflow แสดงข้อความสำรองบน Console แต่โค้ดฝั่งเราไม่หยุด
   ในสาขา 04 การบันทึก Firestore อาจเกิดขึ้นแล้ว ถ้าผู้ใช้ส่งข้อความเดิมซ้ำตามที่ข้อความนอกเวลาแนะนำ อาจได้ประวัติซ้ำ 2 รายการ
   — ยังไม่ได้ทดสอบว่าเกิดจริง · เกี่ยวข้องกับ #6 (สาขาสรุปผลไม่คุมเวลา)
-- **#31** **`tax_advice` ยังมีคำว่า "ครับ" 4 ข้อความ ซึ่งไปอยู่ใน PDF ด้วย** (ขัดกับ "รูปแบบข้อความที่บอทส่ง" ข้อสุดท้าย)
-  1. "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลงครับ"
-     — ขึ้นเมื่อภาษีวิธีที่ 1 เป็น 0 (`if compute_tax_from_net(net_income) == 0.0:` ใน `generate_tax_planning_advice`)
-  2. "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้วครับ"
-     — ขึ้นเมื่อภาษีไม่เป็น 0 และสิทธิที่เหลือของ RMF, ThaiESG และประกันชีวิตเป็น 0 ทั้งสามรายการ (`if not lines:` ในฟังก์ชันเดียวกัน)
-  3. "หมายเหตุ: เงินบริจาคใช้ลดหย่อนได้ X จาก Y บาท … ค่าลดหย่อนอื่นครับ"
-     — ขึ้นเมื่อเงินบริจาคถูกตัดที่ `donation_rate` (`if round(capped_donation, 2) < round(raw_donation, 2):` ใน `handle_deductions`)
-  4. "หมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี … ระบบจึงไม่นำยอด SSF มาคำนวณครับ"
-     — ขึ้นเมื่อข้อความมีคำว่า ssf หรือ เอสเอสเอฟ (`if any(k in user_query.lower() for k in ['ssf', 'เอสเอสเอฟ']):` ใน `handle_deductions`)
-  — ยังไม่แก้ · ข้อ 1 และ 2 ล็อกไว้ด้วย `test_advice_exempt_bracket_shows_no_rights` และ `test_advice_all_rights_used`
-  ข้อ 3 ล็อกไว้ด้วย `test_donation_over_cap_note` ข้อ 4 ด้วย `SSF_NOTE` ใน `test_webhook.py` (`test_ssf_note_and_ssf_not_counted` ฯลฯ)
+- **#31** **`tax_advice` มีคำว่า "ครับ" 4 ข้อความ ซึ่งไปอยู่ใน PDF ด้วย** — แก้แล้วใน commit เดียวกับที่บันทึกข้อนี้
+  ("Remove ครับ from tax_advice, which also goes into the PDF") ตัด "ครับ" ออกจาก
+  1. ข้อความขั้นยกเว้นภาษี — ขึ้นเมื่อภาษีวิธีที่ 1 เป็น 0 (`if compute_tax_from_net(net_income) == 0.0:` ใน `generate_tax_planning_advice`)
+  2. ข้อความใช้สิทธิครบเพดาน — ขึ้นเมื่อภาษีไม่เป็น 0 และสิทธิที่เหลือของ RMF, ThaiESG, ประกันชีวิตเป็น 0 ทั้งสาม (`if not lines:` ในฟังก์ชันเดียวกัน)
+  3. หมายเหตุเงินบริจาคถูกตัดที่ `donation_rate` (`if round(capped_donation, 2) < round(raw_donation, 2):` ใน `handle_deductions`)
+  4. หมายเหตุ SSF (`if any(k in user_query.lower() for k in ['ssf', 'เอสเอสเอฟ']):` ใน `handle_deductions`)
+  ข้อความ LINE ยังลงท้าย "ครับ" เพราะบรรทัดปิดท้ายของสรุปผลต่อหลัง `tax_advice` เสมอ
+  — เทส: `test_advice_has_no_krub` (`test_tax_calculator.py`) · fixture `mocks` ของ `test_webhook.py` ตรวจ `tax_advice` ที่ส่งเข้า PDF
+  ทุกเทสในไฟล์ (พบ "ครับ" → error ตอน teardown) · `test_advice_case_shows_its_text` ยืนยันว่าเคสใน `REPLY_CASES` ทำให้ทั้ง 4 ข้อความขึ้นจริง
 - **#32** **ผลสรุป "👉 ผลสรุป: ภาษีที่ชำระไว้พอดีแล้ว" ขึ้นเมื่อภาษี 0 และหัก ณ ที่จ่าย 0 ด้วย**
   ตัวเลขถูก แต่ผู้ใช้ไม่ได้ชำระอะไรไว้เลย ข้อความจึงชวนงง (พบตอนทดสอบ #29 ใน LINE)
   — เงื่อนไข: `net_payable = final_tax - withholding_tax` แล้ว `else` ของ `if net_payable > 0:` / `elif net_payable < 0:` ใน `handle_deductions`

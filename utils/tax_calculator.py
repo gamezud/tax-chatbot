@@ -157,7 +157,7 @@ def generate_tax_planning_advice(total_income, net_income, current_life_ins, cur
     current_* คือยอดหลังคุมเพดานแล้วจาก calculate_detailed_deductions
     """
     if compute_tax_from_net(net_income) == 0.0:
-        return "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลงครับ"
+        return "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลง"
 
     deduction_rules = tax_rules.TAX_RULES["deduction"]
 
@@ -182,7 +182,7 @@ def generate_tax_planning_advice(total_income, net_income, current_life_ins, cur
             lines.append(f"- {label}: ยังใช้สิทธิได้อีก {remain:,.0f} บาท")
 
     if not lines:
-        return "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้วครับ"
+        return "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้ว"
 
     bracket_rate = get_tax_bracket_rate(net_income)
     return (f"💡 สิทธิทางภาษีที่ยังใช้ได้ (อัตราภาษีขั้นสูงสุดของคุณอยู่ที่ {bracket_rate*100:.0f}%):\n"

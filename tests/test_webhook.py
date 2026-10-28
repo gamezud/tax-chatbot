@@ -130,7 +130,12 @@ def mocks(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     # ไม่ให้ผลเทสขึ้นกับ LIFF_ID ที่ตั้งไว้ใน PowerShell ตอนรัน app.py — เทสลิงก์ LIFF ตั้งเอง
     monkeypatch.delenv("LIFF_ID", raising=False)
-    return m
+    yield m
+    # ทุกเทสในไฟล์นี้ที่สร้าง PDF: tax_advice ที่ส่งเข้า PDF ต้องไม่มี "ครับ" (#31 — PDF เป็นเอกสารทางการ)
+    # ตรวจหลังจบเทส ถ้าพบจะขึ้นเป็น error ตอน teardown ของเทสนั้น
+    for call in m.pdf.call_args_list:
+        _, data = call.args
+        assert "ครับ" not in data["tax_advice"], data["tax_advice"]
 
 
 @pytest.fixture
@@ -487,7 +492,7 @@ def test_summary_salary_with_child_and_home_loan(post, mocks):
 
 
 SSF_NOTE = ("หมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี 2568 "
-            "ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
+            "ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณ")
 
 
 @pytest.mark.parametrize("query_text", ["SSF 50000", "ซื้อ ssf ไว้ 20000", "เอสเอสเอฟ 30000"])
@@ -573,7 +578,7 @@ def test_donation_over_cap_note(post, mocks):
                               "6,427.50", "0.00", "ต้องชำระภาษีเพิ่มเติม: 6,427.50 บาท"):
         assert line in text
     note = ("หมายเหตุ: เงินบริจาคใช้ลดหย่อนได้ 30,950.00 จาก 102,773.00 บาท "
-            "เพราะหักได้ไม่เกิน 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นครับ")
+            "เพราะหักได้ไม่เกิน 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น")
     assert note in text
     # อยู่ใน tax_advice จึงไปถึง PDF ด้วย
     _, pdf_data = mocks.pdf.call_args.args
@@ -1098,8 +1103,34 @@ def _out_of_scope(post, mocks, monkeypatch):
     return post("011_Default_Fallback_Intent")
 
 
+def _summary_exempt_with_ssf_note(post, mocks, monkeypatch):
+    # ภาษี 0 (คำแนะนำแบบขั้นยกเว้น) + หมายเหตุ SSF — ค่าเดียวกับ test_ssf_note_with_rmf_in_same_message
+    payload = load("021_04_Tax_Interview_Deductions")
+    payload["queryResult"]["queryText"] = "RMF 100000 SSF 50000"
+    payload["queryResult"]["parameters"]["ssf_rmf"] = 100000.0
+    return post(payload)
+
+
+def _summary_donation_over_cap(post, mocks, monkeypatch):
+    # หมายเหตุเงินบริจาคถูกตัดที่เพดาน — ค่าเดียวกับ test_donation_over_cap_note
+    return post(salary_40000_payload("บริจาค 102773", {"donation": 102773.0}))
+
+
+def _summary_all_rights_used(post, mocks, monkeypatch):
+    # ภาษีไม่เป็น 0 และใช้ RMF, ThaiESG, ประกันชีวิตครบเพดาน (เงินเดือน 100,000/เดือน)
+    payload = deductions_payload("ประกันชีวิต 100000 RMF 360000 ThaiESG 300000",
+                                 {"life_insurance": 100000.0, "ssf_rmf": 360000.0, "thai_esg": 300000.0})
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["salary_per_month"] = 100000.0
+    return post(payload)
+
+
 # ข้อความที่ fixture ใน ROUTES ไม่ครอบ
 REPLY_CASES = {
+    "summary_exempt_with_ssf_note": _summary_exempt_with_ssf_note,
+    "summary_donation_over_cap": _summary_donation_over_cap,
+    "summary_all_rights_used": _summary_all_rights_used,
     "history_with_record": _history_with_record,
     "summary_with_pdf_link": _summary_with_pdf_link,
     "deduction_question_with_liff": _deduction_question_with_liff,
@@ -1123,6 +1154,21 @@ def test_fixture_reply_ends_with_krub(post, name):
 def test_reply_ends_with_krub(post, mocks, monkeypatch, case):
     text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
     assert ENDS_WITH_KRUB.search(text), text[-80:]
+
+
+@pytest.mark.parametrize("case, advice_text", [
+    ("summary_exempt_with_ssf_note", "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลง"),
+    ("summary_exempt_with_ssf_note", "ระบบจึงไม่นำยอด SSF มาคำนวณ"),
+    ("summary_donation_over_cap", "ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น"),
+    ("summary_all_rights_used", "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้ว"),
+])
+def test_advice_case_shows_its_text(post, mocks, monkeypatch, case, advice_text):
+    # เคสสรุปผลใน REPLY_CASES ทำให้ข้อความใน tax_advice ทั้ง 4 แบบขึ้นจริง (#31)
+    # test_reply_ends_with_krub จึงยืนยันได้ว่าข้อความ LINE ยังลงท้าย "ครับ" แม้ tax_advice ไม่มี "ครับ" แล้ว
+    text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
+    assert advice_text in text
+    _, data = mocks.pdf.call_args.args
+    assert advice_text in data["tax_advice"]
 
 
 def test_out_of_scope_reply_command_routes_to_greeting(post, mocks, monkeypatch):
