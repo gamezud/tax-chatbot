@@ -85,6 +85,14 @@ def liff_donation_link():
         "(ถ้ามีค่าลดหย่อนอื่นด้วย กรุณาพิมพ์ทั้งหมดในแชตครับ)"
     )
 
+def deduction_question():
+    # คำถามค่าลดหย่อนของสาขาเงินเดือน ค่าเช่า และขายออนไลน์ — เขียนที่เดียว ทั้งสามสาขาจึงถามเหมือนกันเสมอ
+    # ต่อลิงก์ LIFF ตอนถูกเรียก (อ่าน LIFF_ID ตอนนั้น — CLAUDE.md กับดักข้อ 9)
+    return (
+        "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
+        + liff_donation_link()
+    )
+
 def liff_id_status_line():
     # พิมพ์ตอนเริ่มเซิร์ฟเวอร์ ให้รู้ทันทีถ้าลืมตั้ง LIFF_ID (ลิงก์ในคำถามค่าลดหย่อนจะหายเงียบ ๆ)
     # บอกแค่ตั้งแล้วหรือไม่ ไม่พิมพ์ค่า — ใช้เงื่อนไขเดียวกับ liff_donation_link (ช่องว่างล้วนถือว่าไม่ได้ตั้ง)
@@ -285,8 +293,7 @@ def handle_salary(merged_params, user_query, session_id):
         reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
         next_ctx = "awaiting_online"
     else:
-        reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-        reply_text += liff_donation_link()
+        reply_text += deduction_question()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -319,8 +326,7 @@ def handle_rental(merged_params, session_id):
         reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
         next_ctx = "awaiting_online"
     else:
-        reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-        reply_text += liff_donation_link()
+        reply_text += deduction_question()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -351,9 +357,8 @@ def handle_online(merged_params, user_query, session_id):
         f"เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ 📦\n"
         f"- ยอดขายรวมทั้งปี: {online_income:,.2f} บาท\n"
         f"- หักค่าใช้จ่ายเหมา ({online_rate*100:.0f}%): {online_expense:,.2f} บาท\n\n"
-        f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
     )
-    reply_text += liff_donation_link()
+    reply_text += deduction_question()
     out_contexts = [
         {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
         {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
