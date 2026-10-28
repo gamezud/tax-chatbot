@@ -1,7 +1,10 @@
-"""utils/knowledge_search.py — ข้อความตอบเมื่อคำถามอยู่นอกขอบเขตฐานความรู้
-FAISS ปลอมด้วย MagicMock (ไม่โหลดโมเดล embedding จริง — กับดักข้อ 4) และ ask_llm ปลอมทุกเทส ไม่เรียก Ollama
+"""utils/knowledge_search.py — ข้อความตอบเมื่อคำถามอยู่นอกขอบเขตฐานความรู้ และค่าที่ ask_llm ส่งให้ Ollama
+FAISS ปลอมด้วย MagicMock (ไม่โหลดโมเดล embedding จริง — กับดักข้อ 4) ไม่เรียก Ollama จริง
+(ask_llm ปลอม หรือ requests.post ปลอม)
 เส้นทางผ่าน /webhook และการลงท้าย "ครับ" ทดสอบใน test_webhook.py ส่วน E (เคส out_of_scope)
 """
+import json
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -54,3 +57,24 @@ def test_out_of_scope_reply_says_what_bot_can_do():
     for topic in ("คำนวณภาษี", "ดูประวัติ", "คำถามความรู้"):
         assert topic in reply
     assert "เมนู" in reply
+
+
+def test_ask_llm_request_settings(monkeypatch):
+    # keep_alive 10h ครอบช่วงเปิดทดสอบ ส่วน timeout และ num_predict ต้องเท่าเดิม
+    # (CLAUDE.md กฎเหล็กข้อ 1: ห้ามเพิ่ม timeout ของการเรียก Ollama)
+    response = MagicMock(status_code=200)
+    response.iter_lines.return_value = [json.dumps({"response": "คำตอบ", "done": True}).encode("utf-8")]
+    post = MagicMock()
+    post.return_value.__enter__.return_value = response
+    monkeypatch.setattr(knowledge_search.requests, "post", post)
+
+    assert knowledge_search.ask_llm("prompt", deadline=time.monotonic() + 10) == "คำตอบ"
+
+    post.assert_called_once()
+    (url,), kwargs = post.call_args
+    assert url == "http://127.0.0.1:11434/api/generate"
+    assert kwargs["json"]["model"] == "llama3.2:3b"
+    assert kwargs["json"]["keep_alive"] == "10h"
+    assert kwargs["json"]["options"] == {"temperature": 0, "num_predict": 120}
+    assert kwargs["timeout"] == (1.0, 3.0)
+    assert kwargs["stream"] is True

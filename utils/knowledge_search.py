@@ -11,6 +11,11 @@ from utils import debug_log
 # แต่ Ollama รับแค่ IPv4 จึงเสียเวลาราว 2 วินาทีก่อนถอยไปใช้ 127.0.0.1 ซึ่งเกิน connect timeout (1.0 วินาที)
 # วัดจริง: GET /api/tags ผ่าน localhost = 2.05 วินาที, ผ่าน 127.0.0.1 = 0.005 วินาที
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
+# เวลาที่ Ollama เก็บโมเดลไว้ในหน่วยความจำหลังคำขอล่าสุด (นับใหม่ทุกคำขอ) — ไม่ใช่ timeout ของการเรียก
+# ถ้าโมเดลหลุด คำถามถัดไปต้องโหลดใหม่ (วัดบนเครื่องนี้ 3.27 วินาที) นานกว่า read timeout 3.0 วินาที
+# ผู้ใช้จะได้ข้อความดิบจากฐานความรู้แทนคำตอบที่เรียบเรียง — 10h ครอบช่วงเปิดทดสอบ 10:00–20:00
+# แลกกับ VRAM ราว 2.5 GB ที่ถูกจองไว้ตลอดช่วงนั้น
+OLLAMA_KEEP_ALIVE = "10h"
 TAX_DISTANCE_THRESHOLD = 14.0
 
 # ตอบเมื่อไม่พบ chunk หรือทุก chunk ไกลเกิน threshold — บอกว่าบอททำอะไรได้ และพาไปหน้าวิธีใช้
@@ -68,7 +73,7 @@ def ask_llm(prompt, deadline):
                 "model": "llama3.2:3b",
                 "prompt": prompt,
                 "stream": True,
-                "keep_alive": "30m",  # ป้องกันปัญหา Cold Start โมเดลหลุดจากหน่วยความจำ
+                "keep_alive": OLLAMA_KEEP_ALIVE,  # ป้องกันปัญหา Cold Start โมเดลหลุดจากหน่วยความจำ
                 "options": {
                     "temperature": 0,
                     "num_predict": 120  # ควบคุมความยาวไม่ให้ตอบเยิ่นเย้อ
