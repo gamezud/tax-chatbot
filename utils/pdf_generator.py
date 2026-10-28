@@ -57,9 +57,13 @@ def generate_tax_pdf(output_path, tax_data):
     styles = getSampleStyleSheet()
     font_family = THAI_FONT
 
+    # ทุก ParagraphStyle ตั้ง shaping=1 ให้ ReportLab วางสระ/วรรณยุกต์ไทยตามตาราง GPOS/GSUB ของฟอนต์ (ผ่าน uharfbuzz)
+    # ถ้าไม่ตั้ง วรรณยุกต์ที่ไม่มีสระบน (เช่น "ได้", "ค่า") ลอยสูงและเยื้องไปทางขวา
+    # เครื่องที่ไม่มี uharfbuzz ReportLab จะกลับไปวางแบบเดิมเงียบ ๆ — test_pdf_shaping ตรวจว่าเปิดอยู่จริง
     title_style = ParagraphStyle(
         'DocTitle',
         fontName=font_family,
+        shaping=1,
         fontSize=20,
         leading=24,
         alignment=1,
@@ -68,6 +72,7 @@ def generate_tax_pdf(output_path, tax_data):
     sub_style = ParagraphStyle(
         'SubTitle',
         fontName=font_family,
+        shaping=1,
         fontSize=11,
         leading=15,
         alignment=1,
@@ -76,12 +81,14 @@ def generate_tax_pdf(output_path, tax_data):
     cell_style = ParagraphStyle(
         'TableCell',
         fontName=font_family,
+        shaping=1,
         fontSize=11,
         leading=15
     )
     cell_bold = ParagraphStyle(
         'TableCellBold',
         fontName=font_family,
+        shaping=1,
         fontSize=11,
         leading=15,
         textColor=colors.HexColor('#1E293B')
@@ -89,6 +96,7 @@ def generate_tax_pdf(output_path, tax_data):
     advice_head = ParagraphStyle(
         'AdviceHead',
         fontName=font_family,
+        shaping=1,
         fontSize=13,
         leading=17,
         textColor=colors.HexColor('#1E3A8A')
@@ -113,6 +121,7 @@ def generate_tax_pdf(output_path, tax_data):
         rules_note_style = ParagraphStyle(
             'RulesNote',
             fontName=font_family,
+            shaping=1,
             fontSize=12,
             leading=16,
             alignment=1,
@@ -178,7 +187,7 @@ def generate_tax_pdf(output_path, tax_data):
         story.append(Spacer(1, 10))
 
     # หมายเหตุท้ายเอกสาร
-    note_style = ParagraphStyle('NoteText', fontName=font_family, fontSize=9, leading=12, textColor=colors.HexColor('#64748B'))
+    note_style = ParagraphStyle('NoteText', fontName=font_family, shaping=1, fontSize=9, leading=12, textColor=colors.HexColor('#64748B'))
     story.append(Paragraph("* เอกสารนี้เป็นการประมาณการเบื้องต้นตามประมวลรัษฎากร ไม่สามารถใช้แทนแบบแสดงรายการภาษี ภ.ง.ด.90/91 ได้จริง", note_style))
 
     doc.build(story)
