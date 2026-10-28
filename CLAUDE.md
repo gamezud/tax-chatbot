@@ -98,6 +98,13 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
     > เหตุผล: รายการเก่าคำนวณด้วยกติกาปีอื่น รายการที่ไม่มี field นี้ไม่แสดงปีและไม่เดา
   - `pdf_generator.py` และ `firebase_db.py` ไม่ import `tax_rules` — ได้ปีจาก `tax_report_data` ที่ `handle_deductions` ส่งมา
     > เหตุผล: LINE, PDF และ Firestore ได้ปีจาก dict เดียวกัน ปีในสามที่จึงตรงกันเสมอ
+- **ตารางค่าลดหย่อนใน PDF** — `handle_deductions` ส่ง `deduction_detail` (ยอดที่กรอก / ยอดที่ใช้สิทธิได้ / เพดานที่ตัด ทีละรายการ
+  + แถวเงินบริจาค + ปีเกิดบุตรของข้อสมมติ) เข้า `tax_report_data` ยอดแต่ละแถวมาจาก `deduction_breakdown` ใน `tax_calculator`
+  `pdf_generator` แสดงอย่างเดียว ไม่บวกเลข และตัวเลขทุกตัวในหมายเหตุ/ข้อสมมติมาจาก data (`test_pdf_deductions.py`)
+  - `deduction_breakdown` ถูกเรียก 2 ครั้งต่อคำขอ (ใน `calculate_detailed_deductions` และใน `handle_deductions`)
+    ด้วย `total_income` และ `merged_params` ชุดเดียวกัน **ห้ามแก้ให้สองที่ได้ input ต่างกัน**
+    > เหตุผล: ถ้า input ต่างกัน ตาราง PDF จะไม่ตรงกับยอดรวมบรรทัด 3 โดยไม่มี error — `test_deduction_detail_sent_to_pdf` ตรวจผลรวม
+  - Firestore ไม่เก็บ `deduction_detail` (`save_tax_report` เลือก field ทีละตัว — `test_save_tax_report_skips_deduction_detail`)
 - **ตัวเลขใน `tax_rules.py` ต้องตรงกับ `docs/tax-rules-2569.md`** ถ้ากฎหมายเปลี่ยน ให้แก้ docs ก่อน
   พร้อมแหล่งอ้างอิงจากกรมสรรพากรหรือประมวลรัษฎากร แล้วค่อยแก้ `tax_rules.py`
   > เหตุผล: อาจารย์ที่ปรึกษากำหนดให้ทุกตัวเลขต้องมีแหล่งอ้างอิงชัดเจน docs คือที่เก็บแหล่งอ้างอิงนั้น
@@ -393,10 +400,12 @@ global ที่สาขาใช้: `PUBLIC_URL`, `firebase_client`, `generat
 - URL อยู่บรรทัดของตัวเอง (`test_urls_on_own_line`)
   > เหตุผล: LINE อาจลากตัวอักษรที่ติดกันเข้าไปในลิงก์ (ลิงก์ PDF ในประวัติเคยจบด้วย "]")
 - คำสั่งรีเซ็ตในข้อความใช้ "เริ่มใหม่" ให้ตรงกับปุ่มบน rich menu (โค้ดรับทั้ง "เริ่มใหม่" และ "รีเซ็ต")
-- `tax_advice` ไปถึง PDF ด้วย ห้ามมีภาษาพูด ("ครับ") และข้อความที่มีไว้สำหรับแชตเท่านั้น (บรรทัดปิดท้าย คำสั่งให้พิมพ์)
+- `tax_advice` และ `rules_note` ไปถึง PDF ด้วย ห้ามมีภาษาพูด ("ครับ") และข้อความที่มีไว้สำหรับแชตเท่านั้น (บรรทัดปิดท้าย คำสั่งให้พิมพ์)
   บรรทัดปิดท้ายของสรุปผลจึงต่อเฉพาะใน `reply_text` ของ `handle_deductions` — ล็อกด้วย `test_advice_has_no_krub`
-  และ fixture `mocks` ของ `test_webhook.py` (#31)
+  และ fixture `mocks` ของ `test_webhook.py` (#31) และของ `test_rules_loading.py` (ตรวจ `rules_note` ด้วย — #34)
   > เหตุผล: PDF เป็นเอกสารทางการที่จะอยู่ในเล่ม ไม่ควรมีภาษาพูด
+- ข้อความคงที่ของตารางค่าลดหย่อนใน PDF (`DEDUCTION_LABELS`, `LIMIT_NOTES`, `ASSUMPTION_*` ใน `pdf_generator.py`)
+  ห้ามมี "ครับ" ชื่อไฟล์ ชื่อตัวแปร ชื่อ key หรือตัวเลขกฎหมาย (มีได้แค่ "คนที่ 2" ในชื่อแถวบุตร) — `test_texts_have_no_code_names_or_krub`
 
 ### การตัดสินใจ: หยุด refactor ที่ตรงนี้ (2026-10-04)
 
@@ -548,7 +557,7 @@ pytest -v
 
 **เกณฑ์ผ่าน: ต้องไม่มี `failed` และไม่มี `XPASS`**
 
-ตัวเลข ณ ตอนนี้คือ `1273 passed` (เครื่องที่มี Tesseract) ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
+ตัวเลข ณ ตอนนี้คือ `1368 passed` (เครื่องที่มี Tesseract และ uharfbuzz) ตัวเลขนี้จะเปลี่ยนทุกครั้งที่แก้บั๊กแล้วถอด xfail ออก
 (passed เพิ่ม xfailed ลด) และเครื่องที่ไม่มี Tesseract จะมี `skipped` จึงใช้ตัดสินผ่าน/ไม่ผ่านไม่ได้ ให้ดูเกณฑ์ข้างบนแทน
 
 - `pytest.ini` ที่ root บอก pytest สองอย่าง: `pythonpath = .` ให้ใส่ root ของโปรเจกต์ลง path
@@ -567,6 +576,8 @@ pytest -v
   - `tax_rules_not_leaked` (autouse ใน conftest) ล้มเทสที่ทิ้ง `TAX_RULES` / `RULES_INFO` ที่ถูกแก้ไว้ — แทนค่าในเทสด้วย `monkeypatch` เท่านั้น
 - เทสแต่ละไฟล์
   - `test_tax_calculator.py` — สูตรใน `utils/tax_calculator.py` (import แค่ `re` กับ `utils.tax_rules`)
+  - `test_deduction_breakdown.py` — `deduction_breakdown`: ลำดับรายการตามใบแนบ ยอดที่กรอก/ใช้ได้ ผลรวมแถว = subtotal
+    และ `limits` (เพดานที่ตัดจริง รวมประกันชีวิตที่ถูกตัดเพราะเพดานรวมกับประกันสุขภาพ) — tuple เดิมยังล็อกด้วย `test_tax_calculator.py`
   - `test_dialogflow_export.py` — การตั้งค่าในไฟล์ export ใน `dialogflow/` และ annotation ของ training phrase (ใช้รายการคำจาก `deduction_terms`)
   - `test_deduction_terms.py` / `test_deduction_guard.py` — รายการคำ และตัวกัน รวมถึง training phrase ทุกประโยคของ 04 ต้องผ่านตัวกัน
   - `test_receipt_parser.py` — หายอดจากข้อความ OCR (ข้อความล้วน ไม่ต้องมีรูป) · `test_ocr.py` — `utils/ocr.py`
@@ -580,6 +591,9 @@ pytest -v
     ไม่อ่านไฟล์ key และไม่ต่อ Firestore จากนั้นเทสใส่ `db = MagicMock()` เองเพื่อตรวจ doc ที่จะเขียน
   - `test_pdf_generator.py` — smoke test ของ `generate_tax_pdf` ตัวจริง เขียน PDF ลง `tmp_path` (ฟังก์ชันเขียนเฉพาะ path ที่ส่งเข้าไป)
     ตรวจแค่ว่าได้ไฟล์ `%PDF` และ `static/reports/` ไม่เปลี่ยน ไม่ตรวจข้อความใน PDF
+    · `test_pdf_shaping` — ทุก `ParagraphStyle` ใน story เปิด shaping และฟอนต์ไทย shapable (ล้มถ้าไม่มี uharfbuzz)
+  - `test_pdf_deductions.py` — ตารางค่าลดหย่อนใน PDF (จับ story ไม่เขียนไฟล์): ลำดับแถว "N คน" ไม่แสดง `group_used`
+    ยอดรวมแสดงตามที่ส่งมา หมายเหตุเพดานใช้ตัวเลขจาก data ข้อสมมติตามเงื่อนไข ไม่มี "ครับ"/ชื่อในโค้ด dict แบบเก่าไม่มีตาราง
   - `test_knowledge_index.py` — `faiss_tax_index/` สร้างจาก `tax_knowledge.txt` ฉบับปัจจุบันหรือไม่ โดยเทียบ hash
     ไม่โหลด FAISS หรือ embedding (กับดักข้อ 4) · hash ไม่ขึ้นกับ CRLF/LF · import `utils.create_knowledge` ไม่ลาก langchain
     (เทสหลังรันใน process แยกด้วย `sys.executable` เพราะ `test_webhook.py` โหลด langchain เข้า `sys.modules` ไปแล้ว)
@@ -643,6 +657,7 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 | GPU | RTX 3050 **8 GB** — ดูด้วย `nvidia-smi` (WMI `AdapterRAM` แสดงได้ไม่เกิน 4 GB จึงขึ้น 4 GB ผิด) · llama3.2:3b ใช้ VRAM ราว 2.5 GB ส่วนที่เหลือใช้ร่วมกับจอและแอปอื่น |
 | Embedding | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` |
 | google-cloud-firestore | ล็อก 2.29.0 ใน `requirements.txt` — **อัปเกรดแล้วต้องตรวจ `tests/fake_firestore.py`** (ใช้ method private ของ Transaction) |
+| uharfbuzz | ล็อก 0.57.0 ใน `requirements.txt` (wheel `cp311-abi3-win_amd64` ไม่ต้อง build) — **จำเป็น** ให้ ReportLab วางสระ/วรรณยุกต์ไทยใน PDF (`shaping=1`) · สร้าง `.venv` ใหม่ต้อง `pip install -r requirements.txt` ไม่อย่างนั้น PDF ยังสร้างได้โดยไม่มี error แต่วรรณยุกต์กลับมาลอย (`test_pdf_shaping` จับได้) · เปิด shaping แล้ว copy/ค้นข้อความไทยจาก PDF ไม่ครบ (`docs/known-limitations.md` หัวข้อ 7) · สร้าง PDF ช้าขึ้นราว 8 ms |
 | เวลาไทย | หน้า admin ใช้ +7 คงที่ — ห้ามเปลี่ยนเป็น `zoneinfo("Asia/Bangkok")` บน Windows ต้องลง `tzdata` เพิ่ม (ไทยไม่มีเวลาออมแสง) |
 
 ---
@@ -657,12 +672,13 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 | `templates/admin_*.html`, `_admin_banners.html`, `_change_table.html` | หน้าของระบบ Admin | แหล่งอ้างอิงและหมายเหตุเป็นข้อความที่ผู้ใช้พิมพ์ — ห้ามใส่ `\|safe` |
 | `scripts/make_admin_hash.py` | สร้างค่า `ADMIN_PASSWORD_HASH` | พิมพ์แค่ hash ไม่เขียนไฟล์ |
 | `tests/fake_firestore.py` | Firestore ปลอมที่เก็บข้อมูลจริง ใช้เทสระบบ Admin | ไม่ใช่ไฟล์เทส · ผูกกับ google-cloud-firestore 2.29.0 |
-| `utils/tax_calculator.py` | สูตรภาษีทั้งหมด: แปลงข้อความเป็นตัวเลข, ขั้นบันได, วิธีที่ 2, อัตราค่าใช้จ่ายค่าเช่า, ค่าลดหย่อน, คำแนะนำวางแผนภาษี | **import แค่ `re` กับ `utils.tax_rules`** ไม่พึ่ง Flask หรือ Firebase จึงเขียน test ได้ทันที — รักษาคุณสมบัตินี้ไว้ |
+| `utils/tax_calculator.py` | สูตรภาษีทั้งหมด: แปลงข้อความเป็นตัวเลข, ขั้นบันได, วิธีที่ 2, อัตราค่าใช้จ่ายค่าเช่า, ค่าลดหย่อน, คำแนะนำวางแผนภาษี | **import แค่ `re` กับ `utils.tax_rules`** ไม่พึ่ง Flask หรือ Firebase จึงเขียน test ได้ทันที — รักษาคุณสมบัตินี้ไว้ · สูตรเพดานค่าลดหย่อนอยู่ใน `deduction_breakdown` ที่เดียว (`calculate_detailed_deductions` เรียกมันแล้วคืน tuple 4 ค่าเดิม) |
 | `utils/tax_rules.py` | ตัวเลขตามกฎหมายของปีภาษีเดียว (`TAX_RULES`, ปีอยู่ใน key `tax_year` ตอนนี้ 2569) | ค่าคงที่ล้วน ไม่ import อะไร ไม่มี I/O — วิธีอ่านดูกฎเหล็กข้อ 2 |
 | `docs/tax-rules-2569.md` | สเปกตัวเลขภาษีปี 2569 ที่โค้ดใช้อยู่ เทียบกับค่าเดิม (2567) พร้อมแหล่งอ้างอิง | ⚠️ = แหล่งรอง ต้องตรวจตัวบทก่อนอ้างในเล่ม |
 | `utils/knowledge_search.py` | ค้นฐานความรู้ด้วย FAISS + ให้ Ollama เรียบเรียงคำตอบภายใน deadline | มีข้อความสำรองเมื่อ LLM ใช้ไม่ได้ · `OUT_OF_SCOPE_REPLY` ตอบเมื่อไม่พบหรือเกิน threshold · `OLLAMA_KEEP_ALIVE` |
 | `utils/debug_log.py` | สวิตช์ `TAX_DEBUG`: `debug_enabled`, `debug_print` (log ที่มีข้อมูลผู้ใช้), บรรทัดสถานะตอนเปิด | import แค่ `os` เพราะ `app.py` และ `knowledge_search.py` import ไฟล์นี้ — ห้ามย้าย helper ไป `app.py` (import วน) |
-| `utils/pdf_generator.py` | สร้าง PDF สรุปผลด้วย ReportLab | ใช้ฟอนต์ไทย `static/fonts/THSarabunNew.ttf` |
+| `utils/pdf_generator.py` | สร้าง PDF สรุปผลด้วย ReportLab · ตาราง "รายละเอียดค่าลดหย่อนและเงินบริจาค" จาก `deduction_detail` (เรียงตามใบแนบ ภ.ง.ด.90/91) + ข้อสมมติ | ใช้ฟอนต์ไทย `static/fonts/THSarabunNew.ttf` (ไม่มีไฟล์ Bold — `<b>` ไม่หนาจริง) · ทุก style ตั้ง `shaping=1` (ต้องมี uharfbuzz) · แสดงผลอย่างเดียว ไม่ import `tax_rules` ไม่บวกเลข |
+| `tests/test_deduction_breakdown.py`, `tests/test_pdf_deductions.py` | เทสของ `deduction_breakdown` และตารางค่าลดหย่อนใน PDF | ดูหัวข้อ "รันชุด test" |
 | `utils/firebase_db.py` | `firebase_client` สำหรับ `save_tax_report()` และ `get_user_history()` | อ่าน key จาก `firebase_key.json` |
 | `utils/create_knowledge.py` | สร้าง FAISS index ใหม่จาก `tax_knowledge.txt` แล้วเขียน hash ของไฟล์นั้นลง `faiss_tax_index/tax_knowledge.sha256` | รันแยกเมื่อแก้ฐานความรู้ ต้องรันจาก root (`python utils\create_knowledge.py`) · import langchain อยู่ใน `build_vector_store()` ให้เทส import `knowledge_sha256` ได้เบา — ห้ามย้ายขึ้นหัวไฟล์ (`test_create_knowledge_import_is_light` จับ) |
 | `tax_knowledge.txt` | ฐานความรู้ภาษี (Markdown) | แก้ไฟล์นี้แล้วต้องรัน `create_knowledge.py` ใหม่ (ถ้าลืม `test_index_hash_matches_knowledge_file` ล้ม) · หัวข้อ 5.1 แยกเป็น `###` ละรายการ (แก้โครงสร้าง ไม่ใช่เนื้อหา) เพื่อให้แต่ละรายการอยู่คนละ chunk — ห้ามรวมกลับ |
@@ -703,7 +719,10 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 ป้ายหน้าประวัติไม่ตัดกลางคำ, ยืนยันการหมุนรูปตาม EXIF ใน LINE บน Android (`docs/ocr-eval-2569-10.md`) ·
 งานเตรียมให้คนอื่นทดสอบ (branch `feature/tester-polish`): จัดรูปแบบข้อความทุกสาขา, "วิธีใช้"/"เมนู"/"ช่วยด้วย" เข้าสาขาทักทาย,
 ข้อความนอกขอบเขตที่บอกว่าบอททำอะไรได้, `keep_alive` 10h, ข้อความทักทายตรงกับ rich menu และบอกเวลาทดสอบ,
-ข้อความนอกเวลาบน Console ทุก intent
+ข้อความนอกเวลาบน Console ทุก intent ·
+PDF แสดงค่าลดหย่อนทีละรายการ (branch `feature/pdf-deduction-detail`): ยอดที่กรอก / ยอดที่ใช้สิทธิได้ / หมายเหตุเพดานที่ตัด
+เรียงและตั้งชื่อตามใบแนบ ภ.ง.ด.90/91 ปีภาษี 2568 (แบบล่าสุด) พร้อมข้อสมมติที่เกี่ยวกับผู้ใช้ (รวม #33) ·
+วางสระ/วรรณยุกต์ไทยใน PDF ถูก (text shaping ผ่าน uharfbuzz) · `rules_note` ไม่มี "ครับ" (#34)
 
 **ข้อจำกัดที่ควรเขียนในเล่ม** อยู่ใน `docs/known-limitations.md` (ผลวัด OCR ใน `docs/ocr-eval-2569-10.md`)
 
@@ -725,8 +744,10 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
 - ✅ **เปลี่ยนเป็นปีภาษี 2569** (เงินได้ปี 2569 ยื่นต้นปี 2570) — **เสร็จแล้ว (ขั้น C–G)** รายละเอียดแต่ละขั้นอยู่ใน `docs/history-tax-year-2569.md`
   **ที่ยังเหลือ (ยังไม่ต้องทำจนกว่าจะสั่ง)**
   - ⚠️ แหล่งอ้างอิงที่ยังเป็นแหล่งรอง: อัตราเงินสมทบประกันสังคม 5% (docs 2.2) · กอช. 30,000 จากหน้า [4] ที่เป็นข้อมูลปี 2567 (docs หัวข้อ 4)
-    · เลขฉบับของ พ.ร.บ. แก้ไขเพิ่มเติมประมวลรัษฎากร ปี 2561 ที่เพิ่มลดหย่อนบุตรคนที่ 2 เป็น 60,000 — แหล่งรอง (ข่าว) ระบุ "ฉบับที่ 46"
-    ยังไม่ได้ยืนยันกับราชกิจจานุเบกษา **ห้ามเขียนเลขฉบับในเอกสารที่ไปถึงผู้ใช้** (ตัวเลข 60,000 เองอ้าง ม.47(1)(ค) ได้ — docs 2.2 [1][3])
+  - ✅ เลขฉบับของ พ.ร.บ. แก้ไขเพิ่มเติมประมวลรัษฎากร ปี 2561 ที่เพิ่มลดหย่อนบุตรคนที่ 2 เป็น 60,000 คือ **ฉบับที่ 46** — ยืนยันจากแหล่งทางการแล้ว
+    หน้า ม.47 บนเว็บกรมสรรพากร https://www.rd.go.th/5937.html (ตรวจ 28 ต.ค. 2569) ระบุท้าย ม.47(1)(ค)(1)
+    "พระราชบัญญัติแก้ไขเพิ่มเติมประมวลรัษฎากร (ฉบับที่ 46) พ.ศ. 2561 ใช้บังคับสำหรับเงินได้พึงประเมินประจำปีภาษี พ.ศ. 2561..."
+    อ้างเลขฉบับในเล่มได้ · ยังไม่ใส่ใน PDF หรือข้อความบอท (ไม่จำเป็นต่อผู้ใช้)
   - วันขยายเวลายื่นแบบออนไลน์ของปี 2570 ยังไม่มีประกาศ — มีแล้วให้เพิ่มใน docs 2.4 ก่อน แล้วค่อยแก้ `tax_knowledge.txt`
   - ฐานความรู้เรื่องกำหนดยื่นภาษีควรบอกว่าการยื่นออนไลน์มักได้ขยายเวลาตามประกาศของแต่ละปี โดยไม่ระบุวันที่ตายตัว
     (คำตอบใน LINE 28 ต.ค. 2569 บอกแค่ "ภายในเดือนมีนาคมของปีถัดจากปีที่มีเงินได้") — ยังไม่ทำ
@@ -743,12 +764,10 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
   และเก็บ request ที่เข้า webhook เป็น fixture เพื่อดูรูปแบบที่ Dialogflow ใช้จริง
   > เหตุผล: เอกสาร Dialogflow ES ไม่ระบุรูปแบบ payload ของ LINE ใน webhook (มีตัวอย่างแค่ facebook/slack) ถ้ารูปแบบผิดอาจไม่มีข้อความถึงผู้ใช้เลย
 - ย้าย FAISS ออกจาก `langchain-community` ไป package ใหม่ (ดูหมายเหตุ `1 warning` ในหัวข้อ "รันชุด test")
-- แจ้งค่าลดหย่อนรายการอื่นที่ถูกตัดที่เพดาน (รายการอยู่ใน `docs/known-limitations.md` หัวข้อ 1) ด้วย `deduction_breakdown(total_income, params)`
-  ดึงเนื้อในของ `calculate_detailed_deductions` ออกมาคืน `{รายการ: (ยอดที่กรอก, ยอดที่ใช้ได้)}`
-  แล้ว `calculate_detailed_deductions` เรียกมันและคืน tuple 4 ค่าเหมือนเดิม
-  — ย้ายโค้ดเป็น commit แยกก่อนตามกฎเหล็กข้อ 4 (`test_tax_calculator.py` และ `test_line_verified_cases.py` ต้องผ่านโดยไม่แก้)
-  > เหตุผล: สูตรเพดานอยู่ที่เดียว ข้อความจึงบอกยอดตรงกับที่หักจริงเสมอ
-  > ถ้าเปลี่ยนสิ่งที่ฟังก์ชันคืนต้องแก้เทสเดิม ถ้าเขียนฟังก์ชันใหม่คำนวณแยก สูตรจะอยู่สองที่แล้วคลาดกันได้
+- แจ้งค่าลดหย่อนที่ถูกตัดที่เพดานใน **LINE** (PDF ทำแล้ว — ตาราง `deduction_detail`) ให้ใช้ `limits` จาก `deduction_breakdown` ตัวเดียวกัน
+  ไม่คำนวณเพดานใหม่ใน `app.py` · ตอนนี้ LINE แจ้งเฉพาะเงินบริจาค (`docs/known-limitations.md` หัวข้อ 1)
+- ตัวหนาใน PDF: ลงทะเบียนไฟล์ Bold ของ TH Sarabun New เป็นตระกูลเดียวกับตัวธรรมดา (`static/fonts` มีแค่ `THSarabunNew.ttf`)
+  — ทดลองกับ Sarabun แล้วว่า `<b>` หนาจริงเมื่อมีไฟล์ Bold · ต้องตรวจสัญญาอนุญาตของไฟล์ก่อนเพิ่มใน repo
 
 ---
 
@@ -882,9 +901,21 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
   `handle_deductions` เพิ่ม `elif final_tax == 0 and withholding_tax == 0:` → "ไม่มีภาษีที่ต้องชำระ" (เทียบค่าที่คำนวณแล้ว ไม่คำนวณใหม่)
   กรณีอื่นที่ `net_payable` เป็น 0 ยังเป็น "ภาษีที่ชำระไว้พอดีแล้ว" · ข้อความนี้อยู่แค่ใน LINE (PDF แสดงตัวเลข `net_payable` เอง)
   — เทส: `test_status_no_tax_and_no_withholding`, `test_status_withholding_equals_tax` และค่าที่คาดใน `test_ssf_note_with_rmf_in_same_message`
-- **#33** **ระบบถือว่าบุตรคนที่ 2 ขึ้นไปเกิดตั้งแต่ปี 2561 เสมอ** (ได้ `child_second_onward` ใน `calculate_detailed_deductions`)
+- **#33** **ระบบถือว่าบุตรคนที่ 2 ขึ้นไปเกิดตั้งแต่ปี 2561 เสมอ** (ได้ `child_second_onward` ใน `deduction_breakdown`)
   ถ้าบุตรคนที่ 2 ขึ้นไปเกิดก่อนปี 2561 จะได้ลดหย่อนเกิน ภาษีต่ำกว่าจริง
-  มีอยู่ใน `docs/known-limitations.md` แล้ว แต่บอทไม่บอกผู้ใช้ทั้งใน LINE และ PDF (มีแค่คอมเมนต์ในโค้ดกับ docs)
-  — ทางแก้ที่เป็นไปได้: แสดงหมายเหตุเมื่อ `num_children >= 2` — ยังไม่แก้ ห้ามทำจนกว่าจะสั่ง
+  — **PDF แสดงแล้ว** ในหัวข้อ "ข้อสมมติในการคำนวณ" เมื่อมีบุตรตั้งแต่ 2 คน (ปีมาจาก `child_second_onward_born_from` ใน `tax_rules`
+  ซึ่งอยู่ใน `NOT_EDITABLE`) — เทส: `test_assumptions_follow_what_user_entered`, `test_child_year_from_data`
+  — **LINE ยังไม่แสดง** ห้ามทำจนกว่าจะสั่ง
+- **#34** **`rules_note` มี "ครับ" และไปถึง PDF** — แก้แล้วใน commit "Remove ครับ from rules_note, which also goes into the PDF (#34)"
+  หมายเหตุ "ระบบใช้อัตราและเกณฑ์ภาษีที่ผู้ดูแลระบบปรับปรุง (เวอร์ชัน N)" ขึ้นเมื่อค่าที่ Admin แก้ต่างจากค่าตั้งต้น ข้อความเดียวกันไป LINE และ PDF
+  ตัด "ครับ" ออกทั้งสองที่แบบ #31 ข้อความ LINE ยังลงท้าย "ครับ" ที่บรรทัดปิดท้าย
+  — เทส: `test_changed_doc_saves_version_and_shows_note_in_line_and_pdf` · fixture `mocks` ของ `test_rules_loading.py`
+  ตรวจ `tax_advice` และ `rules_note` ทุกครั้งที่ส่งเข้า PDF
+- **#35** **`handle_deductions` คำนวณเลขเองหลายจุด** ขัดกฎเหล็กข้อ 2 ตามตัวอักษร ("การคำนวณทั้งหมดอยู่ใน `utils/tax_calculator.py`")
+  ค่าใช้จ่ายเงินเดือน/ค่าเช่า/ออนไลน์, `total_income`, `income_before_donation`, เพดานเงินบริจาค
+  (`capped_donation = min(raw_donation, income_before_donation * rules["deduction"]["donation_rate"])`), `net_income`,
+  `final_tax = max(tax_method_1, tax_method_2)`, `net_payable`
+  — เจตนาของกฎ (LLM ห้ามคำนวณ · โค้ดตรวจสอบได้) ยังรักษาไว้ ล็อกด้วย `test_line_verified_cases.py` และ `test_webhook.py`
+  — ถ้าจะย้ายเข้า `tax_calculator` ต้องเป็น commit ย้ายโค้ดล้วนตามกฎเหล็กข้อ 4 — ยังไม่แก้ ห้ามทำจนกว่าจะสั่ง
 
 🔒 = มี xfail คุมอยู่ (บั๊กชัดเจน) · 📌 = ล็อกพฤติกรรมปัจจุบันไว้ (ยังไม่ตัดสินใจ) · ไม่มีป้าย = ยังไม่มีเทส
