@@ -94,9 +94,14 @@ def get_tax_bracket_rate(net_income):
         if upper is None or net_income <= upper:
             return rate
 
-def calculate_detailed_deductions(total_income, params):
+def deduction_breakdown(total_income, params):
     """
-    คำนวณและคุมเพดานค่าลดหย่อนครบตามกฎหมาย (แก้บั๊ก 2 และ 3)
+    ค่าลดหย่อนทีละรายการ (ไม่รวมเงินบริจาค ซึ่งหักหลังค่าลดหย่อนใน handle_deductions)
+    คืน dict เรียงตามใบแนบรายละเอียดการลดหย่อนของ ภ.ง.ด.90/91 แต่ละรายการ {"entered": ยอดที่กรอก, "used": ยอดที่ใช้สิทธิได้}
+    - บุตรและบิดามารดา entered เป็นจำนวนคน · คู่สมรส entered เป็น True/False · ส่วนตัว entered เป็น None (ไม่ได้กรอก)
+    - ประกันชีวิต used คือส่วนที่เหลือหลังหักประกันสุขภาพออกจากยอดรวมที่คุม life_health_combined_cap แล้ว
+      group_used คือยอดรวมประกันชีวิต+สุขภาพนั้น (calculate_detailed_deductions ใช้ค่านี้ตรง ๆ ไม่บวกสองส่วนกลับ)
+    สูตรเพดานอยู่ที่นี่ที่เดียว calculate_detailed_deductions เรียกฟังก์ชันนี้ ยอดที่แสดงจึงตรงกับที่หักจริงเสมอ
     """
     deduction_rules = tax_rules.TAX_RULES["deduction"]
 
@@ -109,29 +114,37 @@ def calculate_detailed_deductions(total_income, params):
     spouse_deduct = deduction_rules["spouse"] if has_spouse else 0.0
 
     # 3. แก้บั๊ก 3: บุตร (คนแรก child_first / บุตรคนที่ 2 ขึ้นไป child_second_onward ตามเกณฑ์เกิด >= 2561)
+    #    แยกเป็นสองแถวตามใบแนบ บวกกลับแล้วได้นิพจน์เดียวกับสูตรเดิม child_first + ((n - 1) * child_second_onward)
     num_children = int(clean_number(params.get('num_children', 0)))
     if num_children <= 0:
-        child_deduct = 0.0
-    elif num_children == 1:
-        child_deduct = deduction_rules["child_first"]
+        first_children, child_first_deduct = 0, 0.0
+    else:
+        first_children, child_first_deduct = 1, deduction_rules["child_first"]
+    if num_children <= 1:
+        later_children, child_later_deduct = 0, 0.0
     else:
         # ข้อสมมติของบอท (บอทไม่ถามปีเกิด): ถือว่าบุตรคนที่ 2 ขึ้นไปเกิดตั้งแต่ปี 2561 — ดู docs/known-limitations.md
-        child_deduct = deduction_rules["child_first"] + ((num_children - 1) * deduction_rules["child_second_onward"])
+        later_children = num_children - 1
+        child_later_deduct = (num_children - 1) * deduction_rules["child_second_onward"]
 
     # 4. บิดามารดา (คนละ parent_per_person ไม่เกิน parent_max_count คน)
-    num_parents = min(deduction_rules["parent_max_count"], int(clean_number(params.get('num_parents', 0))))
+    entered_parents = int(clean_number(params.get('num_parents', 0)))
+    num_parents = min(deduction_rules["parent_max_count"], entered_parents)
     parent_deduct = num_parents * deduction_rules["parent_per_person"]
 
     # 5. ประกันสังคม (ไม่เกิน social_security_cap)
-    social_sec = min(clean_number(params.get('social_security', 0)), deduction_rules["social_security_cap"])
+    entered_social_sec = clean_number(params.get('social_security', 0))
+    social_sec = min(entered_social_sec, deduction_rules["social_security_cap"])
 
     # 6. ประกันชีวิต + สุขภาพ (รวมไม่เกิน life_health_combined_cap / สุขภาพไม่เกิน health_insurance_cap)
     raw_life = clean_number(params.get('life_insurance', 0))
-    raw_health = min(clean_number(params.get('health_insurance', 0)), deduction_rules["health_insurance_cap"])
+    entered_health = clean_number(params.get('health_insurance', 0))
+    raw_health = min(entered_health, deduction_rules["health_insurance_cap"])
     life_health_deduct = min(raw_life + raw_health, deduction_rules["life_health_combined_cap"])
 
     # 7. ดอกเบี้ยกู้ซื้อบ้าน (ไม่เกิน home_loan_interest_cap)
-    home_loan_interest = min(clean_number(params.get('home_loan_interest', 0)), deduction_rules["home_loan_interest_cap"])
+    entered_home_loan = clean_number(params.get('home_loan_interest', 0))
+    home_loan_interest = min(entered_home_loan, deduction_rules["home_loan_interest_cap"])
 
     # 8. กองทุน RMF (ไม่เกิน rmf_income_rate ของเงินได้และไม่เกิน rmf_cap แล้วคุมด้วยเพดานกลุ่มเกษียณ retirement_group_cap)
     #    parameter ยังชื่อ ssf_rmf เพราะผูกกับ Dialogflow แต่ถือเป็น RMF อย่างเดียว (SSF หมดสิทธิลดหย่อนหลังปีภาษี 2567)
@@ -144,9 +157,35 @@ def calculate_detailed_deductions(total_income, params):
     raw_thai_esg = clean_number(params.get('thai_esg', 0))
     thai_esg_deduct = min(raw_thai_esg, total_income * deduction_rules["thai_esg_income_rate"], deduction_rules["thai_esg_cap"])
 
-    subtotal_deductions = (personal + spouse_deduct + child_deduct + parent_deduct +
-                           social_sec + life_health_deduct + home_loan_interest + retirement_deduct +
-                           thai_esg_deduct)
+    return {
+        "personal": {"entered": None, "used": personal},
+        "spouse": {"entered": has_spouse, "used": spouse_deduct},
+        "child_first": {"entered": first_children, "used": child_first_deduct},
+        "child_second_onward": {"entered": later_children, "used": child_later_deduct},
+        "parents": {"entered": entered_parents, "used": parent_deduct},
+        "life_insurance": {"entered": raw_life, "used": life_health_deduct - raw_health,
+                           "group_used": life_health_deduct},
+        "health_insurance": {"entered": entered_health, "used": raw_health},
+        "rmf": {"entered": raw_rmf, "used": retirement_deduct},
+        "home_loan_interest": {"entered": entered_home_loan, "used": home_loan_interest},
+        "social_security": {"entered": entered_social_sec, "used": social_sec},
+        "thai_esg": {"entered": raw_thai_esg, "used": thai_esg_deduct},
+    }
+
+def calculate_detailed_deductions(total_income, params):
+    """
+    คำนวณและคุมเพดานค่าลดหย่อนครบตามกฎหมาย (แก้บั๊ก 2 และ 3) — ยอดแต่ละรายการมาจาก deduction_breakdown
+    """
+    items = deduction_breakdown(total_income, params)
+    child_deduct = items["child_first"]["used"] + items["child_second_onward"]["used"]
+    life_health_deduct = items["life_insurance"]["group_used"]
+    retirement_deduct = items["rmf"]["used"]
+    thai_esg_deduct = items["thai_esg"]["used"]
+
+    # บวกตามลำดับเดิม ผลเป็น float ตัวเดียวกับก่อนแยก deduction_breakdown
+    subtotal_deductions = (items["personal"]["used"] + items["spouse"]["used"] + child_deduct + items["parents"]["used"] +
+                           items["social_security"]["used"] + life_health_deduct + items["home_loan_interest"]["used"] +
+                           retirement_deduct + thai_esg_deduct)
 
     # คืนยอด ThaiESG แยกด้วย เพราะ generate_tax_planning_advice ต้องรู้ยอดที่ใช้ไปแล้ว
     return subtotal_deductions, life_health_deduct, retirement_deduct, thai_esg_deduct
