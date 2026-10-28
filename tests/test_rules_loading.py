@@ -97,7 +97,13 @@ def mocks(monkeypatch, tmp_path):
     monkeypatch.setattr(knowledge_search, "get_db", _forbidden("get_db"))
     monkeypatch.setattr(knowledge_search, "ask_llm", _forbidden("ask_llm"))
     monkeypatch.chdir(tmp_path)  # static/reports ที่หลุดออกมาไม่ลง repo
-    return m
+    yield m
+    # ข้อความที่ส่งเข้า PDF ต้องไม่มี "ครับ" (PDF เป็นเอกสารทางการ — #31 tax_advice, #34 rules_note)
+    # เทสในไฟล์นี้และ test_rules_version.py สร้างหมายเหตุ rules_note จริง จึงตรวจที่นี่ด้วย
+    for call in m.pdf.call_args_list:
+        _, data = call.args
+        for key in ("tax_advice", "rules_note"):
+            assert "ครับ" not in data.get(key, ""), (key, data.get(key))
 
 
 @pytest.fixture

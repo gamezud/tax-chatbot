@@ -66,9 +66,13 @@ def test_changed_doc_saves_version_and_shows_note_in_line_and_pdf(apply_doc, moc
     lines = text.splitlines()
     note = lines[1]  # บรรทัดถัดจากหัวข้อ "📊 สรุปผลการประเมินภาษี..."
     # บอกสถานะของระบบ ไม่ได้บอกว่าผลของผู้ใช้เปลี่ยน (ค่าที่แก้อาจไม่เกี่ยวกับเงินได้ของเขา)
-    assert note == f"{NOTE_START} (เวอร์ชัน 7) ครับ"
+    # ไม่มี "ครับ" เพราะข้อความเดียวกันไปถึง PDF ซึ่งเป็นเอกสารทางการ (#34)
+    assert note == f"{NOTE_START} (เวอร์ชัน 7)"
     # PDF ได้ข้อความเดียวกับ LINE จาก dict เดียวกัน
     assert pdf_data["rules_note"] == note
+    assert "ครับ" not in pdf_data["rules_note"]
+    # ข้อความ LINE ทั้งข้อความยังลงท้าย "ครับ" (บรรทัดปิดท้ายของสรุปผล)
+    assert text.endswith("ครับ")
     # ข้อความอื่นในสรุปผลไม่เปลี่ยนเลย — ตัดบรรทัดหมายเหตุออกแล้วต้องเท่าข้อความเดิม
     assert "\n".join(lines[:1] + lines[2:]) == "\n".join(default_text.splitlines())
 
@@ -121,7 +125,7 @@ BASE_PDF_DATA = {"date": "13/10/2026 10:00", "tax_year": 2569, "user_id": "TEST_
 
 
 def test_pdf_shows_rules_note_under_header(pdf_story):
-    note = f"{NOTE_START} (เวอร์ชัน 7) ครับ"
+    note = f"{NOTE_START} (เวอร์ชัน 7)"
     texts = pdf_story({**BASE_PDF_DATA, "rules_note": note})
     date_index = next(i for i, t in enumerate(texts) if t.startswith("วันที่ประเมิน"))
     assert texts[date_index + 1] == note  # ใต้บรรทัดวันที่ ก่อนตารางเงินได้
