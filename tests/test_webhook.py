@@ -726,6 +726,43 @@ def test_default_welcome_intent_still_routes_to_greeting(post):
     assert GREETING in post(payload)["fulfillmentText"]
 
 
+def greeting_lines(post):
+    return post("001_Welcome")["fulfillmentText"].split("\n")
+
+
+def test_greeting_shows_test_hours(post):
+    # ต้องตรงกับข้อความนอกเวลาบน Dialogflow Console
+    assert "⏰ ช่วงทดสอบ บอทตอบทุกวัน 10:00–20:00 น." in greeting_lines(post)
+
+
+def test_greeting_lists_start_command(post):
+    # ปุ่ม "คำนวณภาษี" ส่ง "อยากคำนวณภาษี" — เข้าสาขา 01 ด้วย training phrase ของ Dialogflow
+    # โค้ดไม่ได้ตรวจข้อความนี้ เทสจึงตรวจได้แค่ว่าอยู่บรรทัดของตัวเอง
+    assert "อยากคำนวณภาษี" in greeting_lines(post)
+
+
+@pytest.mark.parametrize("command, expected", [
+    ("ดูประวัติ", HISTORY_EMPTY),
+    ("วิธีใช้", GREETING),
+    ("เริ่มใหม่", RESET),
+])
+def test_greeting_command_routes_to_its_branch(post, command, expected):
+    # คำที่ข้อความทักทายบอกให้พิมพ์ต้องอยู่บรรทัดของตัวเอง และพาไปสาขาที่หัวข้อบอกจริง
+    assert command in greeting_lines(post)
+    payload = load("012_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = command
+    assert expected in post(payload)["fulfillmentText"]
+
+
+@pytest.mark.parametrize("question", ["ลดหย่อนบุตรได้เท่าไหร่", "ยื่นภาษีได้ถึงวันไหน"])
+def test_greeting_example_question_goes_to_knowledge(post, mocks, question):
+    assert question in greeting_lines(post)
+    payload = load("011_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = question
+    assert post(payload)["fulfillmentText"] == RAG_ANSWER
+    mocks.rag.assert_called_once()
+
+
 HELP_WORDS = ["วิธีใช้", "เมนู", "ช่วยด้วย"]
 
 
