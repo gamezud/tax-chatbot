@@ -41,17 +41,41 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 SESSION = "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
 
 # ข้อความที่บอกว่าเข้าสาขาไหน (ตัดมาจาก app.py)
-ERROR_TEXT = "ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มใหม่อีกครั้งครับ"
+ERROR_TEXT = (
+    "ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล\n\n"
+    "รบกวนพิมพ์\n"
+    "เริ่มใหม่\n"
+    "หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่าง แล้วลองอีกครั้งครับ"
+)
 GREETING = "ยินดีต้อนรับสู่ผู้ช่วยภาษีเงินได้บุคคลธรรมดา"
-RESET = "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!"
-HISTORY_EMPTY = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
+RESET = (
+    "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹\n\n"
+    "เริ่มคำนวณใหม่ได้โดยพิมพ์\n"
+    "อยากคำนวณภาษี\n"
+    "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+)
+HISTORY_EMPTY = (
+    "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ\n\n"
+    "เริ่มคำนวณได้โดยพิมพ์\n"
+    "อยากคำนวณภาษี\n"
+    "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+)
 START = "เริ่มเก็บข้อมูลจาก"
 SALARY = "เก็บข้อมูลเงินเดือนเรียบร้อยครับ"
 RENTAL = "เก็บข้อมูลรายได้ค่าเช่าเรียบร้อยครับ"
 ONLINE = "เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ"
 SUMMARY = "📊 สรุปผลการประเมินภาษีประจำปี"
-NUMBER_HINT = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ"
-NO_INCOME = "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มต้นใหม่อีกครั้งครับ"
+NUMBER_HINT = (
+    "หากต้องการคำนวณภาษี พิมพ์\n"
+    "อยากคำนวณภาษี\n"
+    "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+)
+NO_INCOME = (
+    "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ\n\n"
+    "รบกวนพิมพ์\n"
+    "เริ่มใหม่\n"
+    "หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่างครับ"
+)
 RAG_ANSWER = "📖 MOCK_RAG_ANSWER"
 PDF_LINK = "ดาวน์โหลดเอกสารสรุป PDF"
 
@@ -722,11 +746,13 @@ def test_history_formats_records(post, mocks):
     }]
     body = post("002_Default_Fallback_Intent")
     assert body["fulfillmentText"] == (
-        "📜 ประวัติการคำนวณภาษีล่าสุดของคุณ:\n\n"
+        "📜 ประวัติการคำนวณภาษีล่าสุดของคุณครับ\n\n"
         "📅 01/10/2026 10:00:00\n"
         "- เงินได้รวม: 360,000.00 บาท\n"
-        "- ภาษีสุทธิ: 2,050.00 บาท\n"
-        "  [ดาวน์โหลด PDF: https://example.test/download/tax_report_x.pdf]"
+        "- ภาษีที่คำนวณได้: 2,050.00 บาท\n"
+        "- ดาวน์โหลด PDF:\n"
+        "https://example.test/download/tax_report_x.pdf\n\n"
+        "รายการเรียงจากล่าสุดไปเก่าสุดครับ"
     )
 
 
@@ -798,7 +824,7 @@ def test_pdf_link_uses_public_url_at_request_time(post, mocks, monkeypatch):
     monkeypatch.setattr(app_module, "PUBLIC_URL", "https://example.test")
     body = post("021_04_Tax_Interview_Deductions")
     prefix = "https://example.test/download/tax_report_"
-    assert f"📄 {PDF_LINK}: {prefix}" in body["fulfillmentText"]
+    assert f"📄 {PDF_LINK}:\n{prefix}" in body["fulfillmentText"]
     _, data = mocks.firebase.save_tax_report.call_args.args
     assert data["pdf_file_url"].startswith(prefix)
     assert data["pdf_file_url"].endswith(".pdf")
@@ -815,16 +841,21 @@ def test_current_behavior_pdf_failure_returns_error_text(post, mocks):
 # D. ตัวกันค่าลดหย่อน (#25) — Dialogflow จับ 04 ได้แต่ใส่ตัวเลขผิดช่อง
 # ---------------------------------------------------------------------------
 UNCLEAR = (
-    "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
-    "กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น "
+    "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n\n"
+    "กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น\n"
     "ประกันชีวิต 20000, ประกันสุขภาพ 10000, ดอกเบี้ยบ้าน 50000, RMF 30000, ThaiESG 30000, "
-    "บริจาค 5000, ลูก 1 คน, พ่อแม่ 2 คน\n"
-    "หากไม่มีค่าลดหย่อน พิมพ์ 'ไม่มี' ได้เลยครับ"
+    "บริจาค 5000, ลูก 1 คน, พ่อแม่ 2 คน\n\n"
+    "ถ้าไม่มีค่าลดหย่อน พิมพ์\n"
+    "ไม่มี\n"
+    "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
 )
 PARENT_HEALTH = (
     "ขออภัยครับ ระบบยังไม่รองรับเบี้ยประกันสุขภาพของบิดามารดา ซึ่งเป็นสิทธิแยกจากประกันสุขภาพของตัวเอง "
-    "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
-    "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้ หากไม่มีรายการอื่นพิมพ์ 'ไม่มี' ได้เลยครับ"
+    "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n\n"
+    "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้\n\n"
+    "ถ้าไม่มีรายการอื่น พิมพ์\n"
+    "ไม่มี\n"
+    "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
 )
 
 # parameters ที่ Dialogflow ควรส่งสำหรับตัวอย่างแต่ละตัวในข้อความ ก
@@ -933,6 +964,93 @@ def test_unclear_examples_together_pass_guard():
     text = ", ".join(UNCLEAR_EXAMPLE_PARAMETERS)
     params = {k: v for p in UNCLEAR_EXAMPLE_PARAMETERS.values() for k, v in p.items()}
     assert app_module.check_deduction_parameters(text, params) is None
+
+
+# ---------------------------------------------------------------------------
+# E. รูปแบบข้อความที่บอตส่ง — ทุกข้อความลงท้าย "ครับ" และ URL อยู่บรรทัดของตัวเอง
+#    ข้อความจาก LLM / ฐานความรู้ (RAG_ANSWER) ไม่อยู่ในกฎนี้ เพราะเนื้อหาไม่ได้มาจากโค้ด
+# ---------------------------------------------------------------------------
+ENDS_WITH_KRUB = re.compile(r"ครับ[!?)]*$")
+
+
+def _history_with_record(post, mocks, monkeypatch):
+    mocks.firebase.get_user_history.return_value = [{
+        "created_at": "09/10/2026 10:00:00", "tax_year": 2569, "total_income": 360000.0,
+        "tax_payable": 2050.0, "pdf_file_url": "https://example.test/download/tax_report_x.pdf",
+    }]
+    return post("002_Default_Fallback_Intent")
+
+
+def _summary_with_pdf_link(post, mocks, monkeypatch):
+    monkeypatch.setattr(app_module, "PUBLIC_URL", "https://example.test")
+    return post("021_04_Tax_Interview_Deductions")
+
+
+def _deduction_question_with_liff(post, mocks, monkeypatch):
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    return post("004_02_Tax_Interview_Salary")
+
+
+def _start_unknown_income_type(post, mocks, monkeypatch):
+    payload = load("003_01_Tax_Interview_Start")
+    payload["queryResult"]["queryText"] = "งานอิสระ"
+    payload["queryResult"]["parameters"]["income_types"] = ["งานอิสระ"]
+    return post(payload)
+
+
+def _no_income(post, mocks, monkeypatch):
+    payload = load("021_04_Tax_Interview_Deductions")
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["salary_per_month"] = 0.0
+    return post(payload)
+
+
+def _empty_text(post, mocks, monkeypatch):
+    payload = load("012_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = ""
+    return post(payload)
+
+
+def _error(post, mocks, monkeypatch):
+    mocks.pdf.side_effect = RuntimeError("disk full")
+    return post("021_04_Tax_Interview_Deductions", expect_error=True)
+
+
+# ข้อความที่ fixture ใน ROUTES ไม่ครอบ
+REPLY_CASES = {
+    "history_with_record": _history_with_record,
+    "summary_with_pdf_link": _summary_with_pdf_link,
+    "deduction_question_with_liff": _deduction_question_with_liff,
+    "start_unknown_income_type": _start_unknown_income_type,
+    "unclear": lambda post, mocks, monkeypatch: post(deductions_payload("ดอกเบี้ยเงินกู้รถ 20000", {"donation": 20000.0})),
+    "parent_health": lambda post, mocks, monkeypatch: post(fallback_payload("ประกันสุขภาพพ่อแม่ 10000")),
+    "no_income": _no_income,
+    "empty_text": _empty_text,
+    "error": _error,
+}
+
+
+@pytest.mark.parametrize("name", [name for name, _, marker in ROUTES if marker != RAG_ANSWER])
+def test_fixture_reply_ends_with_krub(post, name):
+    text = post(name)["fulfillmentText"]
+    assert ENDS_WITH_KRUB.search(text), text[-80:]
+
+
+@pytest.mark.parametrize("case", REPLY_CASES)
+def test_reply_ends_with_krub(post, mocks, monkeypatch, case):
+    text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
+    assert ENDS_WITH_KRUB.search(text), text[-80:]
+
+
+@pytest.mark.parametrize("case", ["history_with_record", "summary_with_pdf_link", "deduction_question_with_liff"])
+def test_urls_on_own_line(post, mocks, monkeypatch, case):
+    # URL ที่ติดกับตัวอักษรอื่น LINE อาจลากตัวอักษรนั้นเข้าไปในลิงก์ (เช่น "]" ท้ายลิงก์ PDF ในประวัติแบบเดิม)
+    text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
+    url_lines = [line for line in text.split("\n") if "https://" in line]
+    assert url_lines  # เคสนี้ต้องมีลิงก์จริง ไม่งั้นเทสผ่านโดยไม่ได้ตรวจอะไร
+    for line in url_lines:
+        assert re.fullmatch(r"https://\S+", line), line
 
 
 # ---------------------------------------------------------------------------

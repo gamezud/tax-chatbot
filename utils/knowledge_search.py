@@ -91,7 +91,7 @@ def ask_llm(prompt, deadline):
 def query_tax_knowledge(user_question, deadline=None):
     db = get_db()
     if db is None:
-        return "ขออภัยครับ ระบบฐานข้อมูลความรู้ภาษียังไม่พร้อมใช้งานในขณะนี้"
+        return "ขออภัยครับ ระบบฐานข้อมูลความรู้ภาษียังไม่พร้อมใช้งานในขณะนี้ครับ"
 
     # หากไม่ได้ส่ง deadline มา ให้ตั้งเพดานไว้ 3.5 วินาที นับจากฟังก์ชันนี้เริ่ม
     if deadline is None:
