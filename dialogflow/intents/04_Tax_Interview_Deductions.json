@@ -17,7 +17,7 @@
       ],
       "parameters": [
         {
-          "id": "164747fb-7521-4ba3-ba7d-93b18bf42e30",
+          "id": "65dc2d1f-1099-4583-a33b-3b64a3aaa226",
           "name": "num_children",
           "required": false,
           "dataType": "@sys.number",
@@ -31,7 +31,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "f7efb832-4876-4c52-b1ac-08d9304599e8",
+          "id": "56a6f16c-4c69-40c3-abdd-7dfc01d53540",
           "name": "life_insurance",
           "required": false,
           "dataType": "@sys.number",
@@ -45,7 +45,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "5de41691-2eba-4012-b8d8-3575fa5663b3",
+          "id": "73886d3f-6878-43a8-8e9f-b3b37449f1ea",
           "name": "ssf_rmf",
           "required": false,
           "dataType": "@sys.number",
@@ -59,7 +59,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "d86eb3b5-63d0-4d34-af65-25220ee33164",
+          "id": "a70815be-4634-4897-9974-d3457c13b3e9",
           "name": "spouse",
           "required": false,
           "dataType": "@marital_status",
@@ -73,7 +73,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "fdab2d95-6b70-4f52-b4d0-bdb5bb6abea1",
+          "id": "7bc6aeb6-ffa4-4882-8f33-c4e36327be28",
           "name": "num_parents",
           "required": false,
           "dataType": "@sys.number",
@@ -87,7 +87,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "2e206502-ecf5-4a06-bc3a-49a759f61b6c",
+          "id": "4b61c466-9e2c-4e22-9df5-e02b46d968c6",
           "name": "health_insurance",
           "required": false,
           "dataType": "@sys.number",
@@ -101,7 +101,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "fb505faf-0577-4af1-b3f2-f32160674d25",
+          "id": "52116ab0-de16-43bd-b3d1-a8beaf3be4ce",
           "name": "home_loan_interest",
           "required": false,
           "dataType": "@sys.number",
@@ -115,7 +115,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "d376f1c2-a93e-4c92-b07b-740d3b340bd7",
+          "id": "2d06e314-a3d2-4768-886b-fe1b4147993d",
           "name": "donation",
           "required": false,
           "dataType": "@sys.number",
@@ -129,7 +129,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "978203d3-f13f-48f7-a84d-355f2b0078d5",
+          "id": "82286e75-ce88-475c-bd42-1b0c7596128b",
           "name": "thai_esg",
           "required": false,
           "dataType": "@sys.number",
@@ -149,6 +149,9 @@
           "title": "",
           "textToSpeech": "",
           "lang": "th",
+          "speech": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ],
           "condition": ""
         }
       ],

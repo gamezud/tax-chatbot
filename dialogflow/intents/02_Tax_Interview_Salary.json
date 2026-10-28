@@ -17,7 +17,7 @@
       ],
       "parameters": [
         {
-          "id": "2d78e12f-f351-42c3-bbc0-050381042d39",
+          "id": "1d08c976-cd9d-4e89-8d07-e2e6c679383c",
           "name": "salary_per_month",
           "required": true,
           "dataType": "@sys.number",
@@ -27,7 +27,7 @@
           "prompts": [
             {
               "lang": "th",
-              "value": "เงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ? (เผื่อบอตจับเลขไม่ได้ให้มันถามซ้ำ)"
+              "value": "เงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
             }
           ],
           "promptMessages": [],
@@ -36,7 +36,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "300c5d59-bee1-41df-89d0-034dd8ccf4da",
+          "id": "d6fac8bd-b036-4d39-8262-ae28de2aae51",
           "name": "bonus",
           "required": true,
           "dataType": "@money_amount",
@@ -55,7 +55,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "ddc7eff9-b9a1-465d-9300-18a075e89ee6",
+          "id": "f3891471-1307-4260-9383-f60f32e3aaf6",
           "name": "social_security",
           "required": true,
           "dataType": "@money_amount",
@@ -74,7 +74,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "59c99108-edd7-4ee7-a409-e39c5686998c",
+          "id": "ba6b6c5c-9ac6-4926-940f-df030c142652",
           "name": "withholding_tax",
           "required": true,
           "dataType": "@money_amount",
@@ -99,6 +99,9 @@
           "title": "",
           "textToSpeech": "",
           "lang": "th",
+          "speech": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ],
           "condition": ""
         }
       ],

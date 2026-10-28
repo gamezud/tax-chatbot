@@ -17,7 +17,7 @@
       ],
       "parameters": [
         {
-          "id": "ff805367-7fa2-47e7-8f92-f585ff850acd",
+          "id": "92cfc526-da5b-4a4f-bed6-44a0a8d298cf",
           "name": "online_income",
           "required": true,
           "dataType": "@sys.number",
@@ -42,6 +42,9 @@
           "title": "",
           "textToSpeech": "",
           "lang": "th",
+          "speech": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ],
           "condition": ""
         }
       ],
