@@ -873,11 +873,10 @@ repo อยู่บน GitHub และ fixture มาจาก LINE จริ�
   ข้อความ LINE ยังลงท้าย "ครับ" เพราะบรรทัดปิดท้ายของสรุปผลต่อหลัง `tax_advice` เสมอ
   — เทส: `test_advice_has_no_krub` (`test_tax_calculator.py`) · fixture `mocks` ของ `test_webhook.py` ตรวจ `tax_advice` ที่ส่งเข้า PDF
   ทุกเทสในไฟล์ (พบ "ครับ" → error ตอน teardown) · `test_advice_case_shows_its_text` ยืนยันว่าเคสใน `REPLY_CASES` ทำให้ทั้ง 4 ข้อความขึ้นจริง
-- **#32** **ผลสรุป "👉 ผลสรุป: ภาษีที่ชำระไว้พอดีแล้ว" ขึ้นเมื่อภาษี 0 และหัก ณ ที่จ่าย 0 ด้วย**
-  ตัวเลขถูก แต่ผู้ใช้ไม่ได้ชำระอะไรไว้เลย ข้อความจึงชวนงง (พบตอนทดสอบ #29 ใน LINE)
-  — เงื่อนไข: `net_payable = final_tax - withholding_tax` แล้ว `else` ของ `if net_payable > 0:` / `elif net_payable < 0:` ใน `handle_deductions`
-  คือทุกกรณีที่ภาษีเท่ากับภาษีหัก ณ ที่จ่าย รวม 0 = 0
-  — ข้อความนี้อยู่แค่ใน LINE (PDF แสดงตัวเลข `net_payable` เอง ไม่ใช้ `tax_status_str`)
-  — ยังไม่แก้ · `test_ssf_note_with_rmf_in_same_message` ล็อกข้อความนี้ไว้ในกรณีภาษี 0 หัก ณ ที่จ่าย 0 ต้องแก้ค่าที่คาดพร้อมกัน
+- **#32** **ผลสรุป "👉 ผลสรุป: ภาษีที่ชำระไว้พอดีแล้ว" ขึ้นเมื่อภาษี 0 และหัก ณ ที่จ่าย 0 ด้วย** (พบตอนทดสอบ #29 ใน LINE)
+  — แก้แล้วใน commit เดียวกับที่บันทึกข้อนี้ ("Say there is no tax to pay when tax and withholding are both zero")
+  `handle_deductions` เพิ่ม `elif final_tax == 0 and withholding_tax == 0:` → "ไม่มีภาษีที่ต้องชำระ" (เทียบค่าที่คำนวณแล้ว ไม่คำนวณใหม่)
+  กรณีอื่นที่ `net_payable` เป็น 0 ยังเป็น "ภาษีที่ชำระไว้พอดีแล้ว" · ข้อความนี้อยู่แค่ใน LINE (PDF แสดงตัวเลข `net_payable` เอง)
+  — เทส: `test_status_no_tax_and_no_withholding`, `test_status_withholding_equals_tax` และค่าที่คาดใน `test_ssf_note_with_rmf_in_same_message`
 
 🔒 = มี xfail คุมอยู่ (บั๊กชัดเจน) · 📌 = ล็อกพฤติกรรมปัจจุบันไว้ (ยังไม่ตัดสินใจ) · ไม่มีป้าย = ยังไม่มีเทส

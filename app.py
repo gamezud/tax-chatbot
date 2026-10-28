@@ -462,6 +462,9 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         tax_status_str = f"ต้องชำระภาษีเพิ่มเติม: {net_payable:,.2f} บาท"
     elif net_payable < 0:
         tax_status_str = f"ได้รับเงินคืนภาษี: {abs(net_payable):,.2f} บาท"
+    elif final_tax == 0 and withholding_tax == 0:
+        # ไม่มีภาษีและไม่ได้ถูกหักไว้ "ชำระไว้พอดี" จะชวนให้เข้าใจว่าเคยจ่ายไปแล้ว (#32) — เทียบค่าที่คำนวณแล้ว ไม่คำนวณใหม่
+        tax_status_str = "ไม่มีภาษีที่ต้องชำระ"
     else:
         tax_status_str = "ภาษีที่ชำระไว้พอดีแล้ว"
 

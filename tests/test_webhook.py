@@ -523,7 +523,7 @@ def test_ssf_note_with_rmf_in_same_message(post):
     payload["queryResult"]["parameters"]["ssf_rmf"] = 100000.0
     text = post(payload)["fulfillmentText"]
     for line in summary_lines("360,000.00", "100,000.00", "169,000.00", "91,000.00",
-                              "0.00", "0.00", "ภาษีที่ชำระไว้พอดีแล้ว"):
+                              "0.00", "0.00", "ไม่มีภาษีที่ต้องชำระ"):
         assert line in text
     assert SSF_NOTE in text
 
@@ -605,6 +605,34 @@ def test_no_donation_no_note(post):
     text = post(salary_40000_payload("ไม่มี", {}))["fulfillmentText"]
     assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 8,450.00 บาท" in text
     assert DONATION_CAP_NOTE not in text
+
+
+def _with_withholding(withholding):
+    """021 (เงินเดือน 30,000 ตอบ "ไม่มี" ภาษี 2,050) แทนภาษีหัก ณ ที่จ่ายใน tax_session"""
+    payload = load("021_04_Tax_Interview_Deductions")
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["withholding_tax"] = withholding
+    return payload
+
+
+def test_status_no_tax_and_no_withholding(post):
+    # #32: ภาษี 0 และหัก ณ ที่จ่าย 0 — ผู้ใช้ไม่ได้ชำระอะไรไว้ จึงไม่ใช่ "ชำระไว้พอดี"
+    # RMF 100,000 ทำให้เงินได้สุทธิอยู่ในขั้นยกเว้น (ค่าเดียวกับ test_ssf_note_with_rmf_in_same_message แต่ไม่มี SSF)
+    text = post(deductions_payload("RMF 100000", {"ssf_rmf": 100000.0}))["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 0.00 บาท" in text
+    assert "6. ภาษีหัก ณ ที่จ่ายสะสม: 0.00 บาท" in text
+    assert "👉 ผลสรุป: ไม่มีภาษีที่ต้องชำระ" in text
+    assert "ชำระไว้พอดี" not in text
+
+
+def test_status_withholding_equals_tax(post):
+    # #32: หัก ณ ที่จ่ายเท่ากับภาษีพอดีและไม่เป็น 0 ยังเป็นข้อความเดิม
+    # 2,050 ได้จากการรันโค้ดด้วย fixture 021 (เท่ากับ test_summary_salary_only_no_deductions) ไม่ได้คิดมือ
+    text = post(_with_withholding(2050.0))["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 2,050.00 บาท" in text
+    assert "6. ภาษีหัก ณ ที่จ่ายสะสม: 2,050.00 บาท" in text
+    assert "👉 ผลสรุป: ภาษีที่ชำระไว้พอดีแล้ว" in text
 
 
 def test_summary_shows_tax_year(post, mocks):
