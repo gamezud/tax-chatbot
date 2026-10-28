@@ -654,7 +654,10 @@ def webhook():
         # -------------------------------------------------------------
         # INTENT: ทักทายเริ่มต้น (Welcome Intent & Greeting Text)
         # -------------------------------------------------------------
-        greeting_keywords = ['สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'hello', 'hi', 'hey']
+        # คำขอวิธีใช้ (ปุ่ม "วิธีใช้" บน rich menu) ได้ข้อความเดียวกับคำทักทาย — เทียบทั้งข้อความ
+        # "วิธีใช้สิทธิ RMF" จึงยังเป็นคำถามความรู้
+        greeting_keywords = ['สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'hello', 'hi', 'hey',
+                             'วิธีใช้', 'เมนู', 'ช่วยด้วย']
         if intent_name in ['Welcome', 'Default Welcome Intent'] or user_query.lower() in greeting_keywords:
             return jsonify(handle_greeting())
 

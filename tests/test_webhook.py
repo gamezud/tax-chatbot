@@ -726,6 +726,38 @@ def test_default_welcome_intent_still_routes_to_greeting(post):
     assert GREETING in post(payload)["fulfillmentText"]
 
 
+HELP_WORDS = ["วิธีใช้", "เมนู", "ช่วยด้วย"]
+
+
+@pytest.mark.parametrize("text", HELP_WORDS)
+def test_help_word_routes_to_greeting(post, mocks, text):
+    # ปุ่ม "วิธีใช้" บน rich menu ส่งข้อความนี้ — ตัดสินจากข้อความล้วนแบบเดียวกับคำทักทาย (ขั้น 1)
+    payload = load("012_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = text
+    body = post(payload)
+    assert GREETING in body["fulfillmentText"]
+    assert "outputContexts" not in body
+    mocks.rag.assert_not_called()
+
+
+@pytest.mark.parametrize("text", HELP_WORDS)
+def test_help_word_while_awaiting_deduction(post, mocks, text):
+    # ขั้น 1 อยู่ก่อนขั้น 7 — ระหว่างรอค่าลดหย่อนก็ได้วิธีใช้ ไม่ตกไปตัวกันหรือสาขาความรู้
+    # ไม่ส่ง outputContexts — โค้ดไม่ล้าง context เอง (lifespan ยังลดตามรอบสนทนาของ Dialogflow)
+    body = post(fallback_payload(text))
+    assert GREETING in body["fulfillmentText"]
+    assert "outputContexts" not in body
+    mocks.rag.assert_not_called()
+
+
+def test_help_word_inside_question_goes_to_knowledge(post, mocks):
+    # เทียบทั้งข้อความ — คำถามที่มีคำว่า "วิธีใช้" อยู่ข้างในยังเป็นคำถามความรู้
+    payload = load("011_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = "วิธีใช้สิทธิ RMF"
+    assert post(payload)["fulfillmentText"] == RAG_ANSWER
+    mocks.rag.assert_called_once()
+
+
 def test_reset_text_overrides_intent(post):
     # ขั้น 2 (รีเซ็ต) อยู่ก่อนขั้น 4 — พิมพ์ "รีเซ็ต" ระหว่างที่ Dialogflow จับเป็น 02 ก็ยังรีเซ็ต
     payload = load("004_02_Tax_Interview_Salary")
