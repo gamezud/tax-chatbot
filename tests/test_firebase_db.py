@@ -59,3 +59,15 @@ def test_save_tax_report_writes_rules_version(real_firebase_db, report_extra, ex
     doc = client.db.collection.return_value.add.call_args.args[0]
     assert "rules_version" in doc
     assert doc["rules_version"] == expected
+
+
+def test_save_tax_report_skips_deduction_detail(real_firebase_db):
+    # handle_deductions ส่ง dict เดียวกับ PDF ซึ่งมีค่าลดหย่อนทีละรายการ — Firestore เก็บแค่ตัวเลขสรุป ไม่เก็บ key นี้
+    # (ประวัติแสดงแค่ยอดรวม · ไม่เพิ่มข้อมูลส่วนบุคคลใน Firestore)
+    client = real_firebase_db.firebase_client
+    client.db = MagicMock(name="firestore_db")
+    detail = {"items": {"personal": {"entered": None, "used": 60000.0, "limits": []}}, "subtotal": 60000.0}
+    assert client.save_tax_report("TEST_USER", {"tax_year": 2569, "deduction_detail": detail}) is True
+    doc = client.db.collection.return_value.add.call_args.args[0]
+    assert "deduction_detail" not in doc
+    assert not any(isinstance(value, dict) for value in doc.values())

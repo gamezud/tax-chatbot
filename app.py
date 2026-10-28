@@ -13,6 +13,7 @@ from utils.tax_calculator import (
     clean_number,
     get_rental_expense_rate,
     calculate_detailed_deductions,
+    deduction_breakdown,
     compute_tax_from_net,
     compute_method_2_tax,
     generate_tax_planning_advice
@@ -489,8 +490,10 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
 
     # บอกเมื่อเงินบริจาคถูกตัดที่ donation_rate ใช้ยอดเดียวกับที่หักจริง (capped_donation) ไม่คำนวณใหม่
     # เทียบหลังปัดเป็นสตางค์ กันเศษ float ของเพดานทำให้ขึ้นข้อความ "ใช้ได้ X จาก X บาท"
-    if round(capped_donation, 2) < round(raw_donation, 2):
-        donation_rate = rules["deduction"]["donation_rate"]
+    # ผลเทียบเก็บในตัวแปร ใช้ทั้งหมายเหตุนี้และแถวเงินบริจาคใน PDF (deduction_detail ข้างล่าง)
+    donation_capped = round(capped_donation, 2) < round(raw_donation, 2)
+    donation_rate = rules["deduction"]["donation_rate"]
+    if donation_capped:
         tax_advice += (f"\nหมายเหตุ: เงินบริจาคใช้ลดหย่อนได้ {capped_donation:,.2f} จาก {raw_donation:,.2f} บาท "
                        f"เพราะหักได้ไม่เกิน {donation_rate*100:g}% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น")
 
@@ -508,6 +511,24 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     # บอกสถานะของระบบ ไม่ได้บอกว่าผลของผู้ใช้คนนี้เปลี่ยน (ค่าที่แก้อาจไม่เกี่ยวกับเงินได้ของเขา)
     rules_note = (f"หมายเหตุ: ระบบใช้อัตราและเกณฑ์ภาษีที่ผู้ดูแลระบบปรับปรุง (เวอร์ชัน {rules_version}) ครับ"
                   if rules_info["changed_keys"] else "")
+
+    # ค่าลดหย่อนทีละรายการสำหรับตาราง PDF — ทุกตัวเลขมาจาก tax_calculator หรือค่าที่คำนวณแล้วข้างบน ไม่คำนวณใหม่ที่นี่
+    # deduction_breakdown คือฟังก์ชันที่ calculate_detailed_deductions ใช้ ยอดแต่ละแถวจึงรวมกันได้ subtotal_deduct
+    # เงินบริจาคไม่อยู่ใน breakdown (หักหลังค่าลดหย่อน) ใช้ raw_donation / capped_donation ตัวเดิม
+    #   ถ้าถูกตัด ยอดที่ใช้ได้คือเพดานพอดี limit จึงเป็น capped_donation
+    # PDF ไม่อ่าน tax_rules เอง ปีเกิดบุตรของข้อสมมติจึงส่งไปด้วย
+    # (Firestore ไม่ได้เก็บ key นี้ — save_tax_report เลือก field ทีละตัว)
+    deduction_detail = {
+        "items": deduction_breakdown(total_income, merged_params),
+        "subtotal": subtotal_deduct,
+        "donation": {
+            "entered": raw_donation,
+            "used": capped_donation,
+            "limits": ([{"rule": "donation_rate", "limit": capped_donation, "rate": donation_rate}]
+                       if donation_capped else []),
+        },
+        "child_second_onward_born_from": rules["deduction"]["child_second_onward_born_from"],
+    }
 
     pdf_filename = f"tax_report_{uuid.uuid4().hex[:8]}.pdf"
     pdf_filepath = os.path.join("static", "reports", pdf_filename)
@@ -530,6 +551,7 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         "tax_advice": tax_advice,         
         "rules_version": rules_version,
         "rules_note": rules_note,
+        "deduction_detail": deduction_detail,
     }
 
     generate_tax_pdf(pdf_filepath, tax_report_data)
