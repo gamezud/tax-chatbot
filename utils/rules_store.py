@@ -71,11 +71,13 @@ EDITABLE_SCHEMA = {
 # - rental_rate.unmatched: ค่าชั่วคราวของปัญหา #8 ไม่ใช่ตัวเลขกฎหมาย
 # - parent_max_count: จำนวนคน เป็นโครงสร้างของสิทธิ
 # - ssf_last_tax_year: ผูกกับข้อความที่อ้างกฎกระทรวงใน handle_deductions
+# - child_second_onward_born_from: เงื่อนไขของสิทธิใน ม.47(1)(ค) ไม่ใช่ยอดเงิน ใช้แค่ข้อความข้อสมมติใน PDF
 NOT_EDITABLE = {
     ("tax_year",),
     ("expense", "rental_rate", "unmatched"),
     ("deduction", "parent_max_count"),
     ("deduction", "ssf_last_tax_year"),
+    ("deduction", "child_second_onward_born_from"),
 }
 
 # ความสัมพันธ์ข้าม key: (key ที่ต้องไม่เกิน, key เพดาน)

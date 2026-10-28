@@ -150,6 +150,7 @@ def test_build_rules_does_not_change_defaults():
     ({"tax_year": 2570}, "tax_year"),
     ({"deduction": {"parent_max_count": 5}}, "deduction.parent_max_count"),
     ({"deduction": {"ssf_last_tax_year": 2568}}, "deduction.ssf_last_tax_year"),
+    ({"deduction": {"child_second_onward_born_from": 2560}}, "deduction.child_second_onward_born_from"),
     ({"expense": {"rental_rate": {"unmatched": 0.10}}}, "expense.rental_rate.unmatched"),
     ({"deduction": 5}, "deduction"),
     # ขั้นบันได

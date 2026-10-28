@@ -607,6 +607,40 @@ def test_no_donation_no_note(post):
     assert DONATION_CAP_NOTE not in text
 
 
+# deduction_detail: ค่าลดหย่อนทีละรายการที่ส่งเข้า PDF (ไม่บันทึก Firestore — test_firebase_db.py)
+def test_deduction_detail_sent_to_pdf(post, mocks):
+    # กรณีเดียวกับ test_donation_over_cap_note: ลดหย่อนอื่น 70,500 · บริจาคใช้ได้ 30,950 จาก 102,773 · รวม 101,450
+    post(salary_40000_payload("บริจาค 102773", {"donation": 102773.0}))
+    _, pdf_data = mocks.pdf.call_args.args
+    detail = pdf_data["deduction_detail"]
+    # ยอดแต่ละแถวรวมกันได้ subtotal และ subtotal + เงินบริจาค = บรรทัด 3 ของสรุปผล (ค่าที่คำนวณแล้ว ไม่ใช่คำนวณใหม่)
+    assert sum(item["used"] for item in detail["items"].values()) == pytest.approx(detail["subtotal"])
+    assert detail["subtotal"] == pytest.approx(70500.0)
+    assert detail["subtotal"] + detail["donation"]["used"] == pytest.approx(pdf_data["total_deduction"])
+    assert detail["items"]["social_security"] == {"entered": 10500.0, "used": 10500.0, "limits": []}
+    assert detail["donation"] == {
+        "entered": 102773.0, "used": pytest.approx(30950.0),
+        "limits": [{"rule": "donation_rate", "limit": pytest.approx(30950.0), "rate": 0.10}]}
+    assert detail["child_second_onward_born_from"] == 2561
+
+
+def test_deduction_detail_donation_under_cap(post, mocks):
+    post(salary_40000_payload("บริจาค 5000", {"donation": 5000.0}))
+    _, pdf_data = mocks.pdf.call_args.args
+    assert pdf_data["deduction_detail"]["donation"] == {"entered": 5000.0, "used": 5000.0, "limits": []}
+
+
+def test_deduction_detail_follows_active_rules(post, mocks, monkeypatch):
+    # ค่าที่ระบบ Admin แทน tax_rules.TAX_RULES ไปถึงยอดและเพดานในแถวของ PDF (อ่านตอนถูกเรียก — กฎเหล็กข้อ 2)
+    rules = {**tax_rules.TAX_RULES, "deduction": {**tax_rules.TAX_RULES["deduction"], "home_loan_interest_cap": 50000.0}}
+    monkeypatch.setattr(tax_rules, "TAX_RULES", rules)
+    post(deductions_payload("ดอกเบี้ยบ้าน 80000", {"home_loan_interest": 80000.0}))
+    _, pdf_data = mocks.pdf.call_args.args
+    assert pdf_data["deduction_detail"]["items"]["home_loan_interest"] == {
+        "entered": 80000.0, "used": 50000.0,
+        "limits": [{"rule": "home_loan_interest_cap", "limit": 50000.0, "rate": None}]}
+
+
 def _with_withholding(withholding):
     """021 (เงินเดือน 30,000 ตอบ "ไม่มี" ภาษี 2,050) แทนภาษีหัก ณ ที่จ่ายใน tax_session"""
     payload = load("021_04_Tax_Interview_Deductions")

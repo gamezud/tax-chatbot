@@ -32,6 +32,9 @@ TAX_RULES = {
         "spouse": 60000.0,
         "child_first": 30000.0,
         "child_second_onward": 60000.0,
+        # child_second_onward ใช้กับบุตรคนที่ 2 ขึ้นไปที่เกิดในหรือหลังปี พ.ศ. นี้ (docs ข้อ 2.2 หมายเหตุปีเกิดบุตร [1][12])
+        # บอทไม่ถามปีเกิด ใช้แจ้งข้อสมมติใน PDF ไม่ใช้คำนวณ
+        "child_second_onward_born_from": 2561,
         "parent_per_person": 30000.0,
         "parent_max_count": 4,
         "social_security_cap": 10500.0,    # ไม่ใช่เพดานในประมวลรัษฎากร — ยอดสูงสุดที่ผู้ประกันตน ม.33 จ่ายได้ทั้งปี (docs ข้อ 2.2 หมายเหตุ)
