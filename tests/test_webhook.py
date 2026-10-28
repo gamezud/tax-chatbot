@@ -41,17 +41,41 @@ FIXTURES_DIR = Path(__file__).resolve().parent / "fixtures"
 SESSION = "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
 
 # ข้อความที่บอกว่าเข้าสาขาไหน (ตัดมาจาก app.py)
-ERROR_TEXT = "ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มใหม่อีกครั้งครับ"
+ERROR_TEXT = (
+    "ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล\n\n"
+    "รบกวนพิมพ์\n"
+    "เริ่มใหม่\n"
+    "หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่าง แล้วลองอีกครั้งครับ"
+)
 GREETING = "ยินดีต้อนรับสู่ผู้ช่วยภาษีเงินได้บุคคลธรรมดา"
-RESET = "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!"
-HISTORY_EMPTY = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
+RESET = (
+    "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹\n\n"
+    "เริ่มคำนวณใหม่ได้โดยพิมพ์\n"
+    "อยากคำนวณภาษี\n"
+    "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+)
+HISTORY_EMPTY = (
+    "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ\n\n"
+    "เริ่มคำนวณได้โดยพิมพ์\n"
+    "อยากคำนวณภาษี\n"
+    "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+)
 START = "เริ่มเก็บข้อมูลจาก"
 SALARY = "เก็บข้อมูลเงินเดือนเรียบร้อยครับ"
 RENTAL = "เก็บข้อมูลรายได้ค่าเช่าเรียบร้อยครับ"
 ONLINE = "เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ"
 SUMMARY = "📊 สรุปผลการประเมินภาษีประจำปี"
-NUMBER_HINT = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ"
-NO_INCOME = "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มต้นใหม่อีกครั้งครับ"
+NUMBER_HINT = (
+    "หากต้องการคำนวณภาษี พิมพ์\n"
+    "อยากคำนวณภาษี\n"
+    "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+)
+NO_INCOME = (
+    "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ\n\n"
+    "รบกวนพิมพ์\n"
+    "เริ่มใหม่\n"
+    "หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่างครับ"
+)
 RAG_ANSWER = "📖 MOCK_RAG_ANSWER"
 PDF_LINK = "ดาวน์โหลดเอกสารสรุป PDF"
 
@@ -106,7 +130,12 @@ def mocks(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     # ไม่ให้ผลเทสขึ้นกับ LIFF_ID ที่ตั้งไว้ใน PowerShell ตอนรัน app.py — เทสลิงก์ LIFF ตั้งเอง
     monkeypatch.delenv("LIFF_ID", raising=False)
-    return m
+    yield m
+    # ทุกเทสในไฟล์นี้ที่สร้าง PDF: tax_advice ที่ส่งเข้า PDF ต้องไม่มี "ครับ" (#31 — PDF เป็นเอกสารทางการ)
+    # ตรวจหลังจบเทส ถ้าพบจะขึ้นเป็น error ตอน teardown ของเทสนั้น
+    for call in m.pdf.call_args_list:
+        _, data = call.args
+        assert "ครับ" not in data["tax_advice"], data["tax_advice"]
 
 
 @pytest.fixture
@@ -463,7 +492,7 @@ def test_summary_salary_with_child_and_home_loan(post, mocks):
 
 
 SSF_NOTE = ("หมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี 2568 "
-            "ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
+            "ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณ")
 
 
 @pytest.mark.parametrize("query_text", ["SSF 50000", "ซื้อ ssf ไว้ 20000", "เอสเอสเอฟ 30000"])
@@ -494,7 +523,7 @@ def test_ssf_note_with_rmf_in_same_message(post):
     payload["queryResult"]["parameters"]["ssf_rmf"] = 100000.0
     text = post(payload)["fulfillmentText"]
     for line in summary_lines("360,000.00", "100,000.00", "169,000.00", "91,000.00",
-                              "0.00", "0.00", "ภาษีที่ชำระไว้พอดีแล้ว"):
+                              "0.00", "0.00", "ไม่มีภาษีที่ต้องชำระ"):
         assert line in text
     assert SSF_NOTE in text
 
@@ -549,7 +578,7 @@ def test_donation_over_cap_note(post, mocks):
                               "6,427.50", "0.00", "ต้องชำระภาษีเพิ่มเติม: 6,427.50 บาท"):
         assert line in text
     note = ("หมายเหตุ: เงินบริจาคใช้ลดหย่อนได้ 30,950.00 จาก 102,773.00 บาท "
-            "เพราะหักได้ไม่เกิน 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นครับ")
+            "เพราะหักได้ไม่เกิน 10% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น")
     assert note in text
     # อยู่ใน tax_advice จึงไปถึง PDF ด้วย
     _, pdf_data = mocks.pdf.call_args.args
@@ -576,6 +605,34 @@ def test_no_donation_no_note(post):
     text = post(salary_40000_payload("ไม่มี", {}))["fulfillmentText"]
     assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 8,450.00 บาท" in text
     assert DONATION_CAP_NOTE not in text
+
+
+def _with_withholding(withholding):
+    """021 (เงินเดือน 30,000 ตอบ "ไม่มี" ภาษี 2,050) แทนภาษีหัก ณ ที่จ่ายใน tax_session"""
+    payload = load("021_04_Tax_Interview_Deductions")
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["withholding_tax"] = withholding
+    return payload
+
+
+def test_status_no_tax_and_no_withholding(post):
+    # #32: ภาษี 0 และหัก ณ ที่จ่าย 0 — ผู้ใช้ไม่ได้ชำระอะไรไว้ จึงไม่ใช่ "ชำระไว้พอดี"
+    # RMF 100,000 ทำให้เงินได้สุทธิอยู่ในขั้นยกเว้น (ค่าเดียวกับ test_ssf_note_with_rmf_in_same_message แต่ไม่มี SSF)
+    text = post(deductions_payload("RMF 100000", {"ssf_rmf": 100000.0}))["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 0.00 บาท" in text
+    assert "6. ภาษีหัก ณ ที่จ่ายสะสม: 0.00 บาท" in text
+    assert "👉 ผลสรุป: ไม่มีภาษีที่ต้องชำระ" in text
+    assert "ชำระไว้พอดี" not in text
+
+
+def test_status_withholding_equals_tax(post):
+    # #32: หัก ณ ที่จ่ายเท่ากับภาษีพอดีและไม่เป็น 0 ยังเป็นข้อความเดิม
+    # 2,050 ได้จากการรันโค้ดด้วย fixture 021 (เท่ากับ test_summary_salary_only_no_deductions) ไม่ได้คิดมือ
+    text = post(_with_withholding(2050.0))["fulfillmentText"]
+    assert "5. ภาษีที่คำนวณได้ทั้งสิ้น: 2,050.00 บาท" in text
+    assert "6. ภาษีหัก ณ ที่จ่ายสะสม: 2,050.00 บาท" in text
+    assert "👉 ผลสรุป: ภาษีที่ชำระไว้พอดีแล้ว" in text
 
 
 def test_summary_shows_tax_year(post, mocks):
@@ -702,6 +759,75 @@ def test_default_welcome_intent_still_routes_to_greeting(post):
     assert GREETING in post(payload)["fulfillmentText"]
 
 
+def greeting_lines(post):
+    return post("001_Welcome")["fulfillmentText"].split("\n")
+
+
+def test_greeting_shows_test_hours(post):
+    # ต้องตรงกับข้อความนอกเวลาบน Dialogflow Console
+    assert "⏰ ช่วงทดสอบ บอทตอบทุกวัน 10:00–20:00 น." in greeting_lines(post)
+
+
+def test_greeting_lists_start_command(post):
+    # ปุ่ม "คำนวณภาษี" ส่ง "อยากคำนวณภาษี" — เข้าสาขา 01 ด้วย training phrase ของ Dialogflow
+    # โค้ดไม่ได้ตรวจข้อความนี้ เทสจึงตรวจได้แค่ว่าอยู่บรรทัดของตัวเอง
+    assert "อยากคำนวณภาษี" in greeting_lines(post)
+
+
+@pytest.mark.parametrize("command, expected", [
+    ("ดูประวัติ", HISTORY_EMPTY),
+    ("วิธีใช้", GREETING),
+    ("เริ่มใหม่", RESET),
+])
+def test_greeting_command_routes_to_its_branch(post, command, expected):
+    # คำที่ข้อความทักทายบอกให้พิมพ์ต้องอยู่บรรทัดของตัวเอง และพาไปสาขาที่หัวข้อบอกจริง
+    assert command in greeting_lines(post)
+    payload = load("012_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = command
+    assert expected in post(payload)["fulfillmentText"]
+
+
+@pytest.mark.parametrize("question", ["ลดหย่อนบุตรได้เท่าไหร่", "ยื่นภาษีได้ถึงวันไหน"])
+def test_greeting_example_question_goes_to_knowledge(post, mocks, question):
+    assert question in greeting_lines(post)
+    payload = load("011_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = question
+    assert post(payload)["fulfillmentText"] == RAG_ANSWER
+    mocks.rag.assert_called_once()
+
+
+HELP_WORDS = ["วิธีใช้", "เมนู", "ช่วยด้วย"]
+
+
+@pytest.mark.parametrize("text", HELP_WORDS)
+def test_help_word_routes_to_greeting(post, mocks, text):
+    # ปุ่ม "วิธีใช้" บน rich menu ส่งข้อความนี้ — ตัดสินจากข้อความล้วนแบบเดียวกับคำทักทาย (ขั้น 1)
+    payload = load("012_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = text
+    body = post(payload)
+    assert GREETING in body["fulfillmentText"]
+    assert "outputContexts" not in body
+    mocks.rag.assert_not_called()
+
+
+@pytest.mark.parametrize("text", HELP_WORDS)
+def test_help_word_while_awaiting_deduction(post, mocks, text):
+    # ขั้น 1 อยู่ก่อนขั้น 7 — ระหว่างรอค่าลดหย่อนก็ได้วิธีใช้ ไม่ตกไปตัวกันหรือสาขาความรู้
+    # ไม่ส่ง outputContexts — โค้ดไม่ล้าง context เอง (lifespan ยังลดตามรอบสนทนาของ Dialogflow)
+    body = post(fallback_payload(text))
+    assert GREETING in body["fulfillmentText"]
+    assert "outputContexts" not in body
+    mocks.rag.assert_not_called()
+
+
+def test_help_word_inside_question_goes_to_knowledge(post, mocks):
+    # เทียบทั้งข้อความ — คำถามที่มีคำว่า "วิธีใช้" อยู่ข้างในยังเป็นคำถามความรู้
+    payload = load("011_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = "วิธีใช้สิทธิ RMF"
+    assert post(payload)["fulfillmentText"] == RAG_ANSWER
+    mocks.rag.assert_called_once()
+
+
 def test_reset_text_overrides_intent(post):
     # ขั้น 2 (รีเซ็ต) อยู่ก่อนขั้น 4 — พิมพ์ "รีเซ็ต" ระหว่างที่ Dialogflow จับเป็น 02 ก็ยังรีเซ็ต
     payload = load("004_02_Tax_Interview_Salary")
@@ -722,11 +848,13 @@ def test_history_formats_records(post, mocks):
     }]
     body = post("002_Default_Fallback_Intent")
     assert body["fulfillmentText"] == (
-        "📜 ประวัติการคำนวณภาษีล่าสุดของคุณ:\n\n"
+        "📜 ประวัติการคำนวณภาษีล่าสุดของคุณครับ\n\n"
         "📅 01/10/2026 10:00:00\n"
         "- เงินได้รวม: 360,000.00 บาท\n"
-        "- ภาษีสุทธิ: 2,050.00 บาท\n"
-        "  [ดาวน์โหลด PDF: https://example.test/download/tax_report_x.pdf]"
+        "- ภาษีที่คำนวณได้: 2,050.00 บาท\n"
+        "- ดาวน์โหลด PDF:\n"
+        "https://example.test/download/tax_report_x.pdf\n\n"
+        "รายการเรียงจากล่าสุดไปเก่าสุดครับ"
     )
 
 
@@ -798,7 +926,7 @@ def test_pdf_link_uses_public_url_at_request_time(post, mocks, monkeypatch):
     monkeypatch.setattr(app_module, "PUBLIC_URL", "https://example.test")
     body = post("021_04_Tax_Interview_Deductions")
     prefix = "https://example.test/download/tax_report_"
-    assert f"📄 {PDF_LINK}: {prefix}" in body["fulfillmentText"]
+    assert f"📄 {PDF_LINK}:\n{prefix}" in body["fulfillmentText"]
     _, data = mocks.firebase.save_tax_report.call_args.args
     assert data["pdf_file_url"].startswith(prefix)
     assert data["pdf_file_url"].endswith(".pdf")
@@ -815,16 +943,21 @@ def test_current_behavior_pdf_failure_returns_error_text(post, mocks):
 # D. ตัวกันค่าลดหย่อน (#25) — Dialogflow จับ 04 ได้แต่ใส่ตัวเลขผิดช่อง
 # ---------------------------------------------------------------------------
 UNCLEAR = (
-    "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
-    "กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น "
+    "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n\n"
+    "กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น\n"
     "ประกันชีวิต 20000, ประกันสุขภาพ 10000, ดอกเบี้ยบ้าน 50000, RMF 30000, ThaiESG 30000, "
-    "บริจาค 5000, ลูก 1 คน, พ่อแม่ 2 คน\n"
-    "หากไม่มีค่าลดหย่อน พิมพ์ 'ไม่มี' ได้เลยครับ"
+    "บริจาค 5000, ลูก 1 คน, พ่อแม่ 2 คน\n\n"
+    "ถ้าไม่มีค่าลดหย่อน พิมพ์\n"
+    "ไม่มี\n"
+    "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
 )
 PARENT_HEALTH = (
     "ขออภัยครับ ระบบยังไม่รองรับเบี้ยประกันสุขภาพของบิดามารดา ซึ่งเป็นสิทธิแยกจากประกันสุขภาพของตัวเอง "
-    "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
-    "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้ หากไม่มีรายการอื่นพิมพ์ 'ไม่มี' ได้เลยครับ"
+    "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n\n"
+    "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้\n\n"
+    "ถ้าไม่มีรายการอื่น พิมพ์\n"
+    "ไม่มี\n"
+    "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
 )
 
 # parameters ที่ Dialogflow ควรส่งสำหรับตัวอย่างแต่ละตัวในข้อความ ก
@@ -933,6 +1066,157 @@ def test_unclear_examples_together_pass_guard():
     text = ", ".join(UNCLEAR_EXAMPLE_PARAMETERS)
     params = {k: v for p in UNCLEAR_EXAMPLE_PARAMETERS.values() for k, v in p.items()}
     assert app_module.check_deduction_parameters(text, params) is None
+
+
+# ---------------------------------------------------------------------------
+# E. รูปแบบข้อความที่บอตส่ง — ทุกข้อความลงท้าย "ครับ" และ URL อยู่บรรทัดของตัวเอง
+#    ข้อความจาก LLM / ฐานความรู้ (RAG_ANSWER) ไม่อยู่ในกฎนี้ เพราะเนื้อหาไม่ได้มาจากโค้ด
+# ---------------------------------------------------------------------------
+# เครื่องหมายท้าย "ครับ" ได้ตัวเดียว (? ในคำถาม, ! ในคำทักทาย, ) ท้ายย่อหน้าลิงก์ LIFF)
+# \Z ไม่ใช่ $ เพราะ $ ยอมให้มี "\n" ต่อท้าย ข้อความที่จบด้วย "ครับ\n" จะผ่าน
+ENDS_WITH_KRUB = re.compile(r"ครับ[!?)]?\Z")
+
+
+def _history_with_record(post, mocks, monkeypatch):
+    mocks.firebase.get_user_history.return_value = [{
+        "created_at": "09/10/2026 10:00:00", "tax_year": 2569, "total_income": 360000.0,
+        "tax_payable": 2050.0, "pdf_file_url": "https://example.test/download/tax_report_x.pdf",
+    }]
+    return post("002_Default_Fallback_Intent")
+
+
+def _summary_with_pdf_link(post, mocks, monkeypatch):
+    monkeypatch.setattr(app_module, "PUBLIC_URL", "https://example.test")
+    return post("021_04_Tax_Interview_Deductions")
+
+
+def _deduction_question_with_liff(post, mocks, monkeypatch):
+    monkeypatch.setenv("LIFF_ID", TEST_LIFF_ID)
+    return post("004_02_Tax_Interview_Salary")
+
+
+def _start_unknown_income_type(post, mocks, monkeypatch):
+    payload = load("003_01_Tax_Interview_Start")
+    payload["queryResult"]["queryText"] = "งานอิสระ"
+    payload["queryResult"]["parameters"]["income_types"] = ["งานอิสระ"]
+    return post(payload)
+
+
+def _no_income(post, mocks, monkeypatch):
+    payload = load("021_04_Tax_Interview_Deductions")
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["salary_per_month"] = 0.0
+    return post(payload)
+
+
+def _empty_text(post, mocks, monkeypatch):
+    payload = load("012_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = ""
+    return post(payload)
+
+
+def _error(post, mocks, monkeypatch):
+    mocks.pdf.side_effect = RuntimeError("disk full")
+    return post("021_04_Tax_Interview_Deductions", expect_error=True)
+
+
+def _out_of_scope(post, mocks, monkeypatch):
+    # ใช้ query_tax_knowledge ของจริงแทน mock แต่ FAISS ปลอมให้ระยะเกิน threshold
+    # ask_llm ยังเป็นตัวที่สั่ง pytest.fail (fixture mocks) — เกิน threshold ต้องไม่เรียก LLM
+    fake_db = MagicMock()
+    fake_db.similarity_search_with_score.return_value = [(MagicMock(page_content="x"), 99.0)]
+    monkeypatch.setattr(knowledge_search, "get_db", lambda: fake_db)
+    monkeypatch.setattr(app_module, "query_tax_knowledge", knowledge_search.query_tax_knowledge)
+    return post("011_Default_Fallback_Intent")
+
+
+def _summary_exempt_with_ssf_note(post, mocks, monkeypatch):
+    # ภาษี 0 (คำแนะนำแบบขั้นยกเว้น) + หมายเหตุ SSF — ค่าเดียวกับ test_ssf_note_with_rmf_in_same_message
+    payload = load("021_04_Tax_Interview_Deductions")
+    payload["queryResult"]["queryText"] = "RMF 100000 SSF 50000"
+    payload["queryResult"]["parameters"]["ssf_rmf"] = 100000.0
+    return post(payload)
+
+
+def _summary_donation_over_cap(post, mocks, monkeypatch):
+    # หมายเหตุเงินบริจาคถูกตัดที่เพดาน — ค่าเดียวกับ test_donation_over_cap_note
+    return post(salary_40000_payload("บริจาค 102773", {"donation": 102773.0}))
+
+
+def _summary_all_rights_used(post, mocks, monkeypatch):
+    # ภาษีไม่เป็น 0 และใช้ RMF, ThaiESG, ประกันชีวิตครบเพดาน (เงินเดือน 100,000/เดือน)
+    payload = deductions_payload("ประกันชีวิต 100000 RMF 360000 ThaiESG 300000",
+                                 {"life_insurance": 100000.0, "ssf_rmf": 360000.0, "thai_esg": 300000.0})
+    for ctx in payload["queryResult"]["outputContexts"]:
+        if ctx["name"].endswith("/contexts/tax_session"):
+            ctx["parameters"]["salary_per_month"] = 100000.0
+    return post(payload)
+
+
+# ข้อความที่ fixture ใน ROUTES ไม่ครอบ
+REPLY_CASES = {
+    "summary_exempt_with_ssf_note": _summary_exempt_with_ssf_note,
+    "summary_donation_over_cap": _summary_donation_over_cap,
+    "summary_all_rights_used": _summary_all_rights_used,
+    "history_with_record": _history_with_record,
+    "summary_with_pdf_link": _summary_with_pdf_link,
+    "deduction_question_with_liff": _deduction_question_with_liff,
+    "start_unknown_income_type": _start_unknown_income_type,
+    "unclear": lambda post, mocks, monkeypatch: post(deductions_payload("ดอกเบี้ยเงินกู้รถ 20000", {"donation": 20000.0})),
+    "parent_health": lambda post, mocks, monkeypatch: post(fallback_payload("ประกันสุขภาพพ่อแม่ 10000")),
+    "no_income": _no_income,
+    "empty_text": _empty_text,
+    "error": _error,
+    "out_of_scope": _out_of_scope,
+}
+
+
+@pytest.mark.parametrize("name", [name for name, _, marker in ROUTES if marker != RAG_ANSWER])
+def test_fixture_reply_ends_with_krub(post, name):
+    text = post(name)["fulfillmentText"]
+    assert ENDS_WITH_KRUB.search(text), text[-80:]
+
+
+@pytest.mark.parametrize("case", REPLY_CASES)
+def test_reply_ends_with_krub(post, mocks, monkeypatch, case):
+    text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
+    assert ENDS_WITH_KRUB.search(text), text[-80:]
+
+
+@pytest.mark.parametrize("case, advice_text", [
+    ("summary_exempt_with_ssf_note", "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลง"),
+    ("summary_exempt_with_ssf_note", "ระบบจึงไม่นำยอด SSF มาคำนวณ"),
+    ("summary_donation_over_cap", "ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น"),
+    ("summary_all_rights_used", "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้ว"),
+])
+def test_advice_case_shows_its_text(post, mocks, monkeypatch, case, advice_text):
+    # เคสสรุปผลใน REPLY_CASES ทำให้ข้อความใน tax_advice ทั้ง 4 แบบขึ้นจริง (#31)
+    # test_reply_ends_with_krub จึงยืนยันได้ว่าข้อความ LINE ยังลงท้าย "ครับ" แม้ tax_advice ไม่มี "ครับ" แล้ว
+    text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
+    assert advice_text in text
+    _, data = mocks.pdf.call_args.args
+    assert advice_text in data["tax_advice"]
+
+
+def test_out_of_scope_reply_command_routes_to_greeting(post, mocks, monkeypatch):
+    # ข้อความนอกขอบเขตบอกให้พิมพ์ "วิธีใช้" — คำนั้นต้องพาไปสาขาทักทายจริง ไม่ใช่วนกลับมาสาขาความรู้
+    text = _out_of_scope(post, mocks, monkeypatch)["fulfillmentText"]
+    assert text == knowledge_search.OUT_OF_SCOPE_REPLY
+    assert "วิธีใช้" in text.split("\n")
+    payload = load("011_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = "วิธีใช้"
+    assert GREETING in post(payload)["fulfillmentText"]
+
+
+@pytest.mark.parametrize("case", ["history_with_record", "summary_with_pdf_link", "deduction_question_with_liff"])
+def test_urls_on_own_line(post, mocks, monkeypatch, case):
+    # URL ที่ติดกับตัวอักษรอื่น LINE อาจลากตัวอักษรนั้นเข้าไปในลิงก์ (เช่น "]" ท้ายลิงก์ PDF ในประวัติแบบเดิม)
+    text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
+    url_lines = [line for line in text.split("\n") if "https://" in line]
+    assert url_lines  # เคสนี้ต้องมีลิงก์จริง ไม่งั้นเทสผ่านโดยไม่ได้ตรวจอะไร
+    for line in url_lines:
+        assert re.fullmatch(r"https://\S+", line), line
 
 
 # ---------------------------------------------------------------------------

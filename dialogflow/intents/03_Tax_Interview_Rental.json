@@ -17,7 +17,7 @@
       ],
       "parameters": [
         {
-          "id": "e6817c28-7a48-47dd-8e74-0c71bee27b1f",
+          "id": "0c5e6d78-27dc-45b0-9239-f4f28e54c8a6",
           "name": "property_type",
           "required": true,
           "dataType": "@PropertyType",
@@ -36,7 +36,7 @@
           "outputDialogContexts": []
         },
         {
-          "id": "32b40f19-2433-4498-b197-367e67b65a4e",
+          "id": "b76e2b6a-fb09-4d9e-a9db-dec3bd270132",
           "name": "rental_income",
           "required": true,
           "dataType": "@sys.number",
@@ -61,6 +61,9 @@
           "title": "",
           "textToSpeech": "",
           "lang": "th",
+          "speech": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ],
           "condition": ""
         }
       ],

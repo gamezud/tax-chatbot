@@ -9,7 +9,18 @@
       "action": "input.unknown",
       "affectedContexts": [],
       "parameters": [],
-      "messages": [],
+      "messages": [
+        {
+          "type": "0",
+          "title": "",
+          "textToSpeech": "",
+          "lang": "th",
+          "speech": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ],
+          "condition": ""
+        }
+      ],
       "speech": []
     }
   ],

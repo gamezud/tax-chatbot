@@ -85,6 +85,19 @@ def liff_donation_link():
         "(ถ้ามีค่าลดหย่อนอื่นด้วย กรุณาพิมพ์ทั้งหมดในแชตครับ)"
     )
 
+def deduction_question():
+    # คำถามค่าลดหย่อนของสาขาเงินเดือน ค่าเช่า และขายออนไลน์ — เขียนที่เดียว ทั้งสามสาขาจึงถามเหมือนกันเสมอ
+    # ต่อลิงก์ LIFF ตอนถูกเรียก (อ่าน LIFF_ID ตอนนั้น — CLAUDE.md กับดักข้อ 9)
+    return (
+        "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ?\n\n"
+        "เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค\n"
+        "จำนวนเงินให้ตอบเป็นยอดรวมทั้งปีครับ\n\n"
+        "ถ้าไม่มีค่าลดหย่อน พิมพ์\n"
+        "ไม่มี\n"
+        "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
+        + liff_donation_link()
+    )
+
 def liff_id_status_line():
     # พิมพ์ตอนเริ่มเซิร์ฟเวอร์ ให้รู้ทันทีถ้าลืมตั้ง LIFF_ID (ลิงก์ในคำถามค่าลดหย่อนจะหายเงียบ ๆ)
     # บอกแค่ตั้งแล้วหรือไม่ ไม่พิมพ์ค่า — ใช้เงื่อนไขเดียวกับ liff_donation_link (ช่องว่างล้วนถือว่าไม่ได้ตั้ง)
@@ -171,14 +184,24 @@ def read_donation_amount():
 # เงื่อนไขเลือกสาขาและลำดับการตรวจอยู่ใน webhook() (CLAUDE.md กับดักข้อ 1)
 # -------------------------------------------------------------
 def handle_greeting():
+    # หัวข้อตรงกับชื่อปุ่มบน rich menu (ตั้งใน LINE OA Manager ไม่ได้อยู่ใน repo) คำที่พิมพ์แทนปุ่มอยู่บรรทัดถัดไป
+    # บรรทัดเวลาทดสอบต้องตรงกับข้อความนอกเวลาบน Dialogflow Console และต้องลบก่อนเดโม/วันสอบ
     greeting_text = (
         "สวัสดีครับ! ยินดีต้อนรับสู่ผู้ช่วยภาษีเงินได้บุคคลธรรมดา ภาษีพร้อม (Tax Assistant) ครับ 🤖📄\n\n"
-        "ผมสามารถช่วยคุณได้ดังนี้ครับ:\n"
-        "1. 🧮 คำนวณภาษีประจำปี: พิมพ์ 'อยากคำนวณภาษี'\n"
-        "2. 📜 ดูประวัติการประเมินภาษี: พิมพ์ 'ดูประวัติ'\n"
-        "3. 💡 สอบถามความรู้ภาษี: เช่น 'ลดหย่อนบุตรได้เท่าไหร่', 'ประกันสังคมลดหย่อนได้สูงสุดเท่าไหร่', 'ยื่นภาษีได้ถึงวันไหน'\n"
-        "4. 🔄 เริ่มต้นใหม่: พิมพ์ 'รีเซ็ต'\n\n"
-        "มีข้อมูลภาษีส่วนไหนให้ผมช่วยเหลือ สอบถามเข้ามาได้เลยครับ!"
+        "⏰ ช่วงทดสอบ บอทตอบทุกวัน 10:00–20:00 น.\n\n"
+        "เลือกจากเมนูด้านล่าง หรือพิมพ์คำที่อยู่ใต้แต่ละหัวข้อได้เลยครับ\n\n"
+        "🧮 คำนวณภาษี: คำนวณภาษีเงินได้ประจำปี\n"
+        "อยากคำนวณภาษี\n\n"
+        "📜 ดูประวัติ: ผลการคำนวณที่ผ่านมา\n"
+        "ดูประวัติ\n\n"
+        "📖 วิธีใช้: แสดงข้อความนี้อีกครั้ง\n"
+        "วิธีใช้\n\n"
+        "🔄 เริ่มใหม่: ล้างข้อมูลที่กรอกไว้\n"
+        "เริ่มใหม่\n\n"
+        "💡 ถามความรู้ภาษีได้เลย เช่น\n"
+        "ลดหย่อนบุตรได้เท่าไหร่\n"
+        "ยื่นภาษีได้ถึงวันไหน\n\n"
+        "มีข้อมูลภาษีส่วนไหนให้ผมช่วย สอบถามเข้ามาได้เลยครับ"
     )
     return {"fulfillmentText": greeting_text}
 
@@ -193,7 +216,12 @@ def handle_reset(output_contexts):
             })
     print("🔄 [DEBUG-RESET] สั่งรีเซ็ตและเคลียร์ Context ทั้งหมดทิ้ง")
     return {
-        "fulfillmentText": "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹 พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มใหม่ได้เลยครับ!",
+        "fulfillmentText": (
+            "ล้างข้อมูลเก่าเรียบร้อยครับ 🧹\n\n"
+            "เริ่มคำนวณใหม่ได้โดยพิมพ์\n"
+            "อยากคำนวณภาษี\n"
+            "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+        ),
         "outputContexts": cleared_contexts
     }
 
@@ -207,15 +235,26 @@ def handle_history(line_user_id):
             income_val = data.get('total_income', 0.0)
             tax_val = data.get('tax_payable', 0.0)
             pdf_link = data.get('pdf_file_url', '')
-            link_text = f"\n  [ดาวน์โหลด PDF: {pdf_link}]" if pdf_link else ""
+            # URL อยู่บรรทัดของตัวเอง ไม่งั้น LINE อาจลากตัวอักษรที่ติดกันเข้าไปในลิงก์
+            link_text = f"\n- ดาวน์โหลด PDF:\n{pdf_link}" if pdf_link else ""
             # อ่านปีจาก field ที่บันทึกไว้ ไม่ใช่ tax_rules — รายการเก่าคำนวณด้วยกติกาปีอื่น
             # รายการที่บันทึกก่อนมี field นี้ไม่แสดงปี (ไม่เดา)
             tax_year = data.get('tax_year')
             year_text = f" (ปีภาษี {tax_year})" if tax_year else ""
-            history_list.append(f"📅 {dt}{year_text}\n- เงินได้รวม: {income_val:,.2f} บาท\n- ภาษีสุทธิ: {tax_val:,.2f} บาท{link_text}")
-        reply_text = "📜 ประวัติการคำนวณภาษีล่าสุดของคุณ:\n\n" + "\n------------------\n".join(history_list)
+            # tax_payable คือภาษีก่อนหัก ณ ที่จ่าย (บรรทัด 5 ของสรุปผล) จึงใช้ป้ายเดียวกับสรุปผล ไม่ใช่ "ภาษีสุทธิ"
+            history_list.append(f"📅 {dt}{year_text}\n- เงินได้รวม: {income_val:,.2f} บาท\n- ภาษีที่คำนวณได้: {tax_val:,.2f} บาท{link_text}")
+        reply_text = (
+            "📜 ประวัติการคำนวณภาษีล่าสุดของคุณครับ\n\n"
+            + "\n------------------\n".join(history_list)
+            + "\n\nรายการเรียงจากล่าสุดไปเก่าสุดครับ"
+        )
     else:
-        reply_text = "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ พิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มคำนวณได้เลยครับ"
+        reply_text = (
+            "ยังไม่มีประวัติการคำนวณภาษีในระบบครับ\n\n"
+            "เริ่มคำนวณได้โดยพิมพ์\n"
+            "อยากคำนวณภาษี\n"
+            "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+        )
     return {"fulfillmentText": reply_text}
 
 def handle_interview_start(user_query, parameters, merged_params, session_id):
@@ -231,16 +270,19 @@ def handle_interview_start(user_query, parameters, merged_params, session_id):
     print(f"🚦 [DEBUG-STEP1] การวิเคราะห์รายได้ -> Salary: {has_salary}, Rental: {has_rental}, Online: {has_online}")
 
     if has_salary:
-        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'เงินเดือน' เป็นอันดับแรกนะครับ 📝\n- ได้รับเงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
+        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'เงินเดือน' เป็นอันดับแรกนะครับ 📝\n\nได้รับเงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
         next_ctx = "awaiting_salary"
     elif has_rental:
-        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ค่าเช่า' เป็นอันดับแรกนะครับ 🏠\n- ปล่อยเช่าทรัพย์สินประเภทไหนครับ (เช่น คอนโด, บ้าน, ที่ดิน)?"
+        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ค่าเช่า' เป็นอันดับแรกนะครับ 🏠\n\nปล่อยเช่าทรัพย์สินประเภทไหนครับ (เช่น คอนโด, บ้าน, ที่ดิน)?"
         next_ctx = "awaiting_rental"
     elif has_online:
-        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ขายของออนไลน์' เป็นอันดับแรกนะครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
+        reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'ขายของออนไลน์' เป็นอันดับแรกนะครับ 📦\n\nยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
         next_ctx = "awaiting_online"
     else:
-        reply_text = "คุณมีรายได้ประเภทไหนบ้างครับในปีนี้ (เช่น เงินเดือน, ค่าเช่า, ขายของออนไลน์)?"
+        reply_text = (
+            "ตอนนี้ระบบคำนวณได้เฉพาะเงินได้จากเงินเดือน ค่าเช่า และขายของออนไลน์ครับ\n\n"
+            "คุณมีรายได้ประเภทไหนบ้างครับ?"
+        )
         next_ctx = None
 
     out_contexts = [
@@ -279,14 +321,13 @@ def handle_salary(merged_params, user_query, session_id):
         f"- ภาษีหัก ณ ที่จ่าย: {withholding_tax:,.2f} บาท\n\n"
     )
     if has_rental:
-        reply_text += "ต่อไปขอสอบถามข้อมูลส่วนของ 'ค่าเช่า' ครับ 🏠\n- ปล่อยเช่าทรัพย์สินประเภทไหน และค่าเช่ารวมทั้งปีประมาณเท่าไหร่ครับ?"
+        reply_text += "ต่อไปขอสอบถามข้อมูลส่วนของ 'ค่าเช่า' ครับ 🏠\n\nปล่อยเช่าทรัพย์สินประเภทไหน และค่าเช่ารวมทั้งปีประมาณเท่าไหร่ครับ?"
         next_ctx = "awaiting_rental"
     elif has_online:
-        reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
+        reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n\nยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
         next_ctx = "awaiting_online"
     else:
-        reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-        reply_text += liff_donation_link()
+        reply_text += deduction_question()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -316,11 +357,10 @@ def handle_rental(merged_params, session_id):
         f"- หักค่าใช้จ่ายเหมา ({rate*100:.0f}%): {rental_expense:,.2f} บาท\n\n"
     )
     if has_online:
-        reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n- ยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
+        reply_text += "ต่อไปขอสอบถามรายได้ส่วนของ 'ขายของออนไลน์' ครับ 📦\n\nยอดขายรวมทั้งปีประมาณเท่าไหร่ครับ?"
         next_ctx = "awaiting_online"
     else:
-        reply_text += "ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
-        reply_text += liff_donation_link()
+        reply_text += deduction_question()
         next_ctx = "awaiting_deduction"
 
     out_contexts = [
@@ -351,9 +391,8 @@ def handle_online(merged_params, user_query, session_id):
         f"เก็บข้อมูลขายของออนไลน์เรียบร้อยครับ 📦\n"
         f"- ยอดขายรวมทั้งปี: {online_income:,.2f} บาท\n"
         f"- หักค่าใช้จ่ายเหมา ({online_rate*100:.0f}%): {online_expense:,.2f} บาท\n\n"
-        f"ขั้นตอนสุดท้าย คุณมี 'ค่าลดหย่อน' เพิ่มเติมไหมครับ? (เช่น บุตร, ประกันชีวิต, RMF, ThaiESG, ดอกเบี้ยบ้าน, เงินบริจาค - จำนวนเงินให้ตอบเป็นยอดรวมทั้งปี หากไม่มีพิมพ์ 'ไม่มี' ได้เลยครับ)"
     )
-    reply_text += liff_donation_link()
+    reply_text += deduction_question()
     out_contexts = [
         {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
         {"name": f"{session_id}/contexts/awaiting_online", "lifespanCount": 0},
@@ -378,7 +417,12 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     if total_income <= 0:
         print("⚠️ [CALC-ABORT] รายได้รวมเป็น 0.00 บาท")
         return {
-            "fulfillmentText": "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มต้นใหม่อีกครั้งครับ",
+            "fulfillmentText": (
+                "ระบบยังไม่ได้รับข้อมูลรายได้ของคุณครับ\n\n"
+                "รบกวนพิมพ์\n"
+                "เริ่มใหม่\n"
+                "หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่างครับ"
+            ),
             "outputContexts": [
                 {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 0},
                 {"name": f"{session_id}/contexts/awaiting_deduction", "lifespanCount": 0}
@@ -418,6 +462,9 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         tax_status_str = f"ต้องชำระภาษีเพิ่มเติม: {net_payable:,.2f} บาท"
     elif net_payable < 0:
         tax_status_str = f"ได้รับเงินคืนภาษี: {abs(net_payable):,.2f} บาท"
+    elif final_tax == 0 and withholding_tax == 0:
+        # ไม่มีภาษีและไม่ได้ถูกหักไว้ "ชำระไว้พอดี" จะชวนให้เข้าใจว่าเคยจ่ายไปแล้ว (#32) — เทียบค่าที่คำนวณแล้ว ไม่คำนวณใหม่
+        tax_status_str = "ไม่มีภาษีที่ต้องชำระ"
     else:
         tax_status_str = "ภาษีที่ชำระไว้พอดีแล้ว"
 
@@ -445,7 +492,7 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     if round(capped_donation, 2) < round(raw_donation, 2):
         donation_rate = rules["deduction"]["donation_rate"]
         tax_advice += (f"\nหมายเหตุ: เงินบริจาคใช้ลดหย่อนได้ {capped_donation:,.2f} จาก {raw_donation:,.2f} บาท "
-                       f"เพราะหักได้ไม่เกิน {donation_rate*100:g}% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่นครับ")
+                       f"เพราะหักได้ไม่เกิน {donation_rate*100:g}% ของเงินได้หลังหักค่าใช้จ่ายและค่าลดหย่อนอื่น")
 
     # SSF ลดหย่อนไม่ได้แล้วหลัง ssf_last_tax_year (docs ข้อ 2.2 แถว SSF [5]) Console ไม่ annotate ยอด SSF จึงไม่ถูกนับ
     # เช็กจากข้อความดิบเพื่อบอกเหตุผล ต่อท้าย tax_advice ให้ไปถึงทั้ง LINE และ PDF
@@ -453,7 +500,7 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
     if any(k in user_query.lower() for k in ['ssf', 'เอสเอสเอฟ']):
         ssf_last_tax_year = rules["deduction"]["ssf_last_tax_year"]
         tax_advice += (f"\nหมายเหตุ: SSF ลดหย่อนภาษีไม่ได้แล้วตั้งแต่ปีภาษี {ssf_last_tax_year + 1} "
-                       f"ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณครับ")
+                       f"ตามกฎกระทรวง ฉบับที่ 357 (พ.ศ. 2563) ระบบจึงไม่นำยอด SSF มาคำนวณ")
 
     # ประวัติเก็บชุดกติกาที่ใช้จริงทุกครั้งที่มาจาก Firestore แม้ค่าจะเท่าค่าตั้งต้น (None = ค่าตั้งต้นในโค้ด)
     rules_version = rules_info["version"] if rules_info["source"] == "firestore" else None
@@ -487,7 +534,8 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
 
     generate_tax_pdf(pdf_filepath, tax_report_data)
     download_url = f"{PUBLIC_URL}/download/{pdf_filename}" if PUBLIC_URL else ""
-    pdf_msg = f"\n📄 ดาวน์โหลดเอกสารสรุป PDF: {download_url}" if download_url else ""  
+    # URL อยู่บรรทัดของตัวเอง ไม่งั้น LINE อาจลากตัวอักษรที่ติดกันเข้าไปในลิงก์
+    pdf_msg = f"📄 ดาวน์โหลดเอกสารสรุป PDF:\n{download_url}\n\n" if download_url else ""
     tax_report_data["pdf_file_url"] = download_url
     firebase_client.save_tax_report(line_user_id, tax_report_data)
 
@@ -504,8 +552,13 @@ def handle_deductions(merged_params, user_query, session_id, line_user_id):
         f"6. ภาษีหัก ณ ที่จ่ายสะสม: {withholding_tax:,.2f} บาท\n"
         f"--------------------------------\n"
         f"👉 ผลสรุป: {tax_status_str}\n\n"
-        f"{tax_advice}\n"
         f"{pdf_msg}"
+        f"{tax_advice}\n\n"
+        # บรรทัดปิดท้ายเฉพาะข้อความ LINE — PDF ได้ tax_advice จาก tax_report_data ซึ่งไม่มีบรรทัดนี้
+        # (PDF เป็นเอกสารทางการ ไม่ใส่ภาษาพูด)
+        f"ถ้าต้องการคำนวณใหม่ พิมพ์\n"
+        f"เริ่มใหม่\n"
+        f"หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่างครับ"
     )
 
     # จบการคำนวณ ล้างบริบททั้งหมด
@@ -528,15 +581,21 @@ def handle_unclear_deductions(reason, merged_params, parameters, session_id):
     if reason == "parent_health":
         reply_text = (
             "ขออภัยครับ ระบบยังไม่รองรับเบี้ยประกันสุขภาพของบิดามารดา ซึ่งเป็นสิทธิแยกจากประกันสุขภาพของตัวเอง "
-            "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
-            "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้ หากไม่มีรายการอื่นพิมพ์ 'ไม่มี' ได้เลยครับ"
+            "จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n\n"
+            "กรุณาพิมพ์ค่าลดหย่อนรายการอื่นทั้งหมดอีกครั้งโดยไม่รวมรายการนี้\n\n"
+            "ถ้าไม่มีรายการอื่น พิมพ์\n"
+            "ไม่มี\n"
+            "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
         )
     else:
         # ขอให้พิมพ์ "ทั้งหมด" ในข้อความเดียว เพราะค่าทุกตัวของรอบนี้ถูกล้าง ถ้าพิมพ์ใหม่บางรายการ ที่เหลือจะหายเงียบ
         reply_text = (
-            "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n"
-            f"กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น {', '.join(UNCLEAR_EXAMPLES)}\n"
-            "หากไม่มีค่าลดหย่อน พิมพ์ 'ไม่มี' ได้เลยครับ"
+            "ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน จึงยังไม่ได้บันทึกและยังไม่ได้คำนวณครับ\n\n"
+            "กรุณาพิมพ์ค่าลดหย่อนทั้งหมดอีกครั้งในข้อความเดียว โดยใส่ชื่อรายการหน้าจำนวนเงินทั้งปี เช่น\n"
+            f"{', '.join(UNCLEAR_EXAMPLES)}\n\n"
+            "ถ้าไม่มีค่าลดหย่อน พิมพ์\n"
+            "ไม่มี\n"
+            "แล้วระบบจะคำนวณภาษีให้ทันทีครับ"
         )
 
     # 04 มี tax_session เป็น affected context ค่าของรอบนี้จึงอยู่ใน tax_session แล้ว
@@ -563,11 +622,15 @@ def handle_knowledge(user_query, active_contexts, deadline):
     has_interview_ctx = any(k in active_contexts for k in ['awaiting_salary', 'awaiting_rental', 'awaiting_online', 'awaiting_deduction'])
 
     if clean_check.isdigit() and clean_check and not has_interview_ctx:
-        reply_text = "หากต้องการคำนวณภาษี รบกวนพิมพ์ 'อยากคำนวณภาษี' เพื่อเริ่มต้นได้เลยครับ"
+        reply_text = (
+            "หากต้องการคำนวณภาษี พิมพ์\n"
+            "อยากคำนวณภาษี\n"
+            "หรือกดปุ่ม \"คำนวณภาษี\" ที่เมนูด้านล่างครับ"
+        )
     elif user_query:
         reply_text = query_tax_knowledge(user_query, deadline=deadline)
     else:
-        reply_text = "ขออภัยครับ ระบบไม่ได้รับข้อความของคุณ"
+        reply_text = "ขออภัยครับ ระบบไม่ได้รับข้อความ กรุณาพิมพ์ใหม่อีกครั้งครับ"
 
     return {"fulfillmentText": reply_text}
 
@@ -604,7 +667,10 @@ def webhook():
         # -------------------------------------------------------------
         # INTENT: ทักทายเริ่มต้น (Welcome Intent & Greeting Text)
         # -------------------------------------------------------------
-        greeting_keywords = ['สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'hello', 'hi', 'hey']
+        # คำขอวิธีใช้ (ปุ่ม "วิธีใช้" บน rich menu) ได้ข้อความเดียวกับคำทักทาย — เทียบทั้งข้อความ
+        # "วิธีใช้สิทธิ RMF" จึงยังเป็นคำถามความรู้
+        greeting_keywords = ['สวัสดี', 'หวัดดี', 'ดีครับ', 'ดีค่ะ', 'hello', 'hi', 'hey',
+                             'วิธีใช้', 'เมนู', 'ช่วยด้วย']
         if intent_name in ['Welcome', 'Default Welcome Intent'] or user_query.lower() in greeting_keywords:
             return jsonify(handle_greeting())
 
@@ -679,7 +745,12 @@ def webhook():
         traceback.print_exc()
         print("!"*75 + "\n")
         return jsonify({
-            "fulfillmentText": "ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล รบกวนพิมพ์ 'รีเซ็ต' เพื่อเริ่มใหม่อีกครั้งครับ"
+            "fulfillmentText": (
+                "ขออภัยครับ เกิดข้อผิดพลาดในการประมวลผล\n\n"
+                "รบกวนพิมพ์\n"
+                "เริ่มใหม่\n"
+                "หรือกดปุ่ม \"เริ่มใหม่\" ที่เมนูด้านล่าง แล้วลองอีกครั้งครับ"
+            )
         })
 
 if __name__ == '__main__':

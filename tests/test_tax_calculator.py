@@ -298,12 +298,26 @@ def test_advice_header_shows_top_bracket_rate():
 
 def test_advice_exempt_bracket_shows_no_rights():
     advice = generate_tax_planning_advice(*ADVICE_EXEMPT)
-    assert advice == "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลงครับ"
+    assert advice == "💡 เงินได้สุทธิของคุณอยู่ในขั้นที่ได้รับยกเว้นภาษี การใช้สิทธิเพิ่มจึงไม่ทำให้ภาษีลดลง"
 
 
 def test_advice_all_rights_used():
     advice = generate_tax_planning_advice(*ADVICE_ALL_FULL)
-    assert advice == "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้วครับ"
+    assert advice == "💡 คุณใช้สิทธิกองทุน RMF, ThaiESG และประกันชีวิตครบเพดานแล้ว"
+
+
+@pytest.mark.parametrize("args", [
+    ADVICE_EXEMPT,
+    ADVICE_ALL_FULL,
+    (650000, 431000, 0, 0, 0),
+    (1000000, 500000, 40000, 100000, 50000),
+    (3000000, 2000000, 0, 0, 0),
+    (1000000, 500000, 0, 300000, 0),
+    (3000000, 2000000, 0, 450000, 0),
+])
+def test_advice_has_no_krub(args):
+    # tax_advice ไปอยู่ใน PDF ซึ่งเป็นเอกสารทางการ — ห้ามมีภาษาพูด (#31) ครอบทุก args ที่ใช้ในส่วนนี้ของไฟล์
+    assert "ครับ" not in generate_tax_planning_advice(*args)
 
 
 def test_advice_rmf_limited_by_retirement_group_remaining(monkeypatch):
