@@ -14,6 +14,7 @@ from reportlab.platypus import Paragraph, Table
 
 from utils import pdf_generator
 from utils.pdf_generator import generate_tax_pdf
+from utils.tax_calculator import deduction_breakdown
 
 REPORTS_DIR = Path(__file__).resolve().parent.parent / "static" / "reports"
 
@@ -48,13 +49,15 @@ def test_generate_tax_pdf_writes_only_to_given_path(tmp_path, extra):
 
 
 def _paragraphs(flowables):
-    # Paragraph ใน story ตรง ๆ และในช่องของตาราง
+    # Paragraph ใน story ตรง ๆ และในช่องของตาราง (ช่องหนึ่งอาจเป็น list ของหลาย Paragraph)
     for f in flowables:
         if isinstance(f, Paragraph):
             yield f
         elif isinstance(f, Table):
             for row in f._cellvalues:
                 yield from _paragraphs(row)
+        elif isinstance(f, (list, tuple)):
+            yield from _paragraphs(f)
 
 
 def test_pdf_shaping(monkeypatch, tmp_path):
@@ -70,8 +73,11 @@ def test_pdf_shaping(monkeypatch, tmp_path):
         return doc
 
     monkeypatch.setattr(pdf_generator, "SimpleDocTemplate", fake_template)
-    # มี rules_note และ tax_advice ให้ style ที่สร้างตามเงื่อนไขถูกใช้ด้วย
-    data = {**BASE_DATA, "tax_year": 2569, "rules_note": "หมายเหตุทดสอบ", "tax_advice": "คำแนะนำทดสอบ"}
+    # มี rules_note, tax_advice และ deduction_detail ที่ถูกตัดเพดาน ให้ style ที่สร้างตามเงื่อนไขถูกใช้ด้วย
+    detail = {"items": deduction_breakdown(360000.0, {"home_loan_interest": 150000}), "subtotal": 160000.0,
+              "donation": {"entered": 0.0, "used": 0.0, "limits": []}, "child_second_onward_born_from": 2561}
+    data = {**BASE_DATA, "tax_year": 2569, "rules_note": "หมายเหตุทดสอบ", "tax_advice": "คำแนะนำทดสอบ",
+            "deduction_detail": detail}
     generate_tax_pdf(str(tmp_path / "unused.pdf"), data)
     assert not (tmp_path / "unused.pdf").exists()
 
@@ -80,4 +86,5 @@ def test_pdf_shaping(monkeypatch, tmp_path):
     assert not_shaped == []
     # ยืนยันว่าข้อมูลข้างบนพาไปถึงทุก style ที่มีอยู่ตอนเขียนเทส
     assert {p.style.name for p in paragraphs} >= {
-        "DocTitle", "SubTitle", "TableCell", "TableCellBold", "AdviceHead", "RulesNote", "NoteText"}
+        "DocTitle", "SubTitle", "TableCell", "TableCellBold", "AdviceHead", "RulesNote", "NoteText",
+        "SmallText", "LimitNote"}
