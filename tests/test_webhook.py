@@ -1051,6 +1051,16 @@ def _error(post, mocks, monkeypatch):
     return post("021_04_Tax_Interview_Deductions", expect_error=True)
 
 
+def _out_of_scope(post, mocks, monkeypatch):
+    # ใช้ query_tax_knowledge ของจริงแทน mock แต่ FAISS ปลอมให้ระยะเกิน threshold
+    # ask_llm ยังเป็นตัวที่สั่ง pytest.fail (fixture mocks) — เกิน threshold ต้องไม่เรียก LLM
+    fake_db = MagicMock()
+    fake_db.similarity_search_with_score.return_value = [(MagicMock(page_content="x"), 99.0)]
+    monkeypatch.setattr(knowledge_search, "get_db", lambda: fake_db)
+    monkeypatch.setattr(app_module, "query_tax_knowledge", knowledge_search.query_tax_knowledge)
+    return post("011_Default_Fallback_Intent")
+
+
 # ข้อความที่ fixture ใน ROUTES ไม่ครอบ
 REPLY_CASES = {
     "history_with_record": _history_with_record,
@@ -1062,6 +1072,7 @@ REPLY_CASES = {
     "no_income": _no_income,
     "empty_text": _empty_text,
     "error": _error,
+    "out_of_scope": _out_of_scope,
 }
 
 
@@ -1075,6 +1086,16 @@ def test_fixture_reply_ends_with_krub(post, name):
 def test_reply_ends_with_krub(post, mocks, monkeypatch, case):
     text = REPLY_CASES[case](post, mocks, monkeypatch)["fulfillmentText"]
     assert ENDS_WITH_KRUB.search(text), text[-80:]
+
+
+def test_out_of_scope_reply_command_routes_to_greeting(post, mocks, monkeypatch):
+    # ข้อความนอกขอบเขตบอกให้พิมพ์ "วิธีใช้" — คำนั้นต้องพาไปสาขาทักทายจริง ไม่ใช่วนกลับมาสาขาความรู้
+    text = _out_of_scope(post, mocks, monkeypatch)["fulfillmentText"]
+    assert text == knowledge_search.OUT_OF_SCOPE_REPLY
+    assert "วิธีใช้" in text.split("\n")
+    payload = load("011_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = "วิธีใช้"
+    assert GREETING in post(payload)["fulfillmentText"]
 
 
 @pytest.mark.parametrize("case", ["history_with_record", "summary_with_pdf_link", "deduction_question_with_liff"])

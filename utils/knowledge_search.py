@@ -13,6 +13,19 @@ from utils import debug_log
 OLLAMA_URL = "http://127.0.0.1:11434/api/generate"
 TAX_DISTANCE_THRESHOLD = 14.0
 
+# ตอบเมื่อไม่พบ chunk หรือทุก chunk ไกลเกิน threshold — บอกว่าบอททำอะไรได้ และพาไปหน้าวิธีใช้
+# "วิธีใช้" อยู่บรรทัดของตัวเอง และเป็นคำที่ webhook() ส่งไปสาขาทักทาย
+OUT_OF_SCOPE_REPLY = (
+    "ขออภัยครับ คำถามนี้อยู่นอกเหนือขอบเขตที่ผมตอบได้\n\n"
+    "ผมช่วยได้ 3 เรื่อง\n"
+    "🧮 คำนวณภาษีเงินได้บุคคลธรรมดาประจำปี\n"
+    "📜 ดูประวัติการคำนวณ\n"
+    "💡 ตอบคำถามความรู้ภาษีเงินได้บุคคลธรรมดา เช่น ค่าลดหย่อน การยื่นภาษี\n\n"
+    "ลองถามใหม่ให้ตรงเรื่องขึ้น กดเมนูด้านล่าง หรือพิมพ์\n"
+    "วิธีใช้\n"
+    "เพื่อดูวิธีใช้งานครับ"
+)
+
 # 1. โหลด FAISS Vector Store เมื่อถูกเรียกครั้งแรก แล้วเก็บไว้ใช้ซ้ำ
 # _db_loaded แยกจาก _db เพื่อจำกรณี "หา index ไม่เจอ" (_db เป็น None) ไว้ด้วย ไม่งั้นจะโหลดโมเดลใหม่ทุกคำถาม
 _db = None
@@ -101,7 +114,7 @@ def query_tax_knowledge(user_question, deadline=None):
         # ค้นหา Top-2 chunks จาก FAISS
         results = db.similarity_search_with_score(user_question, k=2)
         if not results:
-            return "ขออภัยครับ ไม่พบข้อมูลที่เกี่ยวข้องในฐานข้อมูลภาษีเงินได้บุคคลธรรมดาครับ"
+            return OUT_OF_SCOPE_REPLY
 
         valid_chunks = [doc.page_content for doc, score in results if score <= TAX_DISTANCE_THRESHOLD]
         best_doc, best_score = results[0]
@@ -109,7 +122,7 @@ def query_tax_knowledge(user_question, deadline=None):
         debug_log.debug_print(f"🔍 คำถาม: '{user_question}' | L2 Distance ดีที่สุด: {best_score:.4f}")
 
         if not valid_chunks:
-            return "ขออภัยครับ คำถามนี้อยู่นอกเหนือขอบเขตฐานข้อมูลภาษีเงินได้บุคคลธรรมดาครับ"
+            return OUT_OF_SCOPE_REPLY
 
         # ข้อความสำรอง (Fallback) กรณี LLM ตอบไม่ทันหรือขัดข้อง ส่งข้อมูลดิบที่ตัวเลขถูกต้องเสมอ
         fallback = f"📖 ข้อมูลจากฐานข้อมูลภาษี:\n{valid_chunks[0]}"
