@@ -207,6 +207,7 @@ ROUTES = [
     ("018_99_Reset_Chat", 2, RESET),
     ("020_02_Tax_Interview_Salary", 4, SALARY),
     ("021_04_Tax_Interview_Deductions", 6, SUMMARY),
+    ("022_01_Tax_Interview_Start", 4, START),              # จาก Try it now: income_types เหลือแค่ขายออนไลน์ (#37)
 ]
 
 
@@ -340,6 +341,55 @@ def test_online_branch_via_context_and_raw_text(post):
     assert "- หักค่าใช้จ่ายเหมา (60%): 240,000.00 บาท" in text
     assert ctx_params(body, "tax_session")["online_income"] == 400000.0
     assert ctx_list(body) == [("tax_session", 20), ("awaiting_online", 0), ("awaiting_deduction", 2)]
+
+
+SALARY_30000 = {"salary_per_month": 30000.0, "bonus": {"value": 0.0},
+                "social_security": {"value": 0.0}, "withholding_tax": {"value": 0.0}}
+RENTAL_CONDO = {"property_type": "คอนโด", "rental_income": 120000.0}
+
+
+def next_turn(prev_body, query_text, intent, params):
+    """request รอบถัดไปแบบที่ Dialogflow ส่งมาจริง (fixture 007, 008)
+    tax_session = ค่าที่ webhook ตอบรอบก่อน + parameter ของรอบนี้ · awaiting_* ที่รอบก่อนเปิดไว้"""
+    session_params = dict(ctx_params(prev_body, "tax_session"))
+    session_params.update(params)
+    awaiting, _ = ctx_list(prev_body)[-1]
+    return {
+        "session": SESSION,
+        "queryResult": {
+            "queryText": query_text,
+            "parameters": params,
+            "intent": {"displayName": intent},
+            "outputContexts": [
+                {"name": f"{SESSION}/contexts/tax_session", "lifespanCount": 19, "parameters": session_params},
+                {"name": f"{SESSION}/contexts/{awaiting}", "lifespanCount": 1, "parameters": params},
+            ],
+        },
+    }
+
+
+@pytest.mark.xfail(strict=True, reason="#37 สาขา 02 ไม่เห็นค่าเช่าที่สาขา 01 พบในข้อความดิบ")
+def test_salary_asks_rental_found_in_start_text(post):
+    # fixture 022: Dialogflow ให้ income_types แค่ ["ขายของออนไลน์"] ทั้งที่ข้อความดิบมีทั้งสามประเภท
+    start = post("022_01_Tax_Interview_Start")
+    assert ctx_list(start)[-1] == ("awaiting_salary", 2)  # 01 เจอเงินเดือนจากข้อความดิบ (กับดักข้อ 5)
+    body = post(next_turn(start, "0", "02_Tax_Interview_Salary", SALARY_30000))
+    assert "'ค่าเช่า'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_rental", 2)
+
+
+@pytest.mark.xfail(strict=True, reason="#37 สาขา 03 ไม่เห็นขายของออนไลน์ที่สาขา 01 พบในข้อความดิบ")
+def test_rental_asks_online_found_in_start_text(post):
+    # จำลอง: ยังไม่มีข้อมูลจริงที่ Dialogflow ตัด "ขายของออนไลน์" ออก จึงแทน income_types ของ 022
+    payload = load("022_01_Tax_Interview_Start")
+    payload["queryResult"]["parameters"]["income_types"] = ["เงินเดือน", "ค่าเช่า"]
+    ctx_params(payload["queryResult"], "tax_session")["income_types"] = ["เงินเดือน", "ค่าเช่า"]
+    start = post(payload)
+    salary = post(next_turn(start, "0", "02_Tax_Interview_Salary", SALARY_30000))
+    assert ctx_list(salary)[-1] == ("awaiting_rental", 2)
+    body = post(next_turn(salary, "คอนโด 120000", "03_Tax_Interview_Rental", RENTAL_CONDO))
+    assert "'ขายของออนไลน์'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_online", 2)
 
 
 def _rental_without_online():
