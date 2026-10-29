@@ -368,7 +368,6 @@ def next_turn(prev_body, query_text, intent, params):
     }
 
 
-@pytest.mark.xfail(strict=True, reason="#37 สาขา 02 ไม่เห็นค่าเช่าที่สาขา 01 พบในข้อความดิบ")
 def test_salary_asks_rental_found_in_start_text(post):
     # fixture 022: Dialogflow ให้ income_types แค่ ["ขายของออนไลน์"] ทั้งที่ข้อความดิบมีทั้งสามประเภท
     start = post("022_01_Tax_Interview_Start")
@@ -378,7 +377,6 @@ def test_salary_asks_rental_found_in_start_text(post):
     assert ctx_list(body)[-1] == ("awaiting_rental", 2)
 
 
-@pytest.mark.xfail(strict=True, reason="#37 สาขา 03 ไม่เห็นขายของออนไลน์ที่สาขา 01 พบในข้อความดิบ")
 def test_rental_asks_online_found_in_start_text(post):
     # จำลอง: ยังไม่มีข้อมูลจริงที่ Dialogflow ตัด "ขายของออนไลน์" ออก จึงแทน income_types ของ 022
     payload = load("022_01_Tax_Interview_Start")
@@ -390,6 +388,18 @@ def test_rental_asks_online_found_in_start_text(post):
     body = post(next_turn(salary, "คอนโด 120000", "03_Tax_Interview_Rental", RENTAL_CONDO))
     assert "'ขายของออนไลน์'" in body["fulfillmentText"]
     assert ctx_list(body)[-1] == ("awaiting_online", 2)
+
+
+def test_restart_without_reset_uses_new_income_types(post):
+    # #37: เริ่มคำนวณรอบสองโดยไม่พิมพ์ "เริ่มใหม่" — tax_session ยังมี income_types_found ของรอบแรก
+    # 01 ต้องเขียนทับ ไม่รวมกับค่าเดิม ไม่อย่างนั้นรอบสองจะถูกถามค่าเช่าที่ไม่ได้บอก
+    first = post("022_01_Tax_Interview_Start")
+    assert ctx_params(first, "tax_session")["income_types_found"] == ["เงินเดือน", "ค่าเช่า", "ขายของออนไลน์"]
+    second = post(next_turn(first, "เงินเดือน", "01_Tax_Interview_Start", {"income_types": ["เงินเดือน"]}))
+    assert ctx_params(second, "tax_session")["income_types_found"] == ["เงินเดือน"]
+    body = post(next_turn(second, "0", "02_Tax_Interview_Salary", SALARY_30000))
+    assert "'ค่าลดหย่อน'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
 
 
 def _rental_without_online():

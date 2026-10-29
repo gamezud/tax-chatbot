@@ -270,6 +270,11 @@ def handle_interview_start(user_query, parameters, merged_params, session_id):
 
     print(f"🚦 [DEBUG-STEP1] การวิเคราะห์รายได้ -> Salary: {has_salary}, Rental: {has_rental}, Online: {has_online}")
 
+    # #37: Dialogflow อาจตัดบางประเภทออกจาก income_types (fixture 022) จึงเก็บประเภทที่ตรวจพบรอบนี้ให้ 02/03 ใช้ต่อ
+    # เขียนทับทุกครั้ง (รวมลิสต์ว่าง) — ถ้ารวมกับค่าเดิม รอบใหม่ที่ไม่ได้พิมพ์ "เริ่มใหม่" จะได้ประเภทของรอบเก่าติดมา
+    merged_params['income_types_found'] = [label for label, found in [
+        ("เงินเดือน", has_salary), ("ค่าเช่า", has_rental), ("ขายของออนไลน์", has_online)] if found]
+
     if has_salary:
         reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'เงินเดือน' เป็นอันดับแรกนะครับ 📝\n\nได้รับเงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
         next_ctx = "awaiting_salary"
@@ -312,6 +317,7 @@ def handle_salary(merged_params, user_query, session_id):
     debug_log.debug_print(f"💵 [DEBUG-STEP2] เงินเดือน/ด: {salary_per_month:,.2f} | ทั้งปี: {total_salary:,.2f} | ประกันสังคม: {social_security:,.2f} | หัก ณ ที่จ่าย: {withholding_tax:,.2f}")
 
     all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower() + " " + user_query.lower()
+    all_income_str += " " + " ".join(merged_params.get('income_types_found', []))  # #37
     has_rental = any(k in all_income_str for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"])
     has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
 
@@ -349,6 +355,7 @@ def handle_rental(merged_params, session_id):
     debug_log.debug_print(f"🏠 [DEBUG-STEP3] อสังหาฯ: {property_type} | รายได้ค่าเช่า: {rental_income:,.2f} | อัตราหักเหมา: {rate*100}%")
 
     all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower()
+    all_income_str += " " + " ".join(merged_params.get('income_types_found', []))  # #37
     has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
 
     reply_text = (
