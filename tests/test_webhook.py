@@ -208,6 +208,7 @@ ROUTES = [
     ("020_02_Tax_Interview_Salary", 4, SALARY),
     ("021_04_Tax_Interview_Deductions", 6, SUMMARY),
     ("022_01_Tax_Interview_Start", 4, START),              # จาก Try it now: income_types เหลือแค่ขายออนไลน์ (#37)
+    ("023_Default_Fallback_Intent", 7, RAG_ANSWER),        # #38: คำตอบค่าเช่าที่ Dialogflow ไม่จับเป็น 03 ตกสาขาความรู้
 ]
 
 
@@ -399,6 +400,59 @@ def test_restart_without_reset_uses_new_income_types(post):
     assert ctx_params(second, "tax_session")["income_types_found"] == ["เงินเดือน"]
     body = post(next_turn(second, "0", "02_Tax_Interview_Salary", SALARY_30000))
     assert "'ค่าลดหย่อน'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+
+
+RENTAL_ASK_AGAIN = (
+    "ขออภัยครับ ระบบไม่ทราบว่าค่าเช่านี้เป็นทรัพย์สินประเภทไหน จึงยังไม่ได้บันทึกครับ\n\n"
+    "กรุณาพิมพ์ประเภททรัพย์สินพร้อมค่าเช่ารวมทั้งปีในข้อความเดียว เช่น\n"
+    "คอนโด 120000\n\n"
+    "ระบบรองรับ บ้าน คอนโด อาคาร หอพัก ที่ดิน ที่ดินเกษตร และรถยนต์ครับ\n\n"
+    "ถ้าไม่มีค่าเช่า พิมพ์\n"
+    "0\n"
+    "แล้วระบบจะถามข้อมูลขั้นถัดไปครับ"
+)
+
+
+def rental_fallback_payload(query_text):
+    """fixture 023 (Try it now): คำตอบค่าเช่าที่ Dialogflow จัดเป็น Fallback ทั้งที่ awaiting_rental ค้างอยู่
+    tax_session มีเงินเดือน 30,000 และ income_types_found = เงินเดือน + ค่าเช่า (ไม่มีขายออนไลน์ต่อ)"""
+    payload = load("023_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = query_text
+    return payload
+
+
+@pytest.mark.xfail(strict=True, reason="#38 คำตอบค่าเช่าที่ได้ Fallback ตกสาขาความรู้")
+def test_rental_fallback_records_rental(post):
+    # fixture 023 ตรงตัว: "ค่าเช่าบ้าน 120,000" — ประเภทจากรายการคำของ get_rental_expense_rate ยอดจาก clean_number
+    body = post("023_Default_Fallback_Intent")
+    text = body["fulfillmentText"]
+    assert RENTAL in text
+    assert "- ทรัพย์สิน: บ้าน" in text
+    assert "- ค่าเช่ารวมทั้งปี: 120,000.00 บาท" in text
+    assert "- หักค่าใช้จ่ายเหมา (30%): 36,000.00 บาท" in text
+    params = ctx_params(body, "tax_session")
+    assert (params["property_type"], params["rental_income"]) == ("บ้าน", 120000.0)
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+
+
+@pytest.mark.xfail(strict=True, reason="#38 คำตอบค่าเช่าที่ได้ Fallback ตกสาขาความรู้")
+def test_rental_fallback_without_property_asks_again(post):
+    # ไม่มีคำบอกประเภททรัพย์สิน → ถามซ้ำ ห้ามเดาอัตรา (#8) และไม่บันทึกยอด
+    body = post(rental_fallback_payload("120000"))
+    assert body["fulfillmentText"] == RENTAL_ASK_AGAIN
+    assert "rental_income" not in ctx_params(body, "tax_session")
+    assert ctx_list(body) == [("tax_session", 20), ("awaiting_rental", 2)]
+
+
+@pytest.mark.xfail(strict=True, reason="#38 คำตอบค่าเช่าที่ได้ Fallback ตกสาขาความรู้")
+def test_rental_fallback_zero_means_no_rental(post):
+    # ยอด 0 ไปต่อได้โดยไม่ต้องมีประเภท (ค่าใช้จ่าย 0 ไม่ว่าอัตราใด) — ป้ายไม่ใช่ค่าตั้งต้น "บ้าน/คอนโด"
+    body = post(rental_fallback_payload("0"))
+    text = body["fulfillmentText"]
+    assert "- ทรัพย์สิน: ไม่มีค่าเช่า" in text
+    assert "- ค่าเช่ารวมทั้งปี: 0.00 บาท" in text
+    assert ctx_params(body, "tax_session")["property_type"] == "ไม่มีค่าเช่า"
     assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
 
 

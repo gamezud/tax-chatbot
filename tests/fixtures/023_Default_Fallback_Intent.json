@@ -1,0 +1,75 @@
+{
+  "responseId": "4f0900f6-3a65-44aa-a4ac-3085e4c0d46c-d3cf0894",
+  "queryResult": {
+    "queryText": "ค่าเช่าบ้าน 120,000",
+    "action": "input.unknown",
+    "parameters": {},
+    "allRequiredParamsPresent": true,
+    "fulfillmentText": "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ",
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 19,
+        "parameters": {
+          "income_types": [
+            "ค่าเช่า"
+          ],
+          "income_types.original": [
+            "ค่าเช่า"
+          ],
+          "income_types_found": [
+            "เงินเดือน",
+            "ค่าเช่า"
+          ],
+          "salary_per_month": 30000,
+          "salary_per_month.original": "30000",
+          "bonus": {
+            "value": 0
+          },
+          "bonus.original": "0",
+          "social_security": {
+            "value": 0
+          },
+          "social_security.original": "0",
+          "withholding_tax": {
+            "value": 0
+          },
+          "withholding_tax.original": "0"
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/awaiting_rental",
+        "lifespanCount": 1
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "lifespanCount": 1,
+        "parameters": {
+          "no-input": 0,
+          "no-match": 1
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/ee9ea3b5-698c-498d-a262-febd0f49890c",
+      "displayName": "Default Fallback Intent",
+      "isFallback": true
+    },
+    "intentDetectionConfidence": 1,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "DIALOGFLOW_CONSOLE",
+    "payload": {}
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

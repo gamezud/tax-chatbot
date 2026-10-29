@@ -946,5 +946,14 @@ PDF แสดงค่าลดหย่อนทีละรายการ (br
   (ยังไม่มีข้อมูลจริงของกรณีนี้ เทสใช้ `income_types` จำลอง)
   — รากของปัญหาคือ `income_types` เป็น `@sys.any` แบบ list (#16) การแก้ฝั่งโค้ดกันผลกระทบเท่านั้น ไม่ได้แก้ราก
   — เทส: `test_salary_asks_rental_found_in_start_text`, `test_rental_asks_online_found_in_start_text`
+- 🔒 **#38** **คำตอบค่าเช่าที่ Dialogflow ไม่จับเป็น `03` ตกไปสาขาความรู้ ผู้ใช้ค้างอยู่ที่ขั้นค่าเช่า** (พบตอนทดสอบ #37 ใน LINE 29 ต.ค. 2569)
+  "ค่าเช่าบ้าน 120,000" และ "บ้าน 120000" ตอนมี `awaiting_rental` ได้ `Default Fallback Intent` ทั้งคู่
+  สาขาค่าเช่าไม่มีทางสำรองแบบ `awaiting_online` + `clean_number(user_query)` (กับดักข้อ 6) ข้อความจึงตกขั้นสุดท้าย (สาขาความรู้)
+  ไม่มีการตอบ `awaiting_rental` กลับ context จึงหมดอายุ ผู้ใช้ไปต่อไม่ได้จนพิมพ์ "เริ่มใหม่" — กระทบแทบทุกคนที่มีค่าเช่า ไม่ใช่แค่คนที่ตอบ 0
+  — หลักฐาน: `tests/fixtures/023_Default_Fallback_Intent.json` (Try it now) · fixture 008 ("คอนโด 120000") เคยจับ `03` ได้ด้วย confidence 0.719
+  ขณะที่ `mlMinConfidence` ของ agent คือ 0.6 (`dialogflow/agent.json`) — training phrase ของ `03` มี 9 ประโยคและไม่เปลี่ยนตั้งแต่ export แรก
+  ส่วน intent อื่นมี training phrase เพิ่มขึ้นมาก (#14, #23–#26) ซึ่งอาจทำให้คะแนนของ `03` ต่ำกว่าเกณฑ์ (ยังไม่ได้ยืนยัน)
+  — `03` ยังมี `property_type` (`@PropertyType`) และ `rental_income` เป็น required คนที่ไม่มีค่าเช่าตอบ slot filling ให้ผ่านไม่ได้
+  — เทส: `test_rental_fallback_records_rental`, `test_rental_fallback_without_property_asks_again`, `test_rental_fallback_zero_means_no_rental`
 
 🔒 = มี xfail คุมอยู่ (บั๊กชัดเจน) · 📌 = ล็อกพฤติกรรมปัจจุบันไว้ (ยังไม่ตัดสินใจ) · ไม่มีป้าย = ยังไม่มีเทส
