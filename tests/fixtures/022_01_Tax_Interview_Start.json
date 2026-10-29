@@ -1,0 +1,60 @@
+{
+  "responseId": "ca4ee8bd-bff5-44e2-8294-a70b4c922247-d3cf0894",
+  "queryResult": {
+    "queryText": "เงินเดือน ค่าเช่า ขายของออนไลน์",
+    "parameters": {
+      "income_types": [
+        "ขายของออนไลน์"
+      ]
+    },
+    "allRequiredParamsPresent": true,
+    "fulfillmentText": "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ",
+    "fulfillmentMessages": [
+      {
+        "text": {
+          "text": [
+            "ขณะนี้ระบบไม่พร้อมตอบครับ 🙏\nช่วงทดสอบเปิดให้ใช้ทุกวัน 10:00–20:00 น.\nถ้าอยู่ในช่วงเวลานี้ รอสักครู่แล้วส่งข้อความเดิมอีกครั้งครับ"
+          ]
+        }
+      }
+    ],
+    "outputContexts": [
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/tax_session",
+        "lifespanCount": 20,
+        "parameters": {
+          "income_types": [
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ขายของออนไลน์"
+          ]
+        }
+      },
+      {
+        "name": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION/contexts/__system_counters__",
+        "parameters": {
+          "no-input": 0,
+          "no-match": 0,
+          "income_types": [
+            "ขายของออนไลน์"
+          ],
+          "income_types.original": [
+            "ขายของออนไลน์"
+          ]
+        }
+      }
+    ],
+    "intent": {
+      "name": "projects/TEST_PROJECT/agent/intents/5329ddd3-0506-4326-be56-ff0f1b32a178",
+      "displayName": "01_Tax_Interview_Start"
+    },
+    "intentDetectionConfidence": 1,
+    "languageCode": "th"
+  },
+  "originalDetectIntentRequest": {
+    "source": "DIALOGFLOW_CONSOLE",
+    "payload": {}
+  },
+  "session": "projects/TEST_PROJECT/agent/sessions/TEST_SESSION"
+}

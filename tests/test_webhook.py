@@ -183,9 +183,12 @@ def summary_lines(income, expense, deduction, net, tax, withholding, status):
 
 
 # ---------------------------------------------------------------------------
-# A. fixture ทุกไฟล์เข้าสาขาถูกตามลำดับการตรวจ 7 ขั้น (CLAUDE.md กับดักข้อ 1)
+# A. fixture ทุกไฟล์เข้าสาขาถูกตามลำดับการตรวจ 9 ขั้น (CLAUDE.md กับดักข้อ 1)
 #    1 ทักทาย · 2 รีเซ็ต · 3 ดูประวัติ · 4 intent 01/02/03
-#    5 intent 05 หรือ awaiting_online · 6 intent 04 · 7 ที่เหลือ (ความรู้)
+#    5 intent 05 หรือ awaiting_online · 6 intent 04 · 7 Fallback + awaiting_deduction + ตัวเลข
+#    8 Fallback + awaiting_rental + ตัวเลข (#38) · 9 ที่เหลือ (ความรู้)
+#    เลขขั้นต้องตรงกับ CLAUDE.md กับดักข้อ 1 — แทรกขั้นใหม่ที่นั่นต้องเลื่อนเลขในตารางนี้ตาม
+#    (เทสที่ใช้เลขจริงมีแค่ขั้น 3 และ 6 ที่เหลือดูจาก marker)
 # ---------------------------------------------------------------------------
 ROUTES = [
     # (fixture, ขั้น, ข้อความที่บอกว่าเข้าสาขาไหน)
@@ -199,14 +202,16 @@ ROUTES = [
     ("008_03_Tax_Interview_Rental", 4, RENTAL),
     ("009_Default_Fallback_Intent", 5, ONLINE),             # Fallback แต่มี awaiting_online
     ("010_04_Tax_Interview_Deductions", 6, SUMMARY),
-    ("011_Default_Fallback_Intent", 7, RAG_ANSWER),
-    ("012_Default_Fallback_Intent", 7, NUMBER_HINT),
+    ("011_Default_Fallback_Intent", 9, RAG_ANSWER),
+    ("012_Default_Fallback_Intent", 9, NUMBER_HINT),
     ("014_99_Reset_Chat", 2, RESET),
-    ("015_Default_Fallback_Intent", 7, NUMBER_HINT),        # ตัวเลขหลังรีเซ็ต
+    ("015_Default_Fallback_Intent", 9, NUMBER_HINT),        # ตัวเลขหลังรีเซ็ต
     ("017_02_Tax_Interview_Salary", 4, SALARY),
     ("018_99_Reset_Chat", 2, RESET),
     ("020_02_Tax_Interview_Salary", 4, SALARY),
     ("021_04_Tax_Interview_Deductions", 6, SUMMARY),
+    ("022_01_Tax_Interview_Start", 4, START),              # จาก Try it now: income_types เหลือแค่ขายออนไลน์ (#37)
+    ("023_Default_Fallback_Intent", 8, RENTAL),            # #38: Fallback แต่มี awaiting_rental
 ]
 
 
@@ -340,6 +345,167 @@ def test_online_branch_via_context_and_raw_text(post):
     assert "- หักค่าใช้จ่ายเหมา (60%): 240,000.00 บาท" in text
     assert ctx_params(body, "tax_session")["online_income"] == 400000.0
     assert ctx_list(body) == [("tax_session", 20), ("awaiting_online", 0), ("awaiting_deduction", 2)]
+
+
+SALARY_30000 = {"salary_per_month": 30000.0, "bonus": {"value": 0.0},
+                "social_security": {"value": 0.0}, "withholding_tax": {"value": 0.0}}
+RENTAL_CONDO = {"property_type": "คอนโด", "rental_income": 120000.0}
+
+
+def next_turn(prev_body, query_text, intent, params):
+    """request รอบถัดไปแบบที่ Dialogflow ส่งมาจริง (fixture 007, 008)
+    tax_session = ค่าที่ webhook ตอบรอบก่อน + parameter ของรอบนี้ · awaiting_* ที่รอบก่อนเปิดไว้"""
+    session_params = dict(ctx_params(prev_body, "tax_session"))
+    session_params.update(params)
+    awaiting, _ = ctx_list(prev_body)[-1]
+    return {
+        "session": SESSION,
+        "queryResult": {
+            "queryText": query_text,
+            "parameters": params,
+            "intent": {"displayName": intent},
+            "outputContexts": [
+                {"name": f"{SESSION}/contexts/tax_session", "lifespanCount": 19, "parameters": session_params},
+                {"name": f"{SESSION}/contexts/{awaiting}", "lifespanCount": 1, "parameters": params},
+            ],
+        },
+    }
+
+
+def test_salary_asks_rental_found_in_start_text(post):
+    # fixture 022: Dialogflow ให้ income_types แค่ ["ขายของออนไลน์"] ทั้งที่ข้อความดิบมีทั้งสามประเภท
+    start = post("022_01_Tax_Interview_Start")
+    assert ctx_list(start)[-1] == ("awaiting_salary", 2)  # 01 เจอเงินเดือนจากข้อความดิบ (กับดักข้อ 5)
+    body = post(next_turn(start, "0", "02_Tax_Interview_Salary", SALARY_30000))
+    assert "'ค่าเช่า'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_rental", 2)
+
+
+def test_rental_asks_online_found_in_start_text(post):
+    # จำลอง: ยังไม่มีข้อมูลจริงที่ Dialogflow ตัด "ขายของออนไลน์" ออก จึงแทน income_types ของ 022
+    payload = load("022_01_Tax_Interview_Start")
+    payload["queryResult"]["parameters"]["income_types"] = ["เงินเดือน", "ค่าเช่า"]
+    ctx_params(payload["queryResult"], "tax_session")["income_types"] = ["เงินเดือน", "ค่าเช่า"]
+    start = post(payload)
+    salary = post(next_turn(start, "0", "02_Tax_Interview_Salary", SALARY_30000))
+    assert ctx_list(salary)[-1] == ("awaiting_rental", 2)
+    body = post(next_turn(salary, "คอนโด 120000", "03_Tax_Interview_Rental", RENTAL_CONDO))
+    assert "'ขายของออนไลน์'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_online", 2)
+
+
+def test_restart_without_reset_uses_new_income_types(post):
+    # #37: เริ่มคำนวณรอบสองโดยไม่พิมพ์ "เริ่มใหม่" — tax_session ยังมี income_types_found ของรอบแรก
+    # 01 ต้องเขียนทับ ไม่รวมกับค่าเดิม ไม่อย่างนั้นรอบสองจะถูกถามค่าเช่าที่ไม่ได้บอก
+    first = post("022_01_Tax_Interview_Start")
+    assert ctx_params(first, "tax_session")["income_types_found"] == ["เงินเดือน", "ค่าเช่า", "ขายของออนไลน์"]
+    second = post(next_turn(first, "เงินเดือน", "01_Tax_Interview_Start", {"income_types": ["เงินเดือน"]}))
+    assert ctx_params(second, "tax_session")["income_types_found"] == ["เงินเดือน"]
+    body = post(next_turn(second, "0", "02_Tax_Interview_Salary", SALARY_30000))
+    assert "'ค่าลดหย่อน'" in body["fulfillmentText"]
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+
+
+RENTAL_ASK_AGAIN = (
+    "ขออภัยครับ ระบบอ่านประเภททรัพย์สินหรือยอดค่าเช่าจากข้อความนี้ไม่ได้ จึงยังไม่ได้บันทึกครับ\n\n"
+    "กรุณาพิมพ์ประเภททรัพย์สินพร้อมค่าเช่ารวมทั้งปีในข้อความเดียว เช่น\n"
+    "คอนโด 120000\n\n"
+    "ระบบรองรับ บ้าน คอนโด ทาวน์โฮม อาคาร หอพัก ที่ดิน ที่ดินเกษตร และรถยนต์ครับ\n\n"
+    "ถ้าไม่มีค่าเช่า พิมพ์\n"
+    "0\n"
+    "แล้วระบบจะถามข้อมูลขั้นถัดไปครับ"
+)
+
+
+def rental_fallback_payload(query_text):
+    """fixture 023 (Try it now): คำตอบค่าเช่าที่ Dialogflow จัดเป็น Fallback ทั้งที่ awaiting_rental ค้างอยู่
+    tax_session มีเงินเดือน 30,000 และ income_types_found = เงินเดือน + ค่าเช่า (ไม่มีขายออนไลน์ต่อ)"""
+    payload = load("023_Default_Fallback_Intent")
+    payload["queryResult"]["queryText"] = query_text
+    return payload
+
+
+def test_rental_fallback_records_rental(post):
+    # fixture 023 ตรงตัว: "ค่าเช่าบ้าน 120,000" — ประเภทจากรายการคำของ get_rental_expense_rate ยอดจาก clean_number
+    body = post("023_Default_Fallback_Intent")
+    text = body["fulfillmentText"]
+    assert RENTAL in text
+    assert "- ทรัพย์สิน: บ้าน" in text
+    assert "- ค่าเช่ารวมทั้งปี: 120,000.00 บาท" in text
+    assert "- หักค่าใช้จ่ายเหมา (30%): 36,000.00 บาท" in text
+    params = ctx_params(body, "tax_session")
+    assert (params["property_type"], params["rental_income"]) == ("บ้าน", 120000.0)
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+
+
+@pytest.mark.parametrize("query_text", [
+    "120000",         # ไม่มีคำบอกประเภททรัพย์สิน → ห้ามเดาอัตรา (#8)
+    "บ้าน ปี 2569",   # clean_number ตัดปีทิ้งได้ 0 แต่ผู้ใช้ไม่ได้ตอบว่า 0 → ห้ามเดาว่าไม่มีค่าเช่า
+])
+def test_rental_fallback_asks_again(post, query_text):
+    body = post(rental_fallback_payload(query_text))
+    assert body["fulfillmentText"] == RENTAL_ASK_AGAIN
+    assert "rental_income" not in ctx_params(body, "tax_session")
+    assert ctx_list(body) == [("tax_session", 20), ("awaiting_rental", 2)]
+
+
+@pytest.mark.parametrize("query_text, label", [
+    ("0", "ไม่มีค่าเช่า"),   # ไม่มีคำบอกประเภท — ป้ายไม่ใช่ค่าตั้งต้น "บ้าน/คอนโด" ของ handle_rental
+    ("บ้าน 0", "บ้าน"),      # มีคำ → ใช้คำนั้นเหมือนสาขา 03
+])
+def test_rental_fallback_zero_means_no_rental(post, query_text, label):
+    # ยอด 0 ไปต่อได้ (ค่าใช้จ่าย 0 ไม่ว่าอัตราใด)
+    body = post(rental_fallback_payload(query_text))
+    text = body["fulfillmentText"]
+    assert f"- ทรัพย์สิน: {label}\n" in text
+    assert "- ค่าเช่ารวมทั้งปี: 0.00 บาท" in text
+    params = ctx_params(body, "tax_session")
+    assert (params["property_type"], params["rental_income"]) == (label, 0.0)
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+
+
+def test_rental_zero_then_summary(post, mocks):
+    # ค่าเช่า 0 ("ไม่มีค่าเช่า") แล้วตอบค่าลดหย่อนว่า "ไม่มี" — สรุปผลและข้อมูลที่ส่งเข้า PDF (mock) ทำงานปกติ
+    rental = post(rental_fallback_payload("0"))
+    body = post(next_turn(rental, "ไม่มี", "04_Tax_Interview_Deductions", {}))
+    text = body["fulfillmentText"]
+    assert SUMMARY in text
+    assert "1. เงินได้พึงประเมินรวม: 360,000.00 บาท" in text   # เงินเดือน 30,000 × 12 + ค่าเช่า 0
+    mocks.pdf.assert_called_once()
+    mocks.firebase.save_tax_report.assert_called_once()
+    _, data = mocks.pdf.call_args.args
+    assert data["rental_income"] == 0.0
+
+
+def test_rental_fallback_ask_again_then_answer(post):
+    # สองรอบต่อกัน: ถามซ้ำต้องเปิด awaiting_rental ต่อ รอบถัดไปจึงกลับเข้าสาขาค่าเช่าได้ (ไม่ค้างแบบ #38)
+    first = post(rental_fallback_payload("120000"))
+    assert ctx_list(first)[-1] == ("awaiting_rental", 2)
+    body = post(next_turn(first, "คอนโด 120000", "Default Fallback Intent", {}))
+    text = body["fulfillmentText"]
+    assert RENTAL in text
+    assert "- ทรัพย์สิน: คอนโด" in text
+    assert "- ค่าเช่ารวมทั้งปี: 120,000.00 บาท" in text
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+
+
+def test_rental_fallback_yields_to_online_context(post):
+    # #4: awaiting_rental ค้างหลังสาขาค่าเช่า — ตอนรอยอดขายออนไลน์ ตัวเลขต้องเป็นยอดขาย (ขั้น 5) ไม่ใช่ค่าเช่า
+    payload = rental_fallback_payload("200000")
+    payload["queryResult"]["outputContexts"].append({"name": f"{SESSION}/contexts/awaiting_online", "lifespanCount": 1})
+    text = post(payload)["fulfillmentText"]
+    assert ONLINE in text
+    assert "- ยอดขายรวมทั้งปี: 200,000.00 บาท" in text
+
+
+def test_rental_fallback_yields_to_deduction_context(post, mocks):
+    # ตอนรอค่าลดหย่อน ข้อความที่ Dialogflow จับไม่ได้ยังเป็นขั้น 7 (handle_unclear_deductions) ไม่ใช่ค่าเช่า
+    payload = rental_fallback_payload("บุตร 1 คน")
+    payload["queryResult"]["outputContexts"].append({"name": f"{SESSION}/contexts/awaiting_deduction", "lifespanCount": 1})
+    body = post(payload)
+    assert body["fulfillmentText"].startswith("ขออภัยครับ ระบบไม่แน่ใจว่าตัวเลขในข้อความนี้เป็นค่าลดหย่อนรายการไหน")
+    assert ctx_list(body)[-1] == ("awaiting_deduction", 2)
+    mocks.pdf.assert_not_called()
 
 
 def _rental_without_online():
@@ -1197,6 +1363,7 @@ REPLY_CASES = {
     "summary_with_pdf_link": _summary_with_pdf_link,
     "deduction_question_with_liff": _deduction_question_with_liff,
     "start_unknown_income_type": _start_unknown_income_type,
+    "rental_ask_again": lambda post, mocks, monkeypatch: post(rental_fallback_payload("120000")),
     "unclear": lambda post, mocks, monkeypatch: post(deductions_payload("ดอกเบี้ยเงินกู้รถ 20000", {"donation": 20000.0})),
     "parent_health": lambda post, mocks, monkeypatch: post(fallback_payload("ประกันสุขภาพพ่อแม่ 10000")),
     "no_income": _no_income,

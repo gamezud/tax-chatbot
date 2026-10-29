@@ -73,21 +73,33 @@ def compute_method_2_tax(non_salary_income):
             return tax_method_2
     return 0.0
 
+# คำของประเภททรัพย์สินที่ให้เช่า คู่กับ key ใน rental_rate — ตรวจตามลำดับ กลุ่มแรกที่เจอคำตัดสินอัตรา (ลำดับมีผล: #2, #13)
+RENTAL_PROPERTY_WORDS = [
+    (['บ้าน', 'คอนโด', 'ตึก', 'อาคาร', 'สิ่งปลูกสร้าง', 'หอพัก', 'ห้องพัก', 'ทาวน์โฮม'], "building"),
+    (['เกษตร'], "agricultural_land"),
+    (['ที่ดิน'], "land"),
+    # ยานพาหนะใช้อัตราเดียวกับโรงเรือน (key building) ตาม พ.ร.ฎ. ฉบับที่ 11 ม.5
+    # "โรงเรือน" มี "เรือ" อยู่ข้างใน จึงตกกลุ่มนี้ด้วย ได้อัตราถูกเพราะใช้ key building เหมือนกัน
+    (['รถ', 'เรือ', 'ยานพาหนะ'], "building"),
+]
+
 def get_rental_expense_rate(property_type):
     rates = tax_rules.TAX_RULES["expense"]["rental_rate"]
     prop = str(property_type).lower()
-    if any(k in prop for k in ['บ้าน', 'คอนโด', 'ตึก', 'อาคาร', 'สิ่งปลูกสร้าง', 'หอพัก', 'ห้องพัก']):
-        return rates["building"]
-    elif 'เกษตร' in prop:
-        return rates["agricultural_land"]
-    elif 'ที่ดิน' in prop:
-        return rates["land"]
-    # ยานพาหนะใช้อัตราเดียวกับโรงเรือน (key building) ตาม พ.ร.ฎ. ฉบับที่ 11 ม.5
-    # "โรงเรือน" มี "เรือ" อยู่ข้างใน จึงตกสาขานี้ด้วย ได้อัตราถูกเพราะใช้ key building เหมือนกัน
-    elif any(k in prop for k in ['รถ', 'เรือ', 'ยานพาหนะ']):
-        return rates["building"]
-    else:
-        return rates["unmatched"]
+    for words, rate_key in RENTAL_PROPERTY_WORDS:
+        if any(k in prop for k in words):
+            return rates[rate_key]
+    return rates["unmatched"]
+
+def find_property_word(text):
+    """คำแรกที่เจอตามลำดับของ RENTAL_PROPERTY_WORDS หรือ None (สาขาสำรองค่าเช่า #38)
+    คำที่คืนให้อัตราเท่ากับข้อความเต็มเสมอ: ทุกคำของกลุ่มก่อนหน้าไม่อยู่ในข้อความ จึงอยู่ในคำนี้ไม่ได้"""
+    prop = str(text).lower()
+    for words, _ in RENTAL_PROPERTY_WORDS:
+        for k in words:
+            if k in prop:
+                return k
+    return None
 
 def get_tax_bracket_rate(net_income):
     for upper, rate in tax_rules.TAX_RULES["tax_brackets"]:

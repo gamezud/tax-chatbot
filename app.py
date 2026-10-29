@@ -12,6 +12,7 @@ from utils.knowledge_search import query_tax_knowledge, get_db
 from utils.tax_calculator import (
     clean_number,
     get_rental_expense_rate,
+    find_property_word,
     calculate_detailed_deductions,
     deduction_breakdown,
     compute_tax_from_net,
@@ -270,6 +271,11 @@ def handle_interview_start(user_query, parameters, merged_params, session_id):
 
     print(f"🚦 [DEBUG-STEP1] การวิเคราะห์รายได้ -> Salary: {has_salary}, Rental: {has_rental}, Online: {has_online}")
 
+    # #37: Dialogflow อาจตัดบางประเภทออกจาก income_types (fixture 022) จึงเก็บประเภทที่ตรวจพบรอบนี้ให้ 02/03 ใช้ต่อ
+    # เขียนทับทุกครั้ง (รวมลิสต์ว่าง) — ถ้ารวมกับค่าเดิม รอบใหม่ที่ไม่ได้พิมพ์ "เริ่มใหม่" จะได้ประเภทของรอบเก่าติดมา
+    merged_params['income_types_found'] = [label for label, found in [
+        ("เงินเดือน", has_salary), ("ค่าเช่า", has_rental), ("ขายของออนไลน์", has_online)] if found]
+
     if has_salary:
         reply_text = "รับทราบครับ เริ่มเก็บข้อมูลจาก 'เงินเดือน' เป็นอันดับแรกนะครับ 📝\n\nได้รับเงินเดือนเฉลี่ยเดือนละเท่าไหร่ครับ?"
         next_ctx = "awaiting_salary"
@@ -312,6 +318,7 @@ def handle_salary(merged_params, user_query, session_id):
     debug_log.debug_print(f"💵 [DEBUG-STEP2] เงินเดือน/ด: {salary_per_month:,.2f} | ทั้งปี: {total_salary:,.2f} | ประกันสังคม: {social_security:,.2f} | หัก ณ ที่จ่าย: {withholding_tax:,.2f}")
 
     all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower() + " " + user_query.lower()
+    all_income_str += " " + " ".join(merged_params.get('income_types_found', []))  # #37
     has_rental = any(k in all_income_str for k in ["เช่า", "คอนโด", "บ้าน", "ที่ดิน"])
     has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
 
@@ -349,6 +356,7 @@ def handle_rental(merged_params, session_id):
     debug_log.debug_print(f"🏠 [DEBUG-STEP3] อสังหาฯ: {property_type} | รายได้ค่าเช่า: {rental_income:,.2f} | อัตราหักเหมา: {rate*100}%")
 
     all_income_str = " ".join([str(i) for i in merged_params.get('income_types', [])]).lower()
+    all_income_str += " " + " ".join(merged_params.get('income_types_found', []))  # #37
     has_online = any(k in all_income_str for k in ["ออนไลน์", "ขาย", "ธุรกิจ"])
 
     reply_text = (
@@ -377,6 +385,38 @@ def handle_rental(merged_params, session_id):
     ]
     print(f"🔑 [DEBUG-STEP3-EMIT] ส่งกิ่งถัดไป: {next_ctx}")
     return {"fulfillmentText": reply_text, "outputContexts": out_contexts}
+
+def handle_rental_fallback(merged_params, user_query, session_id):
+    # #38: คำตอบค่าเช่าที่ Dialogflow จัดเป็น Fallback (fixture 023) — ยอดจากข้อความดิบแบบสาขาออนไลน์
+    rental_income = clean_number(user_query)
+    property_word = find_property_word(user_query)
+    # ยอด 0 แต่ข้อความมีเลข 1-9 (เช่น "บ้าน ปี 2569" ที่ clean_number ตัดปีทิ้ง) ไม่ใช่การตอบว่าไม่มีค่าเช่า
+    has_nonzero_digit = any(ch in "123456789๑๒๓๔๕๖๗๘๙" for ch in user_query)
+    if rental_income == 0.0 and not has_nonzero_digit:
+        # ค่าเช่า 0 ได้ค่าใช้จ่าย 0 ไม่ว่าอัตราใด จึงไปต่อได้แม้ไม่รู้ประเภท — เจอคำก็ใช้คำนั้นเป็นป้ายเหมือนสาขา 03
+        property_word = property_word or "ไม่มีค่าเช่า"
+    elif rental_income == 0.0 or property_word is None:
+        # ไม่เดาอัตรา (#8) และไม่เดายอด — ถามซ้ำ ไม่บันทึกยอด และเปิด awaiting_rental ต่อ
+        reply_text = (
+            "ขออภัยครับ ระบบอ่านประเภททรัพย์สินหรือยอดค่าเช่าจากข้อความนี้ไม่ได้ จึงยังไม่ได้บันทึกครับ\n\n"
+            "กรุณาพิมพ์ประเภททรัพย์สินพร้อมค่าเช่ารวมทั้งปีในข้อความเดียว เช่น\n"
+            "คอนโด 120000\n\n"
+            "ระบบรองรับ บ้าน คอนโด ทาวน์โฮม อาคาร หอพัก ที่ดิน ที่ดินเกษตร และรถยนต์ครับ\n\n"
+            "ถ้าไม่มีค่าเช่า พิมพ์\n"
+            "0\n"
+            "แล้วระบบจะถามข้อมูลขั้นถัดไปครับ"
+        )
+        print("🏠 [RENTAL-FALLBACK] ไม่พบประเภททรัพย์สินหรือยอดค่าเช่า ถามซ้ำ")
+        return {
+            "fulfillmentText": reply_text,
+            "outputContexts": [
+                {"name": f"{session_id}/contexts/tax_session", "lifespanCount": 20, "parameters": merged_params},
+                {"name": f"{session_id}/contexts/awaiting_rental", "lifespanCount": 2}
+            ]
+        }
+    merged_params['property_type'] = property_word
+    merged_params['rental_income'] = rental_income
+    return handle_rental(merged_params, session_id)
 
 def handle_online(merged_params, user_query, session_id):
     online_income = clean_number(merged_params.get('online_income'))
@@ -755,6 +795,14 @@ def webhook():
               and has_number(user_query)):
             reason = check_deduction_parameters(user_query, {}) or "unclear"
             return jsonify(handle_unclear_deductions(reason, merged_params, parameters, session_id))
+
+        # #38: คำตอบค่าเช่าที่มีตัวเลขแต่ Dialogflow ไม่จับเป็น 03 (fixture 023) เดิมตกสาขาความรู้ ผู้ใช้ค้าง
+        # awaiting_rental ค้างหลังสาขาค่าเช่า (#4) จึงต้องไม่มี awaiting_online / awaiting_deduction
+        # (ขั้น 5 และ 7 อยู่ก่อนแล้ว แต่เขียนไว้ตรง ๆ กันการสลับลำดับ)
+        elif (intent_name == 'Default Fallback Intent' and 'awaiting_rental' in active_contexts
+              and 'awaiting_online' not in active_contexts and 'awaiting_deduction' not in active_contexts
+              and has_number(user_query)):
+            return jsonify(handle_rental_fallback(merged_params, user_query, session_id))
 
         # ==========================================
         # FALLBACK / KNOWLEDGE BASE (RAG)
