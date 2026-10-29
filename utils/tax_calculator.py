@@ -91,6 +91,16 @@ def get_rental_expense_rate(property_type):
             return rates[rate_key]
     return rates["unmatched"]
 
+def find_property_word(text):
+    """คำแรกที่เจอตามลำดับของ RENTAL_PROPERTY_WORDS หรือ None (สาขาสำรองค่าเช่า #38)
+    คำที่คืนให้อัตราเท่ากับข้อความเต็มเสมอ: ทุกคำของกลุ่มก่อนหน้าไม่อยู่ในข้อความ จึงอยู่ในคำนี้ไม่ได้"""
+    prop = str(text).lower()
+    for words, _ in RENTAL_PROPERTY_WORDS:
+        for k in words:
+            if k in prop:
+                return k
+    return None
+
 def get_tax_bracket_rate(net_income):
     for upper, rate in tax_rules.TAX_RULES["tax_brackets"]:
         if upper is None or net_income <= upper:

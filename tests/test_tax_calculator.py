@@ -15,6 +15,7 @@ from utils.tax_calculator import (
     compute_tax_from_net,
     compute_method_2_tax,
     get_rental_expense_rate,
+    find_property_word,
     get_tax_bracket_rate,
     calculate_detailed_deductions,
     generate_tax_planning_advice,
@@ -125,6 +126,24 @@ def test_rental_expense_rate_rong_ruean_is_30_percent():
 ])
 def test_current_behavior_rental_expense_rate(property_type, current):
     assert get_rental_expense_rate(property_type) == current
+
+
+@pytest.mark.parametrize("text, word", [
+    ("ค่าเช่าบ้าน 120,000", "บ้าน"),
+    ("ที่ดินพร้อมบ้าน 50000", "บ้าน"),      # ลำดับเดียวกับ get_rental_expense_rate (#2)
+    ("ที่ดินเกษตร 50000", "เกษตร"),
+    ("ที่ดิน 50000", "ที่ดิน"),
+    ("โรงเรือนเกษตร 50000", "เกษตร"),      # #13
+    ("รถยนต์ 50000", "รถ"),
+    ("120000", None),
+    ("เครื่องจักร 50000", None),           # ไม่เดา 30% แบบ unmatched (#8)
+])
+def test_find_property_word(text, word):
+    # สาขาสำรองค่าเช่า (#38) ใช้รายการคำชุดเดียวกับ get_rental_expense_rate
+    assert find_property_word(text) == word
+    if word is not None:
+        # ป้ายที่บันทึกเป็น property_type ต้องได้อัตราเดียวกับข้อความเต็ม
+        assert get_rental_expense_rate(word) == get_rental_expense_rate(text)
 
 
 # ---------------------------------------------------------------------------

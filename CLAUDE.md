@@ -160,7 +160,7 @@ Dialogflow ES รอคำตอบจาก webhook ได้ประมาณ
 | `03_Tax_Interview_Rental` | เก็บข้อมูลค่าเช่า |
 | `05_Tax_Interview_Online` | เก็บข้อมูลขายของออนไลน์ (เลข 05 มาก่อน 04 ในการทำงานจริง) |
 | `04_Tax_Interview_Deductions` | เก็บค่าลดหย่อน คำนวณ ออก PDF บันทึกประวัติ |
-| `06_Tax_Knowledge` | คำถามความรู้ภาษี — ไม่มีสาขาของตัวเองในโค้ด จึงตกไปสาขาความรู้ (ขั้นที่ 8 ของกับดักข้อ 1) โดยไม่ต้องแก้โค้ด เปิด webhook และไม่มี input context |
+| `06_Tax_Knowledge` | คำถามความรู้ภาษี — ไม่มีสาขาของตัวเองในโค้ด จึงตกไปสาขาความรู้ (ขั้นที่ 9 ของกับดักข้อ 1) โดยไม่ต้องแก้โค้ด เปิด webhook และไม่มี input context |
 | อื่น ๆ ทั้งหมด | ตกไปสาขาตอบคำถามความรู้ (RAG) |
 
 **คำถามแรกของ `01` มาจาก slot filling บน Console ไม่ได้มาจาก `app.py`** (prompt ของ parameter `income_types` ซึ่ง required และเป็น `@sys.any`)
@@ -294,9 +294,15 @@ training phrase ของ 04 ที่มี SSF หรือ "กองทุ�
 6. intent `04` → ผ่านตัวกัน (`check_deduction_parameters`) ก่อน ถ้าถูกปฏิเสธ → `handle_unclear_deductions` ไม่คำนวณ
 7. intent `Default Fallback Intent` **และ** มี context `awaiting_deduction` **และ** ข้อความมีตัวเลข → `handle_unclear_deductions`
    (เช่น "บุตร 1 คน" ที่ Dialogflow เคยจับไม่ได้ เดิมตกไปสาขาความรู้ ผู้ใช้ไม่รู้ว่ายอดไม่ถูกบันทึก)
-8. ที่เหลือ → ตอบคำถามความรู้
+8. intent `Default Fallback Intent` **และ** มี context `awaiting_rental` **และ** ไม่มี `awaiting_online` / `awaiting_deduction`
+   **และ** ข้อความมีตัวเลข → `handle_rental_fallback` (#38 — `tests/fixtures/023_Default_Fallback_Intent.json`)
+   ประเภทจาก `find_property_word` (รายการคำเดียวกับ `get_rental_expense_rate`) ไม่เจอคำ → ถามซ้ำ
+   ยอด 0 และไม่มีเลข 1-9 → ไปต่อ (ป้ายเป็นคำที่เจอ หรือ "ไม่มีค่าเช่า") · ยอด 0 แต่มีเลข 1-9 (เช่น "บ้าน ปี 2569") → ถามซ้ำ
+9. ที่เหลือ → ตอบคำถามความรู้
 
-> เหตุผลที่สำคัญ: ถ้าแปลงเป็นตาราง "ชื่อ intent → ฟังก์ชัน" ตรง ๆ ข้อ 1, 2, 3, 5 และ 7
+> เลขขั้นใน `ROUTES` ของ `tests/test_webhook.py` ต้องตรงกับรายการนี้ แทรกขั้นใหม่ต้องเลื่อนเลขที่นั่นด้วย
+
+> เหตุผลที่สำคัญ: ถ้าแปลงเป็นตาราง "ชื่อ intent → ฟังก์ชัน" ตรง ๆ ข้อ 1, 2, 3, 5, 7 และ 8
 > จะหายไปเงียบ ๆ เพราะไม่ได้ตัดสินจากชื่อ intent และลำดับมีผล เช่น ข้อ 5 อยู่ก่อนข้อ 6
 > ถ้าสลับกัน ผลลัพธ์จะเปลี่ยน ต้องรักษาลำดับนี้ไว้ทุกครั้ง
 
@@ -954,6 +960,6 @@ PDF แสดงค่าลดหย่อนทีละรายการ (br
   ขณะที่ `mlMinConfidence` ของ agent คือ 0.6 (`dialogflow/agent.json`) — training phrase ของ `03` มี 9 ประโยคและไม่เปลี่ยนตั้งแต่ export แรก
   ส่วน intent อื่นมี training phrase เพิ่มขึ้นมาก (#14, #23–#26) ซึ่งอาจทำให้คะแนนของ `03` ต่ำกว่าเกณฑ์ (ยังไม่ได้ยืนยัน)
   — `03` ยังมี `property_type` (`@PropertyType`) และ `rental_income` เป็น required คนที่ไม่มีค่าเช่าตอบ slot filling ให้ผ่านไม่ได้
-  — เทส: `test_rental_fallback_records_rental`, `test_rental_fallback_without_property_asks_again`, `test_rental_fallback_zero_means_no_rental`
+  — เทส: `test_rental_fallback_records_rental`, `test_rental_fallback_asks_again`, `test_rental_fallback_zero_means_no_rental`
 
 🔒 = มี xfail คุมอยู่ (บั๊กชัดเจน) · 📌 = ล็อกพฤติกรรมปัจจุบันไว้ (ยังไม่ตัดสินใจ) · ไม่มีป้าย = ยังไม่มีเทส
