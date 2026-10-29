@@ -80,6 +80,16 @@ def test_thai_digits_resets_like_not_found(get_page):
     assert "thai_digits" not in not_donation
 
 
+def test_edonation_note_shown(get_page):
+    # #36: กรมสรรพากรแจ้งว่าตั้งแต่ 1 ม.ค. 2569 บริจาคต้องผ่าน e-Donation จึงลดหย่อนได้ (docs/tax-rules-2569.md หัวข้อ 6)
+    # HTML คงที่ ไม่พึ่ง JavaScript — เห็นแม้ LIFF โหลดไม่สำเร็จ
+    # ยังไม่พบตัวบท จึงต้องบอกว่าเป็นตามที่กรมสรรพากรแจ้ง ไม่ใช่ตามกฎหมาย
+    html = get_page()
+    assert ('<p id="edonation-note" class="notice">ตั้งแต่ 1 มกราคม 2569 เงินบริจาคที่ลดหย่อนได้'
+            'ต้องผ่านระบบ e-Donation ตามที่กรมสรรพากรแจ้งครับ</p>') in html
+    assert "ตามกฎหมาย" not in html
+
+
 def test_liff_id_status_line_when_set(monkeypatch):
     # บอกแค่ว่าตั้งแล้ว ไม่พิมพ์ค่า LIFF ID หรือ Channel ID (ตัวเลขหน้า "-")
     monkeypatch.setenv("LIFF_ID", "1234567890-TestLiff")
